@@ -1,0 +1,81 @@
+create extension if not exists "pgcrypto";
+
+create table if not exists public.categories (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  slug text not null unique,
+  description text,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.listings (
+  id uuid primary key default gen_random_uuid(),
+  category_id uuid references public.categories(id) on delete set null,
+  title text not null,
+  slug text not null unique,
+  operation text not null default 'Venta',
+  price numeric(12, 2) not null default 0,
+  province text not null,
+  district text not null,
+  address_reference text,
+  bedrooms integer not null default 0,
+  bathrooms integer not null default 0,
+  area_m2 integer not null default 0,
+  description text not null,
+  whatsapp text,
+  email text,
+  lat numeric(10, 6),
+  lng numeric(10, 6),
+  status text not null default 'active',
+  featured boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.listing_images (
+  id uuid primary key default gen_random_uuid(),
+  listing_id uuid not null references public.listings(id) on delete cascade,
+  url text not null,
+  public_id text,
+  position integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists listings_status_idx on public.listings(status);
+create index if not exists listings_category_idx on public.listings(category_id);
+create index if not exists listings_featured_idx on public.listings(featured);
+create index if not exists listing_images_listing_idx on public.listing_images(listing_id);
+
+alter table public.categories enable row level security;
+alter table public.listings enable row level security;
+alter table public.listing_images enable row level security;
+
+drop policy if exists "Public can read categories" on public.categories;
+create policy "Public can read categories"
+  on public.categories for select
+  using (true);
+
+drop policy if exists "Public can read active listings" on public.listings;
+create policy "Public can read active listings"
+  on public.listings for select
+  using (status = 'active');
+
+drop policy if exists "Public can read listing images" on public.listing_images;
+create policy "Public can read listing images"
+  on public.listing_images for select
+  using (
+    exists (
+      select 1
+      from public.listings
+      where listings.id = listing_images.listing_id
+      and listings.status = 'active'
+    )
+  );
+
+insert into public.categories (name, slug, description, sort_order)
+values
+  ('Bienes raices', 'bienes-raices', 'Casas, apartamentos, lotes, fincas y locales', 1),
+  ('Autos', 'autos', 'Carros, motos, repuestos y accesorios', 2),
+  ('Servicios', 'servicios', 'Profesionales, tecnicos, mantenimiento y asesorias', 3)
+on conflict (slug) do nothing;
