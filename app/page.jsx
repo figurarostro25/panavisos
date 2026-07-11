@@ -4,8 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { money, provinces } from "@/lib/format";
 
+const categoryLooks = {
+  "bienes-raices": { icon: "BR", label: "Casas, apartamentos, lotes" },
+  autos: { icon: "AU", label: "Vehiculos y accesorios" },
+  servicios: { icon: "SV", label: "Negocios y profesionales" }
+};
+
 export default function HomePage() {
-  const [data, setData] = useState({ categories: [], listings: [] });
+  const [data, setData] = useState({ categories: [], listings: [], banners: [] });
   const [selected, setSelected] = useState(null);
   const [filters, setFilters] = useState({
     q: "",
@@ -43,93 +49,213 @@ export default function HomePage() {
     });
   }, [data, filters]);
 
+  const featured = listings.filter((listing) => listing.featured).slice(0, 6);
+  const primaryBanner = data.banners?.[0];
+  const secondaryBanners = (data.banners || []).slice(1, 3);
+
   return (
     <>
       <Topbar />
-      <main className="shell">
-        <aside className="filters">
-          <h1>Anuncios en Panama</h1>
-          <p>Marketplace inicial para propiedades, autos y servicios.</p>
-
-          <label className="field">
-            <span>Buscar</span>
-            <input
-              value={filters.q}
-              onChange={(event) => setFilters({ ...filters, q: event.target.value })}
-              placeholder="Apartamento, lote, servicio..."
-            />
-          </label>
-
-          <label className="field">
-            <span>Categoria</span>
-            <select
-              value={filters.category}
-              onChange={(event) => setFilters({ ...filters, category: event.target.value })}
-            >
-              <option value="">Todas</option>
-              {data.categories?.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="field">
-            <span>Provincia</span>
-            <select
-              value={filters.province}
-              onChange={(event) => setFilters({ ...filters, province: event.target.value })}
-            >
-              <option value="">Todas</option>
-              {provinces.map((province) => (
-                <option key={province} value={province}>
-                  {province}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div className="field-row">
-            <label className="field">
-              <span>Minimo</span>
-              <input
-                type="number"
-                value={filters.min}
-                onChange={(event) => setFilters({ ...filters, min: event.target.value })}
-              />
-            </label>
-            <label className="field">
-              <span>Maximo</span>
-              <input
-                type="number"
-                value={filters.max}
-                onChange={(event) => setFilters({ ...filters, max: event.target.value })}
-              />
-            </label>
+      <main>
+        <section className="market-hero">
+          <div className="hero-copy">
+            <span className="eyebrow">Marketplace de Panama</span>
+            <h1>Compra, vende y promociona cerca de ti.</h1>
+            <p>
+              Propiedades, autos, servicios y ofertas locales con busqueda sencilla y contacto directo.
+            </p>
+            <div className="hero-actions">
+              <Link className="primary" href="/admin">
+                Publicar anuncio
+              </Link>
+              <a className="secondary" href="#anuncios">
+                Explorar
+              </a>
+            </div>
           </div>
-        </aside>
+          <form className="hero-search" onSubmit={(event) => event.preventDefault()}>
+            <label className="field">
+              <span>Que buscas?</span>
+              <input
+                value={filters.q}
+                onChange={(event) => setFilters({ ...filters, q: event.target.value })}
+                placeholder="Ej: apartamento, estetica, Toyota..."
+              />
+            </label>
+            <div className="field-row">
+              <label className="field">
+                <span>Categoria</span>
+                <select
+                  value={filters.category}
+                  onChange={(event) => setFilters({ ...filters, category: event.target.value })}
+                >
+                  <option value="">Todas</option>
+                  {data.categories?.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span>Provincia</span>
+                <select
+                  value={filters.province}
+                  onChange={(event) => setFilters({ ...filters, province: event.target.value })}
+                >
+                  <option value="">Todas</option>
+                  {provinces.map((province) => (
+                    <option key={province} value={province}>
+                      {province}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </form>
+        </section>
 
-        <section className="results">
-          <div className="toolbar">
+        <section className="home-band">
+          <div className="section-head">
             <div>
-              <strong>{loading ? "Cargando..." : `${listings.length} anuncios`}</strong>
-              <span className="muted"> disponibles</span>
+              <h2>Categorias populares</h2>
+              <p className="muted">Entrada rapida al estilo marketplace para navegar sin aprender nada nuevo.</p>
             </div>
             <Link className="nav-link" href="/admin">
-              Admin
+              Publicar
             </Link>
           </div>
+          <div className="category-strip">
+            <button className="category-tile" type="button" onClick={() => setFilters({ ...filters, category: "" })}>
+              <span className="category-icon">TO</span>
+              <strong>Todo</strong>
+              <small>Ver anuncios</small>
+            </button>
+            {data.categories?.map((category) => {
+              const look = categoryLooks[category.slug] || { icon: category.name.slice(0, 2), label: category.description };
+              return (
+                <button
+                  className="category-tile"
+                  type="button"
+                  key={category.id}
+                  onClick={() => setFilters({ ...filters, category: category.id })}
+                >
+                  <span className="category-icon">{look.icon}</span>
+                  <strong>{category.name}</strong>
+                  <small>{look.label}</small>
+                </button>
+              );
+            })}
+          </div>
+        </section>
 
-          {!loading && listings.length === 0 ? (
-            <div className="notice">Todavia no hay anuncios con esos filtros.</div>
-          ) : (
-            <div className="grid">
-              {listings.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} onSelect={setSelected} />
-              ))}
+        <section className="home-band banner-grid">
+          <PromoBanner banner={primaryBanner} large />
+          <div className="side-promos">
+            {secondaryBanners.length ? (
+              secondaryBanners.map((banner) => <PromoBanner key={banner.id} banner={banner} />)
+            ) : (
+              <>
+                <PromoBanner banner={{ title: "Destaca tu negocio", subtitle: "Banners administrables para promociones." }} />
+                <PromoBanner banner={{ title: "Anuncios premium", subtitle: "Espacio para ofertas, proyectos y campanas." }} />
+              </>
+            )}
+          </div>
+        </section>
+
+        <section className="market-layout home-band" id="anuncios">
+          <aside className="market-filters">
+            <h2>Filtrar anuncios</h2>
+            <label className="field">
+              <span>Buscar</span>
+              <input
+                value={filters.q}
+                onChange={(event) => setFilters({ ...filters, q: event.target.value })}
+                placeholder="Palabra clave"
+              />
+            </label>
+            <label className="field">
+              <span>Categoria</span>
+              <select
+                value={filters.category}
+                onChange={(event) => setFilters({ ...filters, category: event.target.value })}
+              >
+                <option value="">Todas</option>
+                {data.categories?.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span>Provincia</span>
+              <select
+                value={filters.province}
+                onChange={(event) => setFilters({ ...filters, province: event.target.value })}
+              >
+                <option value="">Todas</option>
+                {provinces.map((province) => (
+                  <option key={province} value={province}>
+                    {province}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="field-row">
+              <label className="field">
+                <span>Minimo</span>
+                <input
+                  type="number"
+                  value={filters.min}
+                  onChange={(event) => setFilters({ ...filters, min: event.target.value })}
+                />
+              </label>
+              <label className="field">
+                <span>Maximo</span>
+                <input
+                  type="number"
+                  value={filters.max}
+                  onChange={(event) => setFilters({ ...filters, max: event.target.value })}
+                />
+              </label>
             </div>
-          )}
+          </aside>
+
+          <section className="market-results">
+            <div className="toolbar">
+              <div>
+                <strong>{loading ? "Cargando..." : `${listings.length} anuncios`}</strong>
+                <span className="muted"> disponibles</span>
+              </div>
+              <div className="facts">
+                <span className="fact">Recientes</span>
+                <span className="fact">Contacto directo</span>
+              </div>
+            </div>
+
+            {featured.length ? (
+              <>
+                <h2 className="block-title">Destacados</h2>
+                <div className="grid compact-grid">
+                  {featured.map((listing) => (
+                    <ListingCard key={listing.id} listing={listing} onSelect={setSelected} />
+                  ))}
+                </div>
+              </>
+            ) : null}
+
+            <h2 className="block-title">Ultimos anuncios</h2>
+            {!loading && listings.length === 0 ? (
+              <div className="notice">Todavia no hay anuncios con esos filtros.</div>
+            ) : (
+              <div className="grid">
+                {listings.map((listing) => (
+                  <ListingCard key={listing.id} listing={listing} onSelect={setSelected} />
+                ))}
+              </div>
+            )}
+          </section>
         </section>
       </main>
 
@@ -140,18 +266,47 @@ export default function HomePage() {
 
 function Topbar() {
   return (
-    <header className="topbar">
+    <header className="topbar marketplace-topbar">
       <Link className="brand" href="/">
         <span className="brand-mark">PA</span>
         <span>
           <strong>PanAvisos</strong>
-          <small>Marketplace de Panama</small>
+          <small>Anuncios de Panama</small>
         </span>
       </Link>
-      <Link className="nav-link" href="/admin">
-        Panel admin
-      </Link>
+      <nav className="top-actions">
+        <a href="#anuncios">Anuncios</a>
+        <Link href="/admin">Mi cuenta</Link>
+        <Link className="primary" href="/admin">
+          Publicar
+        </Link>
+      </nav>
     </header>
+  );
+}
+
+function PromoBanner({ banner, large = false }) {
+  const content = banner || {
+    title: "Promociona aqui",
+    subtitle: "Crea banners desde el panel admin y mostrarlos en portada.",
+    cta_label: "Administrar",
+    cta_url: "/admin"
+  };
+
+  return (
+    <article className={`promo-banner ${large ? "large" : ""}`}>
+      {content.image_url ? <img src={content.image_url} alt="" /> : null}
+      <div>
+        <span className="eyebrow">Destacado</span>
+        <h2>{content.title}</h2>
+        {content.subtitle ? <p>{content.subtitle}</p> : null}
+        {content.cta_label && content.cta_url ? (
+          <a className="secondary" href={content.cta_url}>
+            {content.cta_label}
+          </a>
+        ) : null}
+      </div>
+    </article>
   );
 }
 
@@ -159,8 +314,8 @@ function ListingCard({ listing, onSelect }) {
   const image = listing.images?.sort((a, b) => a.position - b.position)?.[0]?.url;
 
   return (
-    <article className="card">
-      {image ? <img className="card-image" src={image} alt={listing.title} /> : <div className="card-image" />}
+    <article className="card marketplace-card">
+      {image ? <img className="card-image" src={image} alt={listing.title} /> : <div className="card-image empty-image">PA</div>}
       <div className="card-body">
         <div className="facts">
           <span className="pill">{listing.category?.name || "Sin categoria"}</span>

@@ -42,14 +42,31 @@ create table if not exists public.listing_images (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.banners (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  subtitle text,
+  cta_label text,
+  cta_url text,
+  image_url text,
+  placement text not null default 'home',
+  status text not null default 'active',
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create index if not exists listings_status_idx on public.listings(status);
 create index if not exists listings_category_idx on public.listings(category_id);
 create index if not exists listings_featured_idx on public.listings(featured);
 create index if not exists listing_images_listing_idx on public.listing_images(listing_id);
+create index if not exists banners_status_idx on public.banners(status);
+create index if not exists banners_placement_idx on public.banners(placement);
 
 alter table public.categories enable row level security;
 alter table public.listings enable row level security;
 alter table public.listing_images enable row level security;
+alter table public.banners enable row level security;
 
 drop policy if exists "Public can read categories" on public.categories;
 create policy "Public can read categories"
@@ -73,9 +90,23 @@ create policy "Public can read listing images"
     )
   );
 
+drop policy if exists "Public can read active banners" on public.banners;
+create policy "Public can read active banners"
+  on public.banners for select
+  using (status = 'active');
+
 insert into public.categories (name, slug, description, sort_order)
 values
   ('Bienes raices', 'bienes-raices', 'Casas, apartamentos, lotes, fincas y locales', 1),
   ('Autos', 'autos', 'Carros, motos, repuestos y accesorios', 2),
   ('Servicios', 'servicios', 'Profesionales, tecnicos, mantenimiento y asesorias', 3)
 on conflict (slug) do nothing;
+
+insert into public.banners (title, subtitle, cta_label, cta_url, placement, status, sort_order)
+select *
+from (
+  values
+    ('Publica y encuentra oportunidades en Panama', 'Propiedades, autos, servicios y ofertas locales en un solo lugar.', 'Ver anuncios', '/', 'home', 'active', 1),
+    ('Espacio destacado para promociones', 'Usa este banner para resaltar negocios, inmuebles, paquetes o anuncios importantes.', 'Panel admin', '/admin', 'home', 'active', 2)
+) as seed(title, subtitle, cta_label, cta_url, placement, status, sort_order)
+where not exists (select 1 from public.banners);

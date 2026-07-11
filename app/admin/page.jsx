@@ -25,6 +25,17 @@ const emptyListing = {
   images: []
 };
 
+const emptyBanner = {
+  title: "",
+  subtitle: "",
+  cta_label: "",
+  cta_url: "",
+  image_url: "",
+  placement: "home",
+  status: "active",
+  sort_order: 0
+};
+
 export default function AdminPage() {
   const [ready, setReady] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
@@ -32,8 +43,10 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [categories, setCategories] = useState([]);
   const [listings, setListings] = useState([]);
+  const [banners, setBanners] = useState([]);
   const [categoryForm, setCategoryForm] = useState({ id: "", name: "", description: "", sort_order: 0 });
   const [listingForm, setListingForm] = useState(emptyListing);
+  const [bannerForm, setBannerForm] = useState(emptyBanner);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -41,20 +54,23 @@ export default function AdminPage() {
   }, []);
 
   async function loadAdmin() {
-    const [catResponse, listingResponse] = await Promise.all([
+    const [catResponse, listingResponse, bannerResponse] = await Promise.all([
       fetch("/api/admin/categories"),
-      fetch("/api/admin/listings")
+      fetch("/api/admin/listings"),
+      fetch("/api/admin/banners")
     ]);
 
-    if (catResponse.status === 401 || listingResponse.status === 401) {
+    if (catResponse.status === 401 || listingResponse.status === 401 || bannerResponse.status === 401) {
       setLoggedIn(false);
       return;
     }
 
     const catData = await catResponse.json();
     const listingData = await listingResponse.json();
+    const bannerData = await bannerResponse.json();
     setCategories(catData.categories || []);
     setListings(listingData.listings || []);
+    setBanners(bannerData.banners || []);
     setLoggedIn(true);
   }
 
@@ -105,6 +121,35 @@ export default function AdminPage() {
   async function deleteCategory(id) {
     if (!confirm("Eliminar esta categoria?")) return;
     await fetch(`/api/admin/categories/${id}`, { method: "DELETE" });
+    await loadAdmin();
+  }
+
+  async function saveBanner(event) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    const method = bannerForm.id ? "PATCH" : "POST";
+    const url = bannerForm.id ? `/api/admin/banners/${bannerForm.id}` : "/api/admin/banners";
+    const response = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(bannerForm)
+    });
+    setSaving(false);
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      setError(payload.error || "No se pudo guardar el banner.");
+      return;
+    }
+
+    setBannerForm(emptyBanner);
+    await loadAdmin();
+  }
+
+  async function deleteBanner(id) {
+    if (!confirm("Eliminar este banner?")) return;
+    await fetch(`/api/admin/banners/${id}`, { method: "DELETE" });
     await loadAdmin();
   }
 
@@ -197,6 +242,41 @@ export default function AdminPage() {
       setListingForm((current) => ({ ...current, images: [...current.images, ...nextImages] }));
     } catch (uploadError) {
       setError(uploadError.message || "No se pudieron subir las imagenes.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function uploadBannerImage(files) {
+    const file = Array.from(files || [])[0];
+    if (!file) return;
+
+    setSaving(true);
+    setError("");
+    try {
+      const signed = await fetch("/api/cloudinary/sign", { method: "POST" }).then((response) =>
+        response.json()
+      );
+
+      if (signed.error) throw new Error(signed.error);
+
+      const body = new FormData();
+      body.append("file", file);
+      body.append("api_key", signed.apiKey);
+      body.append("timestamp", signed.timestamp);
+      body.append("signature", signed.signature);
+      body.append("folder", signed.folder);
+
+      const uploaded = await fetch(
+        `https://api.cloudinary.com/v1_1/${signed.cloudName}/image/upload`,
+        { method: "POST", body }
+      ).then((response) => response.json());
+
+      if (uploaded.error) throw new Error(uploaded.error.message);
+
+      setBannerForm((current) => ({ ...current, image_url: uploaded.secure_url }));
+    } catch (uploadError) {
+      setError(uploadError.message || "No se pudo subir la imagen del banner.");
     } finally {
       setSaving(false);
     }
@@ -502,13 +582,121 @@ export default function AdminPage() {
                   <article className="list-item" key={listing.id}>
                     <h3>{listing.title}</h3>
                     <p className="muted">
-                      {money(listing.price)} · {listing.status} · {listing.province}
+                      {money(listing.price)} - {listing.status} - {listing.province}
                     </p>
                     <div className="admin-actions">
                       <button className="secondary" type="button" onClick={() => editListing(listing)}>
                         Editar
                       </button>
                       <button className="danger" type="button" onClick={() => deleteListing(listing.id)}>
+                        Eliminar
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </aside>
+
+            <section className="panel">
+              <div className="form-head">
+                <h2>{bannerForm.id ? "Editar banner" : "Nuevo banner de portada"}</h2>
+                <button className="secondary" type="button" onClick={() => setBannerForm(emptyBanner)}>
+                  Limpiar
+                </button>
+              </div>
+              <form onSubmit={saveBanner}>
+                <label className="field">
+                  <span>Titulo</span>
+                  <input
+                    required
+                    value={bannerForm.title}
+                    onChange={(event) => setBannerForm({ ...bannerForm, title: event.target.value })}
+                    placeholder="Ej: Publica tu propiedad destacada"
+                  />
+                </label>
+                <label className="field">
+                  <span>Texto secundario</span>
+                  <input
+                    value={bannerForm.subtitle}
+                    onChange={(event) => setBannerForm({ ...bannerForm, subtitle: event.target.value })}
+                    placeholder="Una frase corta para el banner"
+                  />
+                </label>
+                <div className="field-row">
+                  <label className="field">
+                    <span>Texto del boton</span>
+                    <input
+                      value={bannerForm.cta_label}
+                      onChange={(event) => setBannerForm({ ...bannerForm, cta_label: event.target.value })}
+                      placeholder="Ver promocion"
+                    />
+                  </label>
+                  <label className="field">
+                    <span>Link del boton</span>
+                    <input
+                      value={bannerForm.cta_url}
+                      onChange={(event) => setBannerForm({ ...bannerForm, cta_url: event.target.value })}
+                      placeholder="/admin o https://..."
+                    />
+                  </label>
+                </div>
+                <label className="field">
+                  <span>Imagen del banner</span>
+                  <input type="file" accept="image/*" onChange={(event) => uploadBannerImage(event.target.files)} />
+                </label>
+                <label className="field">
+                  <span>URL de imagen</span>
+                  <input
+                    value={bannerForm.image_url}
+                    onChange={(event) => setBannerForm({ ...bannerForm, image_url: event.target.value })}
+                    placeholder="Se llena al subir imagen, o pega una URL"
+                  />
+                </label>
+                {bannerForm.image_url ? (
+                  <div className="banner-preview">
+                    <img src={bannerForm.image_url} alt="" />
+                  </div>
+                ) : null}
+                <div className="field-row">
+                  <label className="field">
+                    <span>Orden</span>
+                    <input
+                      type="number"
+                      value={bannerForm.sort_order}
+                      onChange={(event) => setBannerForm({ ...bannerForm, sort_order: event.target.value })}
+                    />
+                  </label>
+                  <label className="field">
+                    <span>Estado</span>
+                    <select
+                      value={bannerForm.status}
+                      onChange={(event) => setBannerForm({ ...bannerForm, status: event.target.value })}
+                    >
+                      <option value="active">Activo</option>
+                      <option value="paused">Pausado</option>
+                    </select>
+                  </label>
+                </div>
+                <button className="primary" type="submit" disabled={saving}>
+                  {saving ? "Guardando..." : "Guardar banner"}
+                </button>
+              </form>
+            </section>
+
+            <aside className="panel">
+              <h2>Banners de portada</h2>
+              <div className="list">
+                {banners.map((banner) => (
+                  <article className="list-item" key={banner.id}>
+                    <h3>{banner.title}</h3>
+                    <p className="muted">
+                      {banner.status} - orden {banner.sort_order}
+                    </p>
+                    <div className="admin-actions">
+                      <button className="secondary" type="button" onClick={() => setBannerForm(banner)}>
+                        Editar
+                      </button>
+                      <button className="danger" type="button" onClick={() => deleteBanner(banner.id)}>
                         Eliminar
                       </button>
                     </div>
