@@ -9,8 +9,22 @@ create table if not exists public.categories (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  full_name text,
+  phone text,
+  age integer,
+  avatar_url text,
+  provider text,
+  role text not null default 'user',
+  status text not null default 'active',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.listings (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid references public.profiles(id) on delete set null,
   category_id uuid references public.categories(id) on delete set null,
   title text not null,
   slug text not null unique,
@@ -67,6 +81,7 @@ create table if not exists public.banners (
 );
 
 create index if not exists listings_status_idx on public.listings(status);
+create index if not exists listings_user_id_idx on public.listings(user_id);
 create index if not exists listings_category_idx on public.listings(category_id);
 create index if not exists listings_featured_idx on public.listings(featured);
 create index if not exists listings_expires_at_idx on public.listings(expires_at);
@@ -74,7 +89,9 @@ create index if not exists listing_images_listing_idx on public.listing_images(l
 create index if not exists banners_status_idx on public.banners(status);
 create index if not exists banners_placement_idx on public.banners(placement);
 create index if not exists banners_dates_idx on public.banners(starts_at, ends_at);
+create index if not exists profiles_status_idx on public.profiles(status);
 
+alter table public.profiles enable row level security;
 alter table public.categories enable row level security;
 alter table public.listings enable row level security;
 alter table public.listing_images enable row level security;
@@ -84,6 +101,22 @@ drop policy if exists "Public can read categories" on public.categories;
 create policy "Public can read categories"
   on public.categories for select
   using (true);
+
+drop policy if exists "Users can read own profile" on public.profiles;
+create policy "Users can read own profile"
+  on public.profiles for select
+  using (auth.uid() = id);
+
+drop policy if exists "Users can insert own profile" on public.profiles;
+create policy "Users can insert own profile"
+  on public.profiles for insert
+  with check (auth.uid() = id);
+
+drop policy if exists "Users can update own profile" on public.profiles;
+create policy "Users can update own profile"
+  on public.profiles for update
+  using (auth.uid() = id)
+  with check (auth.uid() = id);
 
 drop policy if exists "Public can read active listings" on public.listings;
 create policy "Public can read active listings"

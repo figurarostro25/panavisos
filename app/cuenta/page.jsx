@@ -2,41 +2,129 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
 
 export default function AccountPage() {
+  const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
-  const [form, setForm] = useState({ name: "", email: "", age: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", age: "" });
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    const stored = localStorage.getItem("panavisos_profile");
-    if (stored) setProfile(JSON.parse(stored));
+    const supabase = getSupabaseBrowser();
+
+    async function loadSession() {
+      const { data } = await supabase.auth.getSession();
+      setSession(data.session);
+      await loadProfile(data.session);
+    }
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      loadProfile(nextSession);
+    });
+
+    loadSession();
+    return () => listener.subscription.unsubscribe();
   }, []);
 
-  function saveProfile(nextProfile) {
-    localStorage.setItem("panavisos_profile", JSON.stringify(nextProfile));
+  async function loadProfile(nextSession) {
+    if (!nextSession?.user) {
+      setProfile(null);
+      return;
+    }
+
+    const supabase = getSupabaseBrowser();
+    const { data } = await supabase.from("profiles").select("*").eq("id", nextSession.user.id).maybeSingle();
+    const metadata = nextSession.user.user_metadata || {};
+    const nextProfile = {
+      id: nextSession.user.id,
+      name: data?.full_name || metadata.full_name || metadata.name || nextSession.user.email,
+      email: nextSession.user.email,
+      phone: data?.phone || "",
+      age: data?.age || metadata.age || "",
+      avatar: data?.avatar_url || metadata.avatar_url || metadata.picture || "",
+      provider: nextSession.user.app_metadata?.provider || "email"
+    };
+
     setProfile(nextProfile);
+    setForm({
+      name: nextProfile.name || "",
+      email: nextProfile.email || "",
+      phone: nextProfile.phone || "",
+      age: nextProfile.age || ""
+    });
   }
 
-  function submit(event) {
+  async function sendEmailLink(event) {
     event.preventDefault();
-    saveProfile({
-      name: form.name,
+    setMessage("");
+    setError("");
+    const { error: otpError } = await getSupabaseBrowser().auth.signInWithOtp({
       email: form.email,
-      age: form.age
+      options: {
+        emailRedirectTo: window.location.origin + "/cuenta",
+        data: {
+          full_name: form.name,
+          age: form.age
+        }
+      }
     });
+
+    if (otpError) {
+      setError(otpError.message);
+      return;
+    }
+
+    setMessage("Te enviamos un enlace para entrar a tu correo.");
   }
 
-  function social(provider) {
-    saveProfile({
-      name: provider === "Facebook" ? "Usuario Facebook" : "Usuario Google",
-      email: "",
-      age: "",
-      provider
+  async function signInProvider(provider) {
+    setError("");
+    const { error: providerError } = await getSupabaseBrowser().auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: window.location.origin + "/cuenta"
+      }
     });
+
+    if (providerError) setError(providerError.message);
   }
 
-  function logout() {
-    localStorage.removeItem("panavisos_profile");
+  async function saveProfile(event) {
+    event.preventDefault();
+    if (!session?.user) return;
+    setMessage("");
+    setError("");
+
+    const { error: profileError } = await getSupabaseBrowser()
+      .from("profiles")
+      .upsert(
+        {
+          id: session.user.id,
+          full_name: form.name,
+          phone: form.phone || null,
+          age: form.age ? Number(form.age) : null,
+          avatar_url: profile?.avatar || null,
+          provider: profile?.provider || "email",
+          updated_at: new Date().toISOString()
+        },
+        { onConflict: "id" }
+      );
+
+    if (profileError) {
+      setError(profileError.message);
+      return;
+    }
+
+    setMessage("Perfil actualizado.");
+    await loadProfile(session);
+  }
+
+  async function logout() {
+    await getSupabaseBrowser().auth.signOut();
+    setSession(null);
     setProfile(null);
   }
 
@@ -64,13 +152,33 @@ export default function AccountPage() {
           {profile ? (
             <>
               <div className="profile-summary">
-                <span className="avatar large-avatar">{initials(profile.name || profile.email)}</span>
+                {profile.avatar ? (
+                  <img className="profile-photo" src={profile.avatar} alt="" />
+                ) : (
+                  <span className="avatar large-avatar">{initials(profile.name || profile.email)}</span>
+                )}
                 <div>
                   <h1>{profile.name}</h1>
-                  <p className="muted">{profile.email || "Completa tu correo al publicar"}</p>
+                  <p className="muted">{profile.email}</p>
                 </div>
               </div>
-              <p className="notice">Cuenta lista para responder y publicar. La conexion real con Google/correo se activa en Supabase Auth.</p>
+              <form className="email-login" onSubmit={saveProfile}>
+                <label className="field">
+                  <span>Nombre completo</span>
+                  <input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
+                </label>
+                <label className="field">
+                  <span>WhatsApp</span>
+                  <input value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} />
+                </label>
+                <label className="field">
+                  <span>Edad</span>
+                  <input type="number" min="18" value={form.age} onChange={(event) => setForm({ ...form, age: event.target.value })} />
+                </label>
+                <button className="primary" type="submit">
+                  Guardar perfil
+                </button>
+              </form>
               <button className="secondary" type="button" onClick={logout}>
                 Salir
               </button>
@@ -79,20 +187,20 @@ export default function AccountPage() {
             <>
               <h1>Entra o crea tu cuenta</h1>
               <p className="muted">
-                Registrate rapido para responder anuncios y publicar sin perder tus datos.
+                Usa Google, Facebook o correo para responder anuncios y publicar con tu perfil real.
               </p>
 
               <div className="login-options">
-                <button className="facebook-button" type="button" onClick={() => social("Facebook")}>
+                <button className="facebook-button" type="button" onClick={() => signInProvider("facebook")}>
                   Continuar con Facebook
                 </button>
-                <button className="google-button-solid" type="button" onClick={() => social("Google")}>
+                <button className="google-button-solid" type="button" onClick={() => signInProvider("google")}>
                   Conectar con Google
                 </button>
-                <form className="email-login" onSubmit={submit}>
+                <form className="email-login" onSubmit={sendEmailLink}>
                   <label className="field">
                     <span>Nombre completo</span>
-                    <input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
+                    <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
                   </label>
                   <label className="field">
                     <span>Correo electronico</span>
@@ -100,15 +208,17 @@ export default function AccountPage() {
                   </label>
                   <label className="field">
                     <span>Edad</span>
-                    <input required type="number" min="18" value={form.age} onChange={(event) => setForm({ ...form, age: event.target.value })} />
+                    <input type="number" min="18" value={form.age} onChange={(event) => setForm({ ...form, age: event.target.value })} />
                   </label>
                   <button className="primary" type="submit">
-                    Crear cuenta con correo
+                    Enviar enlace de acceso
                   </button>
                 </form>
               </div>
             </>
           )}
+          {message ? <p className="notice">{message}</p> : null}
+          {error ? <p className="error">{error}</p> : null}
         </section>
 
         <aside className="account-side">
@@ -116,7 +226,7 @@ export default function AccountPage() {
           <ul>
             <li>Responder anuncios despues de registrarte.</li>
             <li>Publicar con tus datos basicos completos.</li>
-            <li>Ver estado de tus anuncios cuando conectemos Supabase Auth.</li>
+            <li>Relacionar tus anuncios a tu usuario real.</li>
             <li>Separar usuarios normales del dashboard administrador.</li>
           </ul>
         </aside>

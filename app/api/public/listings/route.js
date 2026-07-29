@@ -10,6 +10,12 @@ function defaultExpiresAt() {
   return date.toISOString();
 }
 
+function getBearerToken(request) {
+  const header = request.headers.get("authorization") || "";
+  const [type, token] = header.split(" ");
+  return type?.toLowerCase() === "bearer" ? token : "";
+}
+
 export async function POST(request) {
   const body = await request.json();
 
@@ -26,9 +32,48 @@ export async function POST(request) {
   }
 
   const supabase = getSupabaseAdmin();
+  const token = getBearerToken(request);
+  const { data: authData, error: authError } = await supabase.auth.getUser(token);
+
+  if (authError || !authData?.user) {
+    return NextResponse.json({ error: "Debes iniciar sesion para publicar." }, { status: 401 });
+  }
+
+  const user = authData.user;
+  const metadata = user.user_metadata || {};
+  const provider = user.app_metadata?.provider || "email";
+  const profilePayload = {
+    id: user.id,
+    full_name: body.advertiser_name || metadata.full_name || metadata.name || user.email,
+    phone: body.advertiser_phone || null,
+    age: Number(body.advertiser_age),
+    avatar_url: metadata.avatar_url || metadata.picture || null,
+    provider,
+    status: "active",
+    updated_at: new Date().toISOString()
+  };
+
+  const { data: existingProfile } = await supabase
+    .from("profiles")
+    .select("status, role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (existingProfile?.status === "blocked") {
+    return NextResponse.json({ error: "Esta cuenta no puede publicar anuncios." }, { status: 403 });
+  }
+
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .upsert({ ...profilePayload, role: existingProfile?.role || "user" }, { onConflict: "id" });
+
+  if (profileError) return NextResponse.json({ error: profileError.message }, { status: 500 });
+
   const payload = listingPayload(
     {
       ...body,
+      user_id: user.id,
+      advertiser_email: body.advertiser_email || user.email,
       status: "pending",
       featured: false,
       expires_at: body.expires_at || defaultExpiresAt()

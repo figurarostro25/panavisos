@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { locationSuggestions } from "@/lib/locations";
 import { money, provinces } from "@/lib/format";
+import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
 
 function defaultExpiresAt() {
   const date = new Date();
@@ -41,6 +42,8 @@ export default function PublicarPage() {
   const [form, setForm] = useState(emptyForm);
   const [step, setStep] = useState(1);
   const [locationOpen, setLocationOpen] = useState(false);
+  const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -56,17 +59,51 @@ export default function PublicarPage() {
   }, []);
 
   useEffect(() => {
-    const stored = localStorage.getItem("panavisos_profile");
-    if (!stored) return;
-    const profile = JSON.parse(stored);
+    const supabase = getSupabaseBrowser();
+
+    async function loadSession() {
+      const { data } = await supabase.auth.getSession();
+      setSession(data.session);
+      await hydrateProfile(data.session);
+    }
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      hydrateProfile(nextSession);
+    });
+
+    loadSession();
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  async function hydrateProfile(nextSession) {
+    if (!nextSession?.user) {
+      setProfile(null);
+      return;
+    }
+
+    const supabase = getSupabaseBrowser();
+    const { data } = await supabase.from("profiles").select("*").eq("id", nextSession.user.id).maybeSingle();
+    const metadata = nextSession.user.user_metadata || {};
+    const nextProfile = {
+      name: data?.full_name || metadata.full_name || metadata.name || nextSession.user.email,
+      email: nextSession.user.email,
+      phone: data?.phone || "",
+      age: data?.age || metadata.age || "",
+      avatar: data?.avatar_url || metadata.avatar_url || metadata.picture || ""
+    };
+
+    setProfile(nextProfile);
     setForm((current) => ({
       ...current,
-      advertiser_name: current.advertiser_name || profile.name || "",
-      advertiser_email: current.advertiser_email || profile.email || "",
-      email: current.email || profile.email || "",
-      advertiser_age: current.advertiser_age || profile.age || ""
+      advertiser_name: current.advertiser_name || nextProfile.name || "",
+      advertiser_phone: current.advertiser_phone || nextProfile.phone || "",
+      whatsapp: current.whatsapp || nextProfile.phone || "",
+      advertiser_email: current.advertiser_email || nextProfile.email || "",
+      email: current.email || nextProfile.email || "",
+      advertiser_age: current.advertiser_age || nextProfile.age || ""
     }));
-  }, []);
+  }
 
   const selectedCategory = categories.find((category) => category.id === form.category_id);
   const isRealEstate = selectedCategory?.slug === "bienes-raices";
@@ -128,6 +165,11 @@ export default function PublicarPage() {
       return;
     }
 
+    if (currentStep === 2 && !session?.access_token) {
+      setError("Inicia sesion con Google, Facebook o correo para publicar.");
+      return;
+    }
+
     setStep((value) => Math.min(3, value + 1));
   }
 
@@ -173,6 +215,12 @@ export default function PublicarPage() {
     setError("");
     setMessage("");
 
+    if (!session?.access_token) {
+      setSaving(false);
+      setError("Inicia sesion para publicar.");
+      return;
+    }
+
     const payload = {
       ...form,
       bedrooms: isRealEstate ? form.bedrooms : "",
@@ -183,7 +231,10 @@ export default function PublicarPage() {
 
     const response = await fetch("/api/public/listings", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session?.access_token || ""}`
+      },
       body: JSON.stringify(payload)
     });
 
@@ -370,13 +421,14 @@ export default function PublicarPage() {
 
               <div className="account-box">
                 <h2>Cuenta del anunciante</h2>
-                <p className="muted">Estos datos nos ayudan a revisar tu cuenta y tus publicaciones. Mas adelante quedaran conectados a Google, Facebook o correo.</p>
+                <p className="muted">
+                  {profile
+                    ? `Publicaras como ${profile.name}.`
+                    : "Debes entrar con Google, Facebook o correo antes de publicar."}
+                </p>
                 <div className="account-actions">
                   <Link className="secondary" href="/cuenta">
-                    Continuar con Google
-                  </Link>
-                  <Link className="secondary" href="/cuenta">
-                    Usar correo
+                    {profile ? "Ver cuenta" : "Entrar o registrarme"}
                   </Link>
                 </div>
               </div>

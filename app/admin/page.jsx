@@ -795,10 +795,10 @@ export default function AdminPage() {
                       {money(listing.price)} - {listing.category?.name || "Sin categoria"} - {listing.province}
                     </p>
                     <p className="muted">
-                      {listing.advertiser_name || "Admin"}
-                      {listing.advertiser_phone ? ` - ${listing.advertiser_phone}` : ""}
+                      {listing.profile?.full_name || listing.advertiser_name || "Admin"}
+                      {listing.profile?.phone || listing.advertiser_phone ? ` - ${listing.profile?.phone || listing.advertiser_phone}` : ""}
                       {listing.advertiser_email ? ` - ${listing.advertiser_email}` : ""}
-                      {listing.advertiser_age ? ` - ${listing.advertiser_age} anos` : ""}
+                      {listing.profile?.age || listing.advertiser_age ? ` - ${listing.profile?.age || listing.advertiser_age} anos` : ""}
                       {listing.expires_at ? ` - vence ${toDateInput(listing.expires_at)}` : ""}
                     </p>
                     <div className="quick-actions">
@@ -844,6 +844,7 @@ export default function AdminPage() {
                         {advertiser.age ? ` - ${advertiser.age} anos` : ""}
                       </p>
                       <div className="facts">
+                        <span className="fact">Cuenta {advertiser.status}</span>
                         <span className="fact">{advertiser.total} anuncios</span>
                         <span className="fact">{advertiser.active} activos</span>
                         <span className="fact">{advertiser.pending} pendientes</span>
@@ -1061,13 +1062,14 @@ function groupAdvertisers(listings) {
   const map = new Map();
 
   for (const listing of listings) {
-    const key = listing.advertiser_email || listing.advertiser_phone || listing.advertiser_name || listing.id;
+    const key = listing.user_id || listing.advertiser_email || listing.advertiser_phone || listing.advertiser_name || listing.id;
     const current = map.get(key) || {
       key,
-      name: listing.advertiser_name || "",
+      name: listing.profile?.full_name || listing.advertiser_name || "",
       email: listing.advertiser_email || "",
-      phone: listing.advertiser_phone || "",
-      age: listing.advertiser_age || "",
+      phone: listing.profile?.phone || listing.advertiser_phone || "",
+      age: listing.profile?.age || listing.advertiser_age || "",
+      status: listing.profile?.status || "active",
       total: 0,
       active: 0,
       pending: 0,

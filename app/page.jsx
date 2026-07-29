@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { money, provinces } from "@/lib/format";
+import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
 
 const categoryLooks = {
   "bienes-raices": { icon: "BR", label: "Casas, apartamentos, lotes" },
@@ -33,18 +34,48 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    const stored = localStorage.getItem("panavisos_profile");
-    if (stored) setProfile(JSON.parse(stored));
+    const supabase = getSupabaseBrowser();
+
+    async function loadSession() {
+      const { data } = await supabase.auth.getSession();
+      await hydrateProfile(data.session);
+    }
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      hydrateProfile(session);
+    });
+
+    loadSession();
+    return () => listener.subscription.unsubscribe();
   }, []);
 
-  function saveProfile(nextProfile) {
-    localStorage.setItem("panavisos_profile", JSON.stringify(nextProfile));
-    setProfile(nextProfile);
+  async function hydrateProfile(session) {
+    if (!session?.user) {
+      setProfile(null);
+      return;
+    }
+
+    const supabase = getSupabaseBrowser();
+    const { data: savedProfile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", session.user.id)
+      .maybeSingle();
+    const metadata = session.user.user_metadata || {};
+
+    setProfile({
+      id: session.user.id,
+      name: savedProfile?.full_name || metadata.full_name || metadata.name || session.user.email,
+      email: session.user.email,
+      age: savedProfile?.age || "",
+      avatar: savedProfile?.avatar_url || metadata.avatar_url || metadata.picture || "",
+      provider: session.user.app_metadata?.provider || "email"
+    });
     setAccountOpen(false);
   }
 
-  function logoutProfile() {
-    localStorage.removeItem("panavisos_profile");
+  async function logoutProfile() {
+    await getSupabaseBrowser().auth.signOut();
     setProfile(null);
   }
 
@@ -271,7 +302,7 @@ export default function HomePage() {
           onClose={() => setSelected(null)}
         />
       ) : null}
-      {accountOpen ? <AccountModal onClose={() => setAccountOpen(false)} onSave={saveProfile} /> : null}
+      {accountOpen ? <AccountModal onClose={() => setAccountOpen(false)} /> : null}
     </>
   );
 }
@@ -321,28 +352,46 @@ function AccountButton({ profile, onOpen, onLogout }) {
   );
 }
 
-function AccountModal({ onClose, onSave }) {
+function AccountModal({ onClose }) {
   const [mode, setMode] = useState("login");
-  const [form, setForm] = useState({ name: "", email: "", age: "", password: "" });
+  const [form, setForm] = useState({ name: "", email: "", age: "" });
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
-  function submit(event) {
+  async function submit(event) {
     event.preventDefault();
-    onSave({
-      name: form.name || form.email.split("@")[0],
+    setMessage("");
+    setError("");
+    const supabase = getSupabaseBrowser();
+    const { error: otpError } = await supabase.auth.signInWithOtp({
       email: form.email,
-      age: form.age,
-      avatar: ""
+      options: {
+        emailRedirectTo: window.location.origin,
+        data: {
+          full_name: form.name,
+          age: form.age
+        }
+      }
     });
+
+    if (otpError) {
+      setError(otpError.message);
+      return;
+    }
+
+    setMessage("Te enviamos un enlace de acceso al correo.");
   }
 
-  function social(provider) {
-    onSave({
-      name: provider === "Facebook" ? "Usuario Facebook" : "Usuario Google",
-      email: "",
-      age: "",
-      avatar: "",
-      provider
+  async function social(provider) {
+    setError("");
+    const { error: socialError } = await getSupabaseBrowser().auth.signInWithOAuth({
+      provider: provider.toLowerCase(),
+      options: {
+        redirectTo: window.location.origin
+      }
     });
+
+    if (socialError) setError(socialError.message);
   }
 
   return (
@@ -365,19 +414,12 @@ function AccountModal({ onClose, onSave }) {
                 placeholder="correo@email.com"
               />
             </label>
-            <label className="field">
-              <span>Contrasena</span>
-              <input
-                type="password"
-                value={form.password}
-                onChange={(event) => setForm({ ...form, password: event.target.value })}
-                placeholder="********"
-              />
-            </label>
             <button className="primary wide-button" type="submit">
-              Ingresar a cuenta
+              Enviar enlace de acceso
             </button>
           </form>
+          {message ? <p className="notice">{message}</p> : null}
+          {error ? <p className="error">{error}</p> : null}
         </div>
         <div className="account-column">
           <h2>Aun no tienes cuenta?</h2>

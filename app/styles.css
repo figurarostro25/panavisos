@@ -141,6 +141,14 @@ a {
   font-size: 1.1rem;
 }
 
+.profile-photo {
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+  object-fit: cover;
+  background: var(--soft);
+}
+
 .nav-link,
 .primary,
 .secondary,

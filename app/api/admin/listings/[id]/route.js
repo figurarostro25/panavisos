@@ -33,7 +33,7 @@ export async function PATCH(request, { params }) {
 
   const { data: listing } = await supabase
     .from("listings")
-    .select("*, category:categories(*), images:listing_images(*)")
+    .select("*, category:categories(*), images:listing_images(*), profile:profiles(*)")
     .eq("id", id)
     .single();
 

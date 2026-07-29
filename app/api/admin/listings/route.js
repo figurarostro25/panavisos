@@ -12,7 +12,7 @@ export async function GET() {
 
   const { data, error } = await getSupabaseAdmin()
     .from("listings")
-    .select("*, category:categories(*), images:listing_images(*)")
+    .select("*, category:categories(*), images:listing_images(*), profile:profiles(*)")
     .order("created_at", { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -41,7 +41,7 @@ export async function POST(request) {
 
   const { data: fullListing } = await supabase
     .from("listings")
-    .select("*, category:categories(*), images:listing_images(*)")
+    .select("*, category:categories(*), images:listing_images(*), profile:profiles(*)")
     .eq("id", listing.id)
     .single();
 
