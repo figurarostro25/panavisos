@@ -61,35 +61,42 @@ export default function AccountPage() {
     event.preventDefault();
     setMessage("");
     setError("");
-    const { error: otpError } = await getSupabaseBrowser().auth.signInWithOtp({
-      email: form.email,
-      options: {
-        emailRedirectTo: window.location.origin + "/cuenta",
-        data: {
-          full_name: form.name,
-          age: form.age
+    try {
+      const { error: otpError } = await getSupabaseBrowser().auth.signInWithOtp({
+        email: form.email,
+        options: {
+          emailRedirectTo: window.location.origin + "/cuenta",
+          data: {
+            full_name: form.name
+          }
         }
+      });
+
+      if (otpError) {
+        setError(otpError.message);
+        return;
       }
-    });
 
-    if (otpError) {
-      setError(otpError.message);
-      return;
+      setMessage("Te enviamos un enlace para entrar a tu correo.");
+    } catch {
+      setError("No se pudo conectar con Supabase. Revisa que Vercel tenga la URL y la publishable key completas, y que el ultimo deployment este listo.");
     }
-
-    setMessage("Te enviamos un enlace para entrar a tu correo.");
   }
 
   async function signInProvider(provider) {
     setError("");
-    const { error: providerError } = await getSupabaseBrowser().auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: window.location.origin + "/cuenta"
-      }
-    });
+    try {
+      const { error: providerError } = await getSupabaseBrowser().auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: window.location.origin + "/cuenta"
+        }
+      });
 
-    if (providerError) setError(providerError.message);
+      if (providerError) setError(providerError.message);
+    } catch {
+      setError("Este proveedor aun no esta conectado en Supabase.");
+    }
   }
 
   async function saveProfile(event) {
@@ -187,15 +194,15 @@ export default function AccountPage() {
             <>
               <h1>Entra o crea tu cuenta</h1>
               <p className="muted">
-                Usa Google, Facebook o correo para responder anuncios y publicar con tu perfil real.
+                Usa tu correo para entrar rapido. Google y Facebook quedan para la siguiente conexion.
               </p>
 
               <div className="login-options">
-                <button className="facebook-button" type="button" onClick={() => signInProvider("facebook")}>
-                  Continuar con Facebook
+                <button className="facebook-button" type="button" disabled onClick={() => signInProvider("facebook")}>
+                  Facebook proximamente
                 </button>
-                <button className="google-button-solid" type="button" onClick={() => signInProvider("google")}>
-                  Conectar con Google
+                <button className="google-button-solid" type="button" disabled onClick={() => signInProvider("google")}>
+                  Google proximamente
                 </button>
                 <form className="email-login" onSubmit={sendEmailLink}>
                   <label className="field">
@@ -205,10 +212,6 @@ export default function AccountPage() {
                   <label className="field">
                     <span>Correo electronico</span>
                     <input required type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} />
-                  </label>
-                  <label className="field">
-                    <span>Edad</span>
-                    <input type="number" min="18" value={form.age} onChange={(event) => setForm({ ...form, age: event.target.value })} />
                   </label>
                   <button className="primary" type="submit">
                     Enviar enlace de acceso

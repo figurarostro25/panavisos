@@ -354,7 +354,7 @@ function AccountButton({ profile, onOpen, onLogout }) {
 
 function AccountModal({ onClose }) {
   const [mode, setMode] = useState("login");
-  const [form, setForm] = useState({ name: "", email: "", age: "" });
+  const [form, setForm] = useState({ name: "", email: "" });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -362,36 +362,43 @@ function AccountModal({ onClose }) {
     event.preventDefault();
     setMessage("");
     setError("");
-    const supabase = getSupabaseBrowser();
-    const { error: otpError } = await supabase.auth.signInWithOtp({
-      email: form.email,
-      options: {
-        emailRedirectTo: window.location.origin,
-        data: {
-          full_name: form.name,
-          age: form.age
+    try {
+      const supabase = getSupabaseBrowser();
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: form.email,
+        options: {
+          emailRedirectTo: window.location.origin,
+          data: {
+            full_name: form.name
+          }
         }
+      });
+
+      if (otpError) {
+        setError(otpError.message);
+        return;
       }
-    });
 
-    if (otpError) {
-      setError(otpError.message);
-      return;
+      setMessage("Te enviamos un enlace de acceso al correo.");
+    } catch {
+      setError("No se pudo conectar con Supabase. Revisa las variables publicas en Vercel y el ultimo deployment.");
     }
-
-    setMessage("Te enviamos un enlace de acceso al correo.");
   }
 
   async function social(provider) {
     setError("");
-    const { error: socialError } = await getSupabaseBrowser().auth.signInWithOAuth({
-      provider: provider.toLowerCase(),
-      options: {
-        redirectTo: window.location.origin
-      }
-    });
+    try {
+      const { error: socialError } = await getSupabaseBrowser().auth.signInWithOAuth({
+        provider: provider.toLowerCase(),
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
 
-    if (socialError) setError(socialError.message);
+      if (socialError) setError(socialError.message);
+    } catch {
+      setError("Google y Facebook se conectan despues desde Supabase.");
+    }
   }
 
   return (
@@ -436,21 +443,17 @@ function AccountModal({ onClose }) {
                 <span>Correo</span>
                 <input required type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} />
               </label>
-              <label className="field">
-                <span>Edad</span>
-                <input required type="number" min="18" value={form.age} onChange={(event) => setForm({ ...form, age: event.target.value })} />
-              </label>
               <button className="primary wide-button" type="submit">
                 Crear cuenta
               </button>
             </form>
           ) : null}
-          <p className="muted center-text">Login con Facebook o Google</p>
-          <button className="facebook-button" type="button" onClick={() => social("Facebook")}>
-            Continuar con Facebook
+          <p className="muted center-text">Google y Facebook se conectan despues</p>
+          <button className="facebook-button" type="button" disabled onClick={() => social("Facebook")}>
+            Facebook proximamente
           </button>
-          <button className="google-button-solid" type="button" onClick={() => social("Google")}>
-            Conectar con Google
+          <button className="google-button-solid" type="button" disabled onClick={() => social("Google")}>
+            Google proximamente
           </button>
         </div>
       </section>

@@ -33,6 +33,7 @@ const emptyForm = {
   advertiser_phone: "",
   advertiser_email: "",
   advertiser_age: "",
+  adult_confirmed: false,
   expires_at: defaultExpiresAt(),
   images: []
 };
@@ -160,8 +161,13 @@ export default function PublicarPage() {
       return;
     }
 
-    if (currentStep === 2 && (!form.district || !form.advertiser_name || !form.advertiser_phone || !form.advertiser_email || !form.advertiser_age)) {
-      setError("Completa ubicacion, nombre, correo, edad y WhatsApp para continuar.");
+    if (currentStep === 2 && (!form.district || !form.advertiser_name || !form.advertiser_phone || !form.advertiser_email)) {
+      setError("Completa ubicacion, nombre, correo y WhatsApp para continuar.");
+      return;
+    }
+
+    if (currentStep === 2 && !form.adult_confirmed) {
+      setError("Confirma que eres mayor de edad para publicar.");
       return;
     }
 
@@ -449,11 +455,16 @@ export default function PublicarPage() {
                   <span>Correo</span>
                   <input required type="email" value={form.advertiser_email} onChange={(event) => setForm({ ...form, advertiser_email: event.target.value, email: event.target.value })} />
                 </label>
-                <label className="field">
-                  <span>Edad</span>
-                  <input required type="number" min="18" value={form.advertiser_age} onChange={(event) => setForm({ ...form, advertiser_age: event.target.value })} />
-                </label>
               </div>
+
+              <label className="check-row">
+                <input
+                  type="checkbox"
+                  checked={form.adult_confirmed}
+                  onChange={(event) => setForm({ ...form, adult_confirmed: event.target.checked })}
+                />
+                <span>Confirmo que soy mayor de 18 anos y acepto publicar con mis datos reales.</span>
+              </label>
             </div>
           ) : null}
 

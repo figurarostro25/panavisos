@@ -23,8 +23,12 @@ export async function POST(request) {
     return NextResponse.json({ error: "Faltan datos obligatorios." }, { status: 400 });
   }
 
-  if (!body.advertiser_name || !body.advertiser_phone || !body.advertiser_email || !body.advertiser_age) {
-    return NextResponse.json({ error: "Agrega nombre, correo, edad y telefono del anunciante." }, { status: 400 });
+  if (!body.advertiser_name || !body.advertiser_phone || !body.advertiser_email) {
+    return NextResponse.json({ error: "Agrega nombre, correo y telefono del anunciante." }, { status: 400 });
+  }
+
+  if (!body.adult_confirmed) {
+    return NextResponse.json({ error: "Debes confirmar que eres mayor de edad para publicar." }, { status: 400 });
   }
 
   if (body.operation === "Oferta" && !body.expires_at) {
@@ -46,7 +50,7 @@ export async function POST(request) {
     id: user.id,
     full_name: body.advertiser_name || metadata.full_name || metadata.name || user.email,
     phone: body.advertiser_phone || null,
-    age: Number(body.advertiser_age),
+    age: body.advertiser_age ? Number(body.advertiser_age) : null,
     avatar_url: metadata.avatar_url || metadata.picture || null,
     provider,
     status: "active",

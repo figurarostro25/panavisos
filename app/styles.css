@@ -566,6 +566,28 @@ textarea {
   font-weight: 800;
 }
 
+.check-row {
+  align-items: flex-start;
+  display: flex;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.35;
+  margin: 10px 0 4px;
+}
+
+.check-row input {
+  flex: 0 0 auto;
+  height: 18px;
+  margin-top: 1px;
+  width: 18px;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .marketplace-topbar {
   min-height: 68px;
 }
