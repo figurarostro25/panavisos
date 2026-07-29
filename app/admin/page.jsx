@@ -56,6 +56,7 @@ export default function AdminPage() {
   const [categoryForm, setCategoryForm] = useState({ id: "", name: "", description: "", sort_order: 0 });
   const [listingForm, setListingForm] = useState(emptyListing);
   const [bannerForm, setBannerForm] = useState(emptyBanner);
+  const [listingFilter, setListingFilter] = useState("all");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -199,6 +200,29 @@ export default function AdminPage() {
     await loadAdmin();
   }
 
+  async function quickUpdateListing(listing, changes) {
+    setSaving(true);
+    setError("");
+    const response = await fetch(`/api/admin/listings/${listing.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...listing,
+        ...changes,
+        images: listing.images || []
+      })
+    });
+    setSaving(false);
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      setError(payload.error || "No se pudo actualizar el anuncio.");
+      return;
+    }
+
+    await loadAdmin();
+  }
+
   function editListing(listing) {
     setListingForm({
       id: listing.id,
@@ -321,6 +345,19 @@ export default function AdminPage() {
 
   const selectedCategory = categories.find((category) => category.id === listingForm.category_id);
   const isRealEstate = selectedCategory?.slug === "bienes-raices";
+  const listingStats = {
+    total: listings.length,
+    active: listings.filter((listing) => listing.status === "active").length,
+    pending: listings.filter((listing) => listing.status === "pending").length,
+    paused: listings.filter((listing) => listing.status === "paused").length,
+    featured: listings.filter((listing) => listing.featured).length
+  };
+  const filteredListings =
+    listingFilter === "all"
+      ? listings
+      : listingFilter === "featured"
+        ? listings.filter((listing) => listing.featured)
+        : listings.filter((listing) => listing.status === listingFilter);
 
   function applyDiscount(discountPercent) {
     const originalPrice = Number(listingForm.original_price || 0);
@@ -357,7 +394,7 @@ export default function AdminPage() {
         <div className="admin-title">
           <div>
             <h1>Panel admin</h1>
-            <p className="muted">Categorias, anuncios, imagenes y ubicaciones.</p>
+            <p className="muted">Dashboard para aprobar, pausar, destacar y revisar publicaciones.</p>
           </div>
         </div>
 
@@ -383,7 +420,31 @@ export default function AdminPage() {
         ) : null}
 
         {ready && loggedIn ? (
-          <div className="admin-grid">
+          <>
+            <section className="admin-metrics">
+              <button className={`stat ${listingFilter === "all" ? "selected" : ""}`} type="button" onClick={() => setListingFilter("all")}>
+                <span>Total anuncios</span>
+                <strong>{listingStats.total}</strong>
+              </button>
+              <button className={`stat ${listingFilter === "pending" ? "selected" : ""}`} type="button" onClick={() => setListingFilter("pending")}>
+                <span>Pendientes</span>
+                <strong>{listingStats.pending}</strong>
+              </button>
+              <button className={`stat ${listingFilter === "active" ? "selected" : ""}`} type="button" onClick={() => setListingFilter("active")}>
+                <span>Activos</span>
+                <strong>{listingStats.active}</strong>
+              </button>
+              <button className={`stat ${listingFilter === "featured" ? "selected" : ""}`} type="button" onClick={() => setListingFilter("featured")}>
+                <span>Destacados</span>
+                <strong>{listingStats.featured}</strong>
+              </button>
+              <button className={`stat ${listingFilter === "paused" ? "selected" : ""}`} type="button" onClick={() => setListingFilter("paused")}>
+                <span>Pausados</span>
+                <strong>{listingStats.paused}</strong>
+              </button>
+            </section>
+
+            <div className="admin-grid">
             <section className="panel">
               <div className="form-head">
                 <h2>{listingForm.id ? "Editar anuncio" : "Nuevo anuncio"}</h2>
@@ -703,19 +764,38 @@ export default function AdminPage() {
             </section>
 
             <aside className="panel">
-              <h2>Anuncios</h2>
+              <div className="form-head">
+                <h2>Anuncios</h2>
+                <span className="pill">{filteredListings.length}</span>
+              </div>
               <div className="list">
-                {listings.map((listing) => (
+                {filteredListings.map((listing) => (
                   <article className="list-item" key={listing.id}>
-                    <h3>{listing.title}</h3>
+                    <div className="list-title-row">
+                      <h3>{listing.title}</h3>
+                      <span className={`status-badge ${listing.status}`}>{statusLabel(listing.status)}</span>
+                    </div>
                     <p className="muted">
-                      {money(listing.price)} - {listing.status} - {listing.province}
+                      {money(listing.price)} - {listing.category?.name || "Sin categoria"} - {listing.province}
                     </p>
                     <p className="muted">
                       {listing.advertiser_name || "Admin"}
+                      {listing.advertiser_phone ? ` - ${listing.advertiser_phone}` : ""}
                       {listing.expires_at ? ` - vence ${toDateInput(listing.expires_at)}` : ""}
                     </p>
-                    <div className="admin-actions">
+                    <div className="quick-actions">
+                      <button className="secondary" type="button" disabled={saving} onClick={() => quickUpdateListing(listing, { status: "active" })}>
+                        Activar
+                      </button>
+                      <button className="secondary" type="button" disabled={saving} onClick={() => quickUpdateListing(listing, { status: "paused" })}>
+                        Pausar
+                      </button>
+                      <button className="secondary" type="button" disabled={saving} onClick={() => quickUpdateListing(listing, { status: "pending" })}>
+                        Pendiente
+                      </button>
+                      <button className="secondary" type="button" disabled={saving} onClick={() => quickUpdateListing(listing, { featured: !listing.featured })}>
+                        {listing.featured ? "Quitar destacado" : "Destacar"}
+                      </button>
                       <button className="secondary" type="button" onClick={() => editListing(listing)}>
                         Editar
                       </button>
@@ -725,6 +805,7 @@ export default function AdminPage() {
                     </div>
                   </article>
                 ))}
+                {!filteredListings.length ? <p className="muted">No hay anuncios en este filtro.</p> : null}
               </div>
             </aside>
 
@@ -909,7 +990,8 @@ export default function AdminPage() {
                 ))}
               </div>
             </aside>
-          </div>
+            </div>
+          </>
         ) : null}
       </main>
     </>
@@ -919,4 +1001,11 @@ export default function AdminPage() {
 function toDateInput(value) {
   if (!value) return "";
   return String(value).slice(0, 10);
+}
+
+function statusLabel(status) {
+  if (status === "active") return "Activo";
+  if (status === "pending") return "Pendiente";
+  if (status === "paused") return "Pausado";
+  return status || "Sin estado";
 }

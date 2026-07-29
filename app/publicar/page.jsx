@@ -192,7 +192,8 @@ export default function PublicarPage() {
         </Link>
         <nav className="top-actions">
           <Link href="/">Catalogo</Link>
-          <Link href="/admin">Admin</Link>
+          <Link href="/cuenta">Entrar</Link>
+          <Link href="/admin">Dashboard</Link>
         </nav>
       </header>
 
@@ -338,7 +339,15 @@ export default function PublicarPage() {
 
               <div className="account-box">
                 <h2>Cuenta del anunciante</h2>
-                <p className="muted">En la proxima fase esto sera login con Google o correo. Por ahora guardamos tus datos para aprobar el anuncio sin perder lo que llenaste.</p>
+                <p className="muted">Si ya tienes cuenta podras entrar con Google o correo. Por ahora guardamos tus datos para aprobar el anuncio sin perder lo que llenaste.</p>
+                <div className="account-actions">
+                  <Link className="secondary" href="/cuenta">
+                    Continuar con Google
+                  </Link>
+                  <Link className="secondary" href="/cuenta">
+                    Usar correo
+                  </Link>
+                </div>
               </div>
 
               <div className="field-row">

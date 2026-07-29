@@ -338,6 +338,37 @@ textarea {
   align-items: flex-start;
 }
 
+.admin-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.admin-metrics .stat {
+  display: grid;
+  gap: 8px;
+  min-height: 92px;
+  padding: 14px;
+  color: var(--ink);
+  text-align: left;
+}
+
+.admin-metrics .stat.selected {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 2px rgba(8, 127, 140, 0.12);
+}
+
+.admin-metrics .stat span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.admin-metrics .stat strong {
+  font-size: 1.8rem;
+}
+
 .panel {
   padding: 18px;
 }
@@ -379,8 +410,53 @@ textarea {
   font-size: 1rem;
 }
 
+.list-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .list-item p {
   margin: 6px 0 10px;
+}
+
+.quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.quick-actions .secondary,
+.quick-actions .danger {
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 0.84rem;
+}
+
+.status-badge {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0 8px;
+  font-size: 0.74rem;
+  font-weight: 950;
+}
+
+.status-badge.active {
+  color: #08613a;
+  background: #dff8ea;
+}
+
+.status-badge.pending {
+  color: #755000;
+  background: #fff1c2;
+}
+
+.status-badge.paused {
+  color: #5b6570;
+  background: #e9eef2;
 }
 
 .map-frame {
@@ -734,6 +810,67 @@ textarea {
 
 .compact-facts {
   margin-top: 5px;
+}
+
+.account-page {
+  display: grid;
+  grid-template-columns: minmax(0, 560px) minmax(280px, 420px);
+  gap: 20px;
+  align-items: flex-start;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 42px clamp(16px, 4vw, 44px);
+}
+
+.account-card,
+.account-side {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.account-card {
+  display: grid;
+  gap: 16px;
+  padding: clamp(22px, 4vw, 38px);
+}
+
+.account-card h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3.1rem);
+  line-height: 1;
+}
+
+.login-options,
+.email-login,
+.account-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.account-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 12px;
+}
+
+.google-button {
+  min-height: 48px;
+}
+
+.account-side {
+  padding: 22px;
+}
+
+.account-side h2 {
+  margin: 0 0 14px;
+}
+
+.account-side ul {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
 }
 
 .site-footer {
@@ -1216,6 +1353,8 @@ textarea {
 @media (max-width: 900px) {
   .shell,
   .admin-grid,
+  .admin-metrics,
+  .account-page,
   .market-layout,
   .listing-dialog,
   .publish-workspace,
@@ -1279,6 +1418,7 @@ textarea {
   }
 
   .category-actions,
+  .account-actions,
   .site-footer {
     align-items: stretch;
     flex-direction: column;
@@ -1286,6 +1426,10 @@ textarea {
 
   .quick-search {
     width: 100%;
+  }
+
+  .account-actions {
+    grid-template-columns: 1fr;
   }
 
   .promo-banner.large {

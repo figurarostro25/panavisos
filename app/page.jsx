@@ -229,7 +229,8 @@ function Topbar() {
       </Link>
       <nav className="top-actions">
         <a href="#anuncios">Anuncios</a>
-        <Link href="/admin">Admin</Link>
+        <Link href="/cuenta">Entrar</Link>
+        <Link href="/admin">Dashboard</Link>
         <Link className="primary" href="/publicar">
           Publicar
         </Link>
