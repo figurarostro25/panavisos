@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { money, provinces, provinceCenters } from "@/lib/format";
+import { money, provinces } from "@/lib/format";
 
 const emptyListing = {
   title: "",
@@ -18,8 +18,9 @@ const emptyListing = {
   description: "",
   whatsapp: "",
   email: "",
-  lat: "8.982400",
-  lng: "-79.519900",
+  website_url: "",
+  lat: "",
+  lng: "",
   status: "active",
   featured: false,
   images: []
@@ -159,10 +160,18 @@ export default function AdminPage() {
     setError("");
     const method = listingForm.id ? "PATCH" : "POST";
     const url = listingForm.id ? `/api/admin/listings/${listingForm.id}` : "/api/admin/listings";
+    const category = categories.find((item) => item.id === listingForm.category_id);
+    const isListingRealEstate = category?.slug === "bienes-raices";
+    const payload = {
+      ...listingForm,
+      bedrooms: isListingRealEstate ? listingForm.bedrooms : "",
+      bathrooms: isListingRealEstate ? listingForm.bathrooms : "",
+      area_m2: isListingRealEstate ? listingForm.area_m2 : ""
+    };
     const response = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(listingForm)
+      body: JSON.stringify(payload)
     });
     setSaving(false);
 
@@ -198,6 +207,7 @@ export default function AdminPage() {
       description: listing.description || "",
       whatsapp: listing.whatsapp || "",
       email: listing.email || "",
+      website_url: listing.website_url || "",
       lat: listing.lat || "",
       lng: listing.lng || "",
       status: listing.status || "active",
@@ -282,13 +292,10 @@ export default function AdminPage() {
     }
   }
 
-  function useProvinceCenter(province) {
-    const center = provinceCenters[province] || provinceCenters.Panama;
+  function updateProvince(province) {
     setListingForm((current) => ({
       ...current,
-      province,
-      lat: center[0].toFixed(6),
-      lng: center[1].toFixed(6)
+      province
     }));
   }
 
@@ -297,6 +304,9 @@ export default function AdminPage() {
       setListingForm((current) => ({ ...current, category_id: categories[0].id }));
     }
   }, [categories, listingForm.category_id]);
+
+  const selectedCategory = categories.find((category) => category.id === listingForm.category_id);
+  const isRealEstate = selectedCategory?.slug === "bienes-raices";
 
   return (
     <>
@@ -374,9 +384,16 @@ export default function AdminPage() {
                     <select
                       required
                       value={listingForm.category_id}
-                      onChange={(event) =>
-                        setListingForm({ ...listingForm, category_id: event.target.value })
-                      }
+                      onChange={(event) => {
+                        const nextCategory = categories.find((category) => category.id === event.target.value);
+                        setListingForm({
+                          ...listingForm,
+                          category_id: event.target.value,
+                          bedrooms: nextCategory?.slug === "bienes-raices" ? listingForm.bedrooms : "",
+                          bathrooms: nextCategory?.slug === "bienes-raices" ? listingForm.bathrooms : "",
+                          area_m2: nextCategory?.slug === "bienes-raices" ? listingForm.area_m2 : ""
+                        });
+                      }}
                     >
                       {categories.map((category) => (
                         <option key={category.id} value={category.id}>
@@ -400,6 +417,7 @@ export default function AdminPage() {
                       <option>Alquiler</option>
                       <option>Servicio</option>
                       <option>Oferta</option>
+                      <option>Promocion</option>
                     </select>
                   </label>
                   <label className="field">
@@ -418,7 +436,7 @@ export default function AdminPage() {
                     <span>Provincia</span>
                     <select
                       value={listingForm.province}
-                      onChange={(event) => useProvinceCenter(event.target.value)}
+                      onChange={(event) => updateProvince(event.target.value)}
                     >
                       {provinces.map((province) => (
                         <option key={province} value={province}>
@@ -439,38 +457,40 @@ export default function AdminPage() {
                   </label>
                 </div>
 
-                <div className="field-row">
-                  <label className="field">
-                    <span>Recamaras</span>
-                    <input
-                      type="number"
-                      value={listingForm.bedrooms}
-                      onChange={(event) =>
-                        setListingForm({ ...listingForm, bedrooms: event.target.value })
-                      }
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Banos</span>
-                    <input
-                      type="number"
-                      value={listingForm.bathrooms}
-                      onChange={(event) =>
-                        setListingForm({ ...listingForm, bathrooms: event.target.value })
-                      }
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Area m2</span>
-                    <input
-                      type="number"
-                      value={listingForm.area_m2}
-                      onChange={(event) =>
-                        setListingForm({ ...listingForm, area_m2: event.target.value })
-                      }
-                    />
-                  </label>
-                </div>
+                {isRealEstate ? (
+                  <div className="field-row">
+                    <label className="field">
+                      <span>Recamaras</span>
+                      <input
+                        type="number"
+                        value={listingForm.bedrooms}
+                        onChange={(event) =>
+                          setListingForm({ ...listingForm, bedrooms: event.target.value })
+                        }
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Banos</span>
+                      <input
+                        type="number"
+                        value={listingForm.bathrooms}
+                        onChange={(event) =>
+                          setListingForm({ ...listingForm, bathrooms: event.target.value })
+                        }
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Area m2</span>
+                      <input
+                        type="number"
+                        value={listingForm.area_m2}
+                        onChange={(event) =>
+                          setListingForm({ ...listingForm, area_m2: event.target.value })
+                        }
+                      />
+                    </label>
+                  </div>
+                ) : null}
 
                 <label className="field">
                   <span>Descripcion</span>
@@ -504,16 +524,37 @@ export default function AdminPage() {
                   </label>
                 </div>
 
+                <label className="field">
+                  <span>Sitio web del cliente</span>
+                  <input
+                    type="url"
+                    value={listingForm.website_url}
+                    onChange={(event) => setListingForm({ ...listingForm, website_url: event.target.value })}
+                    placeholder="https://cliente.com"
+                  />
+                </label>
+
+                <label className="field">
+                  <span>Referencia de ubicacion</span>
+                  <input
+                    value={listingForm.address_reference}
+                    onChange={(event) =>
+                      setListingForm({ ...listingForm, address_reference: event.target.value })
+                    }
+                    placeholder="Ej: Parque Lefevre, cerca de Via Espana"
+                  />
+                </label>
+
                 <div className="field-row">
                   <label className="field">
-                    <span>Latitud</span>
+                    <span>Latitud opcional</span>
                     <input
                       value={listingForm.lat}
                       onChange={(event) => setListingForm({ ...listingForm, lat: event.target.value })}
                     />
                   </label>
                   <label className="field">
-                    <span>Longitud</span>
+                    <span>Longitud opcional</span>
                     <input
                       value={listingForm.lng}
                       onChange={(event) => setListingForm({ ...listingForm, lng: event.target.value })}

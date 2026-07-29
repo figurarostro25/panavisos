@@ -25,6 +25,7 @@ create table if not exists public.listings (
   description text not null,
   whatsapp text,
   email text,
+  website_url text,
   lat numeric(10, 6),
   lng numeric(10, 6),
   status text not null default 'active',

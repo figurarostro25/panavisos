@@ -311,81 +311,170 @@ function PromoBanner({ banner, large = false }) {
 }
 
 function ListingCard({ listing, onSelect }) {
-  const image = listing.images?.sort((a, b) => a.position - b.position)?.[0]?.url;
+  const images = [...(listing.images || [])].sort((a, b) => a.position - b.position);
+  const image = images[0]?.url;
+  const showRealEstateFacts = listing.category?.slug === "bienes-raices";
 
   return (
     <article className="card marketplace-card">
-      {image ? <img className="card-image" src={image} alt={listing.title} /> : <div className="card-image empty-image">PA</div>}
+      <button className="card-image-button" type="button" onClick={() => onSelect(listing)}>
+        {image ? (
+          <img className="card-image" src={image} alt={listing.title} />
+        ) : (
+          <div className="card-image empty-image">PA</div>
+        )}
+      </button>
       <div className="card-body">
-        <div className="facts">
-          <span className="pill">{listing.category?.name || "Sin categoria"}</span>
-          {listing.featured ? <span className="pill featured">Destacado</span> : null}
-          <span className="pill">{listing.operation}</span>
-        </div>
-        <h2>{listing.title}</h2>
-        <p>{listing.description}</p>
-        <div className="facts">
-          {Number(listing.bedrooms) > 0 ? <span className="fact">{listing.bedrooms} rec.</span> : null}
-          {Number(listing.bathrooms) > 0 ? <span className="fact">{listing.bathrooms} banos</span> : null}
-          {Number(listing.area_m2) > 0 ? <span className="fact">{listing.area_m2} m2</span> : null}
-        </div>
-        <div className="card-bottom">
-          <strong className="price">{money(listing.price)}</strong>
-          <span className="muted">
-            {listing.district}, {listing.province}
-          </span>
-        </div>
-        <button className="primary" type="button" onClick={() => onSelect(listing)}>
-          Ver detalle
+        {listing.featured ? <span className="fresh-badge">Recien publicado</span> : null}
+        <strong className="price">{money(listing.price)}</strong>
+        <button className="listing-title-button" type="button" onClick={() => onSelect(listing)}>
+          {listing.title}
         </button>
+        <span className="card-location">
+          {listing.district}, {listing.province}
+        </span>
+        {showRealEstateFacts ? (
+          <div className="facts compact-facts">
+            {Number(listing.bedrooms) > 0 ? <span className="fact">{listing.bedrooms} rec.</span> : null}
+            {Number(listing.bathrooms) > 0 ? <span className="fact">{listing.bathrooms} banos</span> : null}
+            {Number(listing.area_m2) > 0 ? <span className="fact">{listing.area_m2} m2</span> : null}
+          </div>
+        ) : null}
       </div>
     </article>
   );
 }
 
 function ListingDetail({ listing, onClose }) {
-  const image = listing.images?.sort((a, b) => a.position - b.position)?.[0]?.url;
+  const [activeImage, setActiveImage] = useState(0);
+  const images = [...(listing.images || [])].sort((a, b) => a.position - b.position);
+  const image = images[activeImage]?.url;
   const hasMap = listing.lat && listing.lng;
   const whatsapp = String(listing.whatsapp || "").replace(/\D/g, "");
+  const whatsappMessage = encodeURIComponent(`Hola, vi este anuncio en PanAvisos: ${listing.title}. Sigue disponible?`);
+  const showRealEstateFacts = listing.category?.slug === "bienes-raices";
+
+  function moveImage(direction) {
+    if (!images.length) return;
+    setActiveImage((current) => (current + direction + images.length) % images.length);
+  }
 
   return (
-    <div className="modal-wrap" style={modalWrapStyle}>
-      <button type="button" style={modalBackdropStyle} onClick={onClose} aria-label="Cerrar" />
-      <article className="panel" style={modalPanelStyle}>
-        <div className="form-head">
-          <h2>{listing.title}</h2>
-          <button className="secondary" type="button" onClick={onClose}>
-            Cerrar
+    <div className="listing-modal">
+      <button type="button" className="modal-backdrop" onClick={onClose} aria-label="Cerrar" />
+      <article className="listing-dialog">
+        <section className="listing-gallery">
+          <button className="modal-close" type="button" onClick={onClose} aria-label="Cerrar">
+            X
           </button>
-        </div>
-        {image ? <img className="card-image" src={image} alt={listing.title} /> : null}
-        <p className="detail-description">{listing.description}</p>
-        <div className="facts">
-          <span className="pill">{listing.category?.name || "Sin categoria"}</span>
-          <span className="pill">{listing.operation}</span>
-          <span className="fact">{listing.district}, {listing.province}</span>
-        </div>
-        <h3 className="price">{money(listing.price)}</h3>
-        <div className="admin-actions">
-          {whatsapp ? (
-            <a className="primary" href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer">
-              WhatsApp
-            </a>
+          <div className="gallery-stage">
+            {image ? <img src={image} alt={listing.title} /> : <div className="empty-image gallery-empty">PA</div>}
+            {images.length > 1 ? (
+              <>
+                <button className="gallery-arrow prev" type="button" onClick={() => moveImage(-1)} aria-label="Imagen anterior">
+                  {"<"}
+                </button>
+                <button className="gallery-arrow next" type="button" onClick={() => moveImage(1)} aria-label="Imagen siguiente">
+                  {">"}
+                </button>
+              </>
+            ) : null}
+          </div>
+          {images.length > 1 ? (
+            <div className="gallery-thumbs">
+              {images.map((item, index) => (
+                <button
+                  className={index === activeImage ? "active" : ""}
+                  type="button"
+                  key={item.id || item.url}
+                  onClick={() => setActiveImage(index)}
+                  aria-label={`Ver imagen ${index + 1}`}
+                >
+                  <img src={item.url} alt="" />
+                </button>
+              ))}
+            </div>
           ) : null}
-          {listing.email ? (
-            <a className="secondary" href={`mailto:${listing.email}`}>
-              Email
-            </a>
-          ) : null}
-        </div>
-        {hasMap ? (
-          <iframe
-            className="map-frame"
-            title="Ubicacion"
-            loading="lazy"
-            src={`https://www.openstreetmap.org/export/embed.html?bbox=${Number(listing.lng) - 0.02}%2C${Number(listing.lat) - 0.02}%2C${Number(listing.lng) + 0.02}%2C${Number(listing.lat) + 0.02}&layer=mapnik&marker=${listing.lat}%2C${listing.lng}`}
-          />
-        ) : null}
+        </section>
+
+        <aside className="listing-info">
+          <div className="listing-info-scroll">
+            <h2>{listing.title}</h2>
+            <strong className="detail-price">{money(listing.price)}</strong>
+            <p className="muted">Publicado en {listing.district}, {listing.province}</p>
+
+            <div className="detail-actions">
+              {whatsapp ? (
+                <a
+                  className="primary"
+                  href={`https://wa.me/${whatsapp}?text=${whatsappMessage}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Enviar mensaje
+                </a>
+              ) : null}
+              {listing.website_url ? (
+                <a className="secondary" href={listing.website_url} target="_blank" rel="noreferrer">
+                  Sitio web
+                </a>
+              ) : null}
+              {listing.email ? (
+                <a className="secondary" href={`mailto:${listing.email}`}>
+                  Email
+                </a>
+              ) : null}
+            </div>
+
+            <h3>Detalles</h3>
+            <dl className="detail-list">
+              <div>
+                <dt>Categoria</dt>
+                <dd>{listing.category?.name || "Sin categoria"}</dd>
+              </div>
+              <div>
+                <dt>Tipo</dt>
+                <dd>{listing.operation}</dd>
+              </div>
+              {showRealEstateFacts && Number(listing.bedrooms) > 0 ? (
+                <div>
+                  <dt>Recamaras</dt>
+                  <dd>{listing.bedrooms}</dd>
+                </div>
+              ) : null}
+              {showRealEstateFacts && Number(listing.bathrooms) > 0 ? (
+                <div>
+                  <dt>Banos</dt>
+                  <dd>{listing.bathrooms}</dd>
+                </div>
+              ) : null}
+              {showRealEstateFacts && Number(listing.area_m2) > 0 ? (
+                <div>
+                  <dt>Area</dt>
+                  <dd>{listing.area_m2} m2</dd>
+                </div>
+              ) : null}
+            </dl>
+
+            <h3>Descripcion</h3>
+            <p className="detail-description">{listing.description}</p>
+
+            <h3>Ubicacion</h3>
+            <p className="muted">
+              {listing.address_reference || `${listing.district}, ${listing.province}`}
+            </p>
+            {hasMap ? (
+              <a
+                className="secondary location-link"
+                href={`https://www.google.com/maps?q=${listing.lat},${listing.lng}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Ver ubicacion aproximada
+              </a>
+            ) : null}
+          </div>
+        </aside>
       </article>
     </div>
   );
@@ -397,26 +486,3 @@ function normalize(value) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
 }
-
-const modalWrapStyle = {
-  position: "fixed",
-  inset: 0,
-  zIndex: 50,
-  display: "grid",
-  placeItems: "center",
-  padding: 18
-};
-
-const modalBackdropStyle = {
-  position: "absolute",
-  inset: 0,
-  border: 0,
-  background: "rgba(9,17,22,.62)"
-};
-
-const modalPanelStyle = {
-  position: "relative",
-  width: "min(100%, 860px)",
-  maxHeight: "92vh",
-  overflow: "auto"
-};
