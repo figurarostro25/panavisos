@@ -51,7 +51,7 @@ export default function HomePage() {
 
   const featured = listings.filter((listing) => listing.featured).slice(0, 6);
   const primaryBanner = data.banners?.[0];
-  const secondaryBanners = (data.banners || []).slice(1, 3);
+  const secondaryBanners = (data.banners || []).slice(1, 9);
 
   return (
     <>
@@ -60,9 +60,15 @@ export default function HomePage() {
         <section className="home-band hero-banner-band">
           <PromoBanner banner={primaryBanner} large />
           {secondaryBanners.length ? (
-            <div className="mini-banner-row">
-              {secondaryBanners.map((banner) => <PromoBanner key={banner.id} banner={banner} />)}
-            </div>
+            <section className="featured-promos" aria-label="Destacados">
+              <div className="rail-head">
+                <h2>Destacados</h2>
+                <small>Promociones activas</small>
+              </div>
+              <div className="promo-rail">
+                {secondaryBanners.map((banner) => <PromoBanner key={banner.id} banner={banner} compact />)}
+              </div>
+            </section>
           ) : null}
         </section>
 
@@ -71,9 +77,19 @@ export default function HomePage() {
             <div>
               <h2>Categorias populares</h2>
             </div>
-            <Link className="nav-link" href="/publicar">
-              Publicar
-            </Link>
+            <div className="category-actions">
+              <label className="quick-search">
+                <span className="sr-only">Buscar anuncios</span>
+                <input
+                  value={filters.q}
+                  onChange={(event) => setFilters({ ...filters, q: event.target.value })}
+                  placeholder="Buscar..."
+                />
+              </label>
+              <Link className="nav-link" href="/publicar">
+                Publicar
+              </Link>
+            </div>
           </div>
           <div className="category-strip">
             <button className="category-tile" type="button" onClick={() => setFilters({ ...filters, category: "" })}>
@@ -195,6 +211,7 @@ export default function HomePage() {
         </section>
       </main>
 
+      <SiteFooter />
       {selected ? <ListingDetail listing={selected} onClose={() => setSelected(null)} /> : null}
     </>
   );
@@ -221,7 +238,7 @@ function Topbar() {
   );
 }
 
-function PromoBanner({ banner, large = false }) {
+function PromoBanner({ banner, large = false, compact = false }) {
   const content = banner || {
     title: "Promociona aqui",
     subtitle: "Crea banners desde el panel admin y mostrarlos en portada.",
@@ -234,7 +251,7 @@ function PromoBanner({ banner, large = false }) {
     : {};
 
   return (
-    <Wrapper className={`promo-banner ${large ? "large" : ""}`} {...wrapperProps}>
+    <Wrapper className={`promo-banner ${large ? "large" : ""} ${compact ? "compact" : ""}`} {...wrapperProps}>
       {content.image_url ? <img src={content.image_url} alt="" /> : null}
       <div>
         <span className="eyebrow">{content.ends_at ? `Vigente hasta ${formatDate(content.ends_at)}` : "Destacado"}</span>
@@ -247,6 +264,22 @@ function PromoBanner({ banner, large = false }) {
         ) : null}
       </div>
     </Wrapper>
+  );
+}
+
+function SiteFooter() {
+  return (
+    <footer className="site-footer">
+      <div>
+        <strong>PanAvisos</strong>
+        <p>Publicaciones locales para comprar, vender y promocionar en Panama.</p>
+      </div>
+      <nav>
+        <Link href="/terminos">Terminos</Link>
+        <Link href="/privacidad">Privacidad</Link>
+        <Link href="/publicar">Publicar</Link>
+      </nav>
+    </footer>
   );
 }
 
