@@ -1,11 +1,45 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
-export const metadata = {
-  title: "Cuenta | PanAvisos",
-  description: "Entrar o crear cuenta en PanAvisos"
-};
-
 export default function AccountPage() {
+  const [profile, setProfile] = useState(null);
+  const [form, setForm] = useState({ name: "", email: "", age: "" });
+
+  useEffect(() => {
+    const stored = localStorage.getItem("panavisos_profile");
+    if (stored) setProfile(JSON.parse(stored));
+  }, []);
+
+  function saveProfile(nextProfile) {
+    localStorage.setItem("panavisos_profile", JSON.stringify(nextProfile));
+    setProfile(nextProfile);
+  }
+
+  function submit(event) {
+    event.preventDefault();
+    saveProfile({
+      name: form.name,
+      email: form.email,
+      age: form.age
+    });
+  }
+
+  function social(provider) {
+    saveProfile({
+      name: provider === "Facebook" ? "Usuario Facebook" : "Usuario Google",
+      email: "",
+      age: "",
+      provider
+    });
+  }
+
+  function logout() {
+    localStorage.removeItem("panavisos_profile");
+    setProfile(null);
+  }
+
   return (
     <>
       <header className="topbar marketplace-topbar">
@@ -27,43 +61,76 @@ export default function AccountPage() {
       <main className="account-page">
         <section className="account-card">
           <span className="eyebrow">Anunciantes</span>
-          <h1>Entra o crea tu cuenta</h1>
-          <p className="muted">
-            La cuenta servira para publicar, editar tus anuncios, ver vigencias y recibir respuestas sin perder tu
-            informacion.
-          </p>
-
-          <div className="login-options">
-            <button className="secondary google-button" type="button">
-              Continuar con Google
-            </button>
-            <form className="email-login">
-              <label className="field">
-                <span>Correo electronico</span>
-                <input type="email" placeholder="tu@email.com" />
-              </label>
-              <button className="primary" type="button">
-                Enviar enlace de acceso
+          {profile ? (
+            <>
+              <div className="profile-summary">
+                <span className="avatar large-avatar">{initials(profile.name || profile.email)}</span>
+                <div>
+                  <h1>{profile.name}</h1>
+                  <p className="muted">{profile.email || "Completa tu correo al publicar"}</p>
+                </div>
+              </div>
+              <p className="notice">Cuenta lista para responder y publicar. La conexion real con Google/correo se activa en Supabase Auth.</p>
+              <button className="secondary" type="button" onClick={logout}>
+                Salir
               </button>
-            </form>
-          </div>
+            </>
+          ) : (
+            <>
+              <h1>Entra o crea tu cuenta</h1>
+              <p className="muted">
+                Registrate rapido para responder anuncios y publicar sin perder tus datos.
+              </p>
 
-          <div className="notice">
-            Esta pantalla queda preparada para conectar Google y correo con Supabase Auth. Mientras tanto puedes publicar y
-            el admin aprueba tu anuncio.
-          </div>
+              <div className="login-options">
+                <button className="facebook-button" type="button" onClick={() => social("Facebook")}>
+                  Continuar con Facebook
+                </button>
+                <button className="google-button-solid" type="button" onClick={() => social("Google")}>
+                  Conectar con Google
+                </button>
+                <form className="email-login" onSubmit={submit}>
+                  <label className="field">
+                    <span>Nombre completo</span>
+                    <input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
+                  </label>
+                  <label className="field">
+                    <span>Correo electronico</span>
+                    <input required type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} />
+                  </label>
+                  <label className="field">
+                    <span>Edad</span>
+                    <input required type="number" min="18" value={form.age} onChange={(event) => setForm({ ...form, age: event.target.value })} />
+                  </label>
+                  <button className="primary" type="submit">
+                    Crear cuenta con correo
+                  </button>
+                </form>
+              </div>
+            </>
+          )}
         </section>
 
         <aside className="account-side">
           <h2>Que tendra tu cuenta</h2>
           <ul>
-            <li>Publicar anuncios con aprobacion.</li>
-            <li>Editar datos, imagenes, precio y descuento.</li>
-            <li>Ver si el anuncio esta pendiente, activo o pausado.</li>
-            <li>Controlar vencimientos sin empezar desde cero.</li>
+            <li>Responder anuncios despues de registrarte.</li>
+            <li>Publicar con tus datos basicos completos.</li>
+            <li>Ver estado de tus anuncios cuando conectemos Supabase Auth.</li>
+            <li>Separar usuarios normales del dashboard administrador.</li>
           </ul>
         </aside>
       </main>
     </>
   );
+}
+
+function initials(value) {
+  const text = String(value || "PA").trim();
+  return text
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
 }

@@ -17,8 +17,12 @@ export async function POST(request) {
     return NextResponse.json({ error: "Faltan datos obligatorios." }, { status: 400 });
   }
 
-  if (!body.advertiser_name || !body.advertiser_phone) {
-    return NextResponse.json({ error: "Agrega nombre y telefono del anunciante." }, { status: 400 });
+  if (!body.advertiser_name || !body.advertiser_phone || !body.advertiser_email || !body.advertiser_age) {
+    return NextResponse.json({ error: "Agrega nombre, correo, edad y telefono del anunciante." }, { status: 400 });
+  }
+
+  if (body.operation === "Oferta" && !body.expires_at) {
+    return NextResponse.json({ error: "Las ofertas deben tener fecha de vigencia." }, { status: 400 });
   }
 
   const supabase = getSupabaseAdmin();

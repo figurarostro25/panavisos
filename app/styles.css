@@ -90,6 +90,57 @@ a {
   font-size: 0.78rem;
 }
 
+.account-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-button,
+.account-icon-button,
+.icon-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0 12px;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.icon-link {
+  min-height: 34px;
+  padding: 0 10px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--teal);
+  font-size: 0.78rem;
+  font-weight: 950;
+}
+
+.small-avatar {
+  width: 42px;
+  height: 42px;
+}
+
+.large-avatar {
+  width: 64px;
+  height: 64px;
+  font-size: 1.1rem;
+}
+
 .nav-link,
 .primary,
 .secondary,
@@ -338,6 +389,10 @@ textarea {
   align-items: flex-start;
 }
 
+.admin-full-row {
+  grid-column: 1 / -1;
+}
+
 .admin-metrics {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -457,6 +512,30 @@ textarea {
 .status-badge.paused {
   color: #5b6570;
   background: #e9eef2;
+}
+
+.advertiser-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.advertiser-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.advertiser-card h3 {
+  margin: 0 0 4px;
+}
+
+.advertiser-card p {
+  margin: 4px 0;
 }
 
 .map-frame {
@@ -871,6 +950,89 @@ textarea {
   margin: 0;
   padding-left: 18px;
   color: var(--muted);
+}
+
+.profile-summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.account-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+.account-dialog {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  width: min(760px, 96vw);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 20px 70px rgba(15, 23, 42, 0.28);
+}
+
+.account-column {
+  display: grid;
+  align-content: flex-start;
+  gap: 12px;
+  padding: 30px;
+}
+
+.account-column + .account-column {
+  border-left: 1px solid var(--line);
+}
+
+.account-column h2 {
+  margin: 0;
+  text-align: center;
+  font-size: 1.05rem;
+}
+
+.account-close {
+  top: -48px;
+  right: 0;
+}
+
+.wide-button,
+.green-button,
+.facebook-button,
+.google-button-solid {
+  width: 100%;
+  min-height: 44px;
+}
+
+.green-button,
+.facebook-button,
+.google-button-solid {
+  border: 0;
+  border-radius: 4px;
+  color: #fff;
+  font-weight: 900;
+}
+
+.green-button {
+  background: #2ebf48;
+}
+
+.facebook-button {
+  background: #3b5998;
+}
+
+.google-button-solid {
+  background: #df4b3f;
+}
+
+.center-text {
+  text-align: center;
 }
 
 .site-footer {
@@ -1355,6 +1517,7 @@ textarea {
   .admin-grid,
   .admin-metrics,
   .account-page,
+  .account-dialog,
   .market-layout,
   .listing-dialog,
   .publish-workspace,
@@ -1426,6 +1589,11 @@ textarea {
 
   .quick-search {
     width: 100%;
+  }
+
+  .account-column + .account-column {
+    border-left: 0;
+    border-top: 1px solid var(--line);
   }
 
   .account-actions {

@@ -24,6 +24,7 @@ const emptyListing = {
   advertiser_name: "",
   advertiser_phone: "",
   advertiser_email: "",
+  advertiser_age: "",
   lat: "",
   lng: "",
   status: "active",
@@ -245,6 +246,7 @@ export default function AdminPage() {
       advertiser_name: listing.advertiser_name || "",
       advertiser_phone: listing.advertiser_phone || "",
       advertiser_email: listing.advertiser_email || "",
+      advertiser_age: listing.advertiser_age || "",
       lat: listing.lat || "",
       lng: listing.lng || "",
       status: listing.status || "active",
@@ -358,6 +360,7 @@ export default function AdminPage() {
       : listingFilter === "featured"
         ? listings.filter((listing) => listing.featured)
         : listings.filter((listing) => listing.status === listingFilter);
+  const advertisers = groupAdvertisers(listings);
 
   function applyDiscount(discountPercent) {
     const originalPrice = Number(listingForm.original_price || 0);
@@ -670,16 +673,29 @@ export default function AdminPage() {
                   </label>
                 </div>
 
-                <label className="field">
-                  <span>Email anunciante</span>
-                  <input
-                    type="email"
-                    value={listingForm.advertiser_email}
-                    onChange={(event) =>
-                      setListingForm({ ...listingForm, advertiser_email: event.target.value })
-                    }
-                  />
-                </label>
+                <div className="field-row">
+                  <label className="field">
+                    <span>Email anunciante</span>
+                    <input
+                      type="email"
+                      value={listingForm.advertiser_email}
+                      onChange={(event) =>
+                        setListingForm({ ...listingForm, advertiser_email: event.target.value })
+                      }
+                    />
+                  </label>
+                  <label className="field">
+                    <span>Edad</span>
+                    <input
+                      type="number"
+                      min="18"
+                      value={listingForm.advertiser_age}
+                      onChange={(event) =>
+                        setListingForm({ ...listingForm, advertiser_age: event.target.value })
+                      }
+                    />
+                  </label>
+                </div>
 
                 <label className="field">
                   <span>Referencia de ubicacion</span>
@@ -781,6 +797,8 @@ export default function AdminPage() {
                     <p className="muted">
                       {listing.advertiser_name || "Admin"}
                       {listing.advertiser_phone ? ` - ${listing.advertiser_phone}` : ""}
+                      {listing.advertiser_email ? ` - ${listing.advertiser_email}` : ""}
+                      {listing.advertiser_age ? ` - ${listing.advertiser_age} anos` : ""}
                       {listing.expires_at ? ` - vence ${toDateInput(listing.expires_at)}` : ""}
                     </p>
                     <div className="quick-actions">
@@ -806,6 +824,35 @@ export default function AdminPage() {
                   </article>
                 ))}
                 {!filteredListings.length ? <p className="muted">No hay anuncios en este filtro.</p> : null}
+              </div>
+            </aside>
+
+            <aside className="panel admin-full-row">
+              <div className="form-head">
+                <h2>Anunciantes</h2>
+                <span className="pill">{advertisers.length}</span>
+              </div>
+              <div className="advertiser-grid">
+                {advertisers.map((advertiser) => (
+                  <article className="advertiser-card" key={advertiser.key}>
+                    <div className="avatar small-avatar">{initials(advertiser.name || advertiser.email || advertiser.phone)}</div>
+                    <div>
+                      <h3>{advertiser.name || "Sin nombre"}</h3>
+                      <p className="muted">{advertiser.email || "Sin correo"}</p>
+                      <p className="muted">
+                        {advertiser.phone || "Sin telefono"}
+                        {advertiser.age ? ` - ${advertiser.age} anos` : ""}
+                      </p>
+                      <div className="facts">
+                        <span className="fact">{advertiser.total} anuncios</span>
+                        <span className="fact">{advertiser.active} activos</span>
+                        <span className="fact">{advertiser.pending} pendientes</span>
+                        <span className="fact">{advertiser.featured} destacados</span>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+                {!advertisers.length ? <p className="muted">Todavia no hay anunciantes registrados.</p> : null}
               </div>
             </aside>
 
@@ -1008,4 +1055,43 @@ function statusLabel(status) {
   if (status === "pending") return "Pendiente";
   if (status === "paused") return "Pausado";
   return status || "Sin estado";
+}
+
+function groupAdvertisers(listings) {
+  const map = new Map();
+
+  for (const listing of listings) {
+    const key = listing.advertiser_email || listing.advertiser_phone || listing.advertiser_name || listing.id;
+    const current = map.get(key) || {
+      key,
+      name: listing.advertiser_name || "",
+      email: listing.advertiser_email || "",
+      phone: listing.advertiser_phone || "",
+      age: listing.advertiser_age || "",
+      total: 0,
+      active: 0,
+      pending: 0,
+      paused: 0,
+      featured: 0
+    };
+
+    current.total += 1;
+    current.active += listing.status === "active" ? 1 : 0;
+    current.pending += listing.status === "pending" ? 1 : 0;
+    current.paused += listing.status === "paused" ? 1 : 0;
+    current.featured += listing.featured ? 1 : 0;
+    map.set(key, current);
+  }
+
+  return [...map.values()].sort((a, b) => b.total - a.total);
+}
+
+function initials(value) {
+  const text = String(value || "PA").trim();
+  return text
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
 }

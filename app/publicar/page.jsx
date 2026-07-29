@@ -31,6 +31,7 @@ const emptyForm = {
   advertiser_name: "",
   advertiser_phone: "",
   advertiser_email: "",
+  advertiser_age: "",
   expires_at: defaultExpiresAt(),
   images: []
 };
@@ -52,6 +53,19 @@ export default function PublicarPage() {
         setCategories(nextCategories);
         setForm((current) => ({ ...current, category_id: current.category_id || nextCategories[0]?.id || "" }));
       });
+  }, []);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("panavisos_profile");
+    if (!stored) return;
+    const profile = JSON.parse(stored);
+    setForm((current) => ({
+      ...current,
+      advertiser_name: current.advertiser_name || profile.name || "",
+      advertiser_email: current.advertiser_email || profile.email || "",
+      email: current.email || profile.email || "",
+      advertiser_age: current.advertiser_age || profile.age || ""
+    }));
   }, []);
 
   const selectedCategory = categories.find((category) => category.id === form.category_id);
@@ -104,8 +118,13 @@ export default function PublicarPage() {
       return;
     }
 
-    if (currentStep === 2 && (!form.district || !form.advertiser_name || !form.advertiser_phone)) {
-      setError("Completa ubicacion, nombre y WhatsApp para continuar.");
+    if (currentStep === 1 && form.operation === "Oferta" && !form.expires_at) {
+      setError("Las ofertas deben tener fecha de vigencia.");
+      return;
+    }
+
+    if (currentStep === 2 && (!form.district || !form.advertiser_name || !form.advertiser_phone || !form.advertiser_email || !form.advertiser_age)) {
+      setError("Completa ubicacion, nombre, correo, edad y WhatsApp para continuar.");
       return;
     }
 
@@ -192,7 +211,7 @@ export default function PublicarPage() {
         </Link>
         <nav className="top-actions">
           <Link href="/">Catalogo</Link>
-          <Link href="/cuenta">Entrar</Link>
+          <Link href="/cuenta">Cuenta</Link>
           <Link href="/admin">Dashboard</Link>
         </nav>
       </header>
@@ -272,6 +291,18 @@ export default function PublicarPage() {
                 </label>
               </div>
 
+              {form.operation === "Oferta" ? (
+                <label className="field">
+                  <span>Vigencia de la oferta</span>
+                  <input
+                    required
+                    type="date"
+                    value={form.expires_at}
+                    onChange={(event) => setForm({ ...form, expires_at: event.target.value })}
+                  />
+                </label>
+              ) : null}
+
               {isRealEstate ? (
                 <div className="field-row">
                   <label className="field">
@@ -339,7 +370,7 @@ export default function PublicarPage() {
 
               <div className="account-box">
                 <h2>Cuenta del anunciante</h2>
-                <p className="muted">Si ya tienes cuenta podras entrar con Google o correo. Por ahora guardamos tus datos para aprobar el anuncio sin perder lo que llenaste.</p>
+                <p className="muted">Estos datos nos ayudan a revisar tu cuenta y tus publicaciones. Mas adelante quedaran conectados a Google, Facebook o correo.</p>
                 <div className="account-actions">
                   <Link className="secondary" href="/cuenta">
                     Continuar con Google
@@ -361,10 +392,16 @@ export default function PublicarPage() {
                 </label>
               </div>
 
-              <label className="field">
-                <span>Email opcional</span>
-                <input type="email" value={form.advertiser_email} onChange={(event) => setForm({ ...form, advertiser_email: event.target.value, email: event.target.value })} />
-              </label>
+              <div className="field-row">
+                <label className="field">
+                  <span>Correo</span>
+                  <input required type="email" value={form.advertiser_email} onChange={(event) => setForm({ ...form, advertiser_email: event.target.value, email: event.target.value })} />
+                </label>
+                <label className="field">
+                  <span>Edad</span>
+                  <input required type="number" min="18" value={form.advertiser_age} onChange={(event) => setForm({ ...form, advertiser_age: event.target.value })} />
+                </label>
+              </div>
             </div>
           ) : null}
 
@@ -385,6 +422,12 @@ export default function PublicarPage() {
                   <span>Ubicacion</span>
                   <strong>{form.district || "Sin ubicacion"}</strong>
                 </div>
+                {form.operation === "Oferta" ? (
+                  <div className="review-row">
+                    <span>Vigencia</span>
+                    <strong>{form.expires_at}</strong>
+                  </div>
+                ) : null}
               </div>
             </div>
           ) : null}

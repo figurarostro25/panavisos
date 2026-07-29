@@ -13,6 +13,8 @@ const categoryLooks = {
 export default function HomePage() {
   const [data, setData] = useState({ categories: [], listings: [], banners: [] });
   const [selected, setSelected] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [filters, setFilters] = useState({
     q: "",
     category: "",
@@ -28,6 +30,22 @@ export default function HomePage() {
       .then((payload) => setData(payload))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("panavisos_profile");
+    if (stored) setProfile(JSON.parse(stored));
+  }, []);
+
+  function saveProfile(nextProfile) {
+    localStorage.setItem("panavisos_profile", JSON.stringify(nextProfile));
+    setProfile(nextProfile);
+    setAccountOpen(false);
+  }
+
+  function logoutProfile() {
+    localStorage.removeItem("panavisos_profile");
+    setProfile(null);
+  }
 
   const listings = useMemo(() => {
     const q = normalize(filters.q);
@@ -55,7 +73,7 @@ export default function HomePage() {
 
   return (
     <>
-      <Topbar />
+      <Topbar profile={profile} onOpenAccount={() => setAccountOpen(true)} onLogout={logoutProfile} />
       <main className="market-home">
         <section className="home-band hero-banner-band">
           <PromoBanner banner={primaryBanner} large />
@@ -212,12 +230,20 @@ export default function HomePage() {
       </main>
 
       <SiteFooter />
-      {selected ? <ListingDetail listing={selected} onClose={() => setSelected(null)} /> : null}
+      {selected ? (
+        <ListingDetail
+          listing={selected}
+          profile={profile}
+          onRequireAccount={() => setAccountOpen(true)}
+          onClose={() => setSelected(null)}
+        />
+      ) : null}
+      {accountOpen ? <AccountModal onClose={() => setAccountOpen(false)} onSave={saveProfile} /> : null}
     </>
   );
 }
 
-function Topbar() {
+function Topbar({ profile, onOpenAccount, onLogout }) {
   return (
     <header className="topbar marketplace-topbar">
       <Link className="brand" href="/">
@@ -229,13 +255,131 @@ function Topbar() {
       </Link>
       <nav className="top-actions">
         <a href="#anuncios">Anuncios</a>
-        <Link href="/cuenta">Entrar</Link>
         <Link href="/admin">Dashboard</Link>
+        <AccountButton profile={profile} onOpen={onOpenAccount} onLogout={onLogout} />
         <Link className="primary" href="/publicar">
           Publicar
         </Link>
       </nav>
     </header>
+  );
+}
+
+function AccountButton({ profile, onOpen, onLogout }) {
+  if (profile) {
+    return (
+      <div className="account-chip">
+        <button className="profile-button" type="button" onClick={onOpen}>
+          <span className="avatar">{initials(profile.name || profile.email)}</span>
+          <span>{profile.name}</span>
+        </button>
+        <button className="icon-link" type="button" onClick={onLogout} aria-label="Salir de cuenta">
+          Salir
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button className="account-icon-button" type="button" onClick={onOpen} aria-label="Entrar o registrarse">
+      <span className="avatar">PA</span>
+      <span>Entrar</span>
+    </button>
+  );
+}
+
+function AccountModal({ onClose, onSave }) {
+  const [mode, setMode] = useState("login");
+  const [form, setForm] = useState({ name: "", email: "", age: "", password: "" });
+
+  function submit(event) {
+    event.preventDefault();
+    onSave({
+      name: form.name || form.email.split("@")[0],
+      email: form.email,
+      age: form.age,
+      avatar: ""
+    });
+  }
+
+  function social(provider) {
+    onSave({
+      name: provider === "Facebook" ? "Usuario Facebook" : "Usuario Google",
+      email: "",
+      age: "",
+      avatar: "",
+      provider
+    });
+  }
+
+  return (
+    <div className="account-modal">
+      <button className="modal-backdrop" type="button" onClick={onClose} aria-label="Cerrar" />
+      <section className="account-dialog">
+        <button className="modal-close account-close" type="button" onClick={onClose} aria-label="Cerrar">
+          X
+        </button>
+        <div className="account-column">
+          <h2>Ya tienes cuenta?</h2>
+          <form onSubmit={submit}>
+            <label className="field">
+              <span>Correo</span>
+              <input
+                required
+                type="email"
+                value={form.email}
+                onChange={(event) => setForm({ ...form, email: event.target.value })}
+                placeholder="correo@email.com"
+              />
+            </label>
+            <label className="field">
+              <span>Contrasena</span>
+              <input
+                type="password"
+                value={form.password}
+                onChange={(event) => setForm({ ...form, password: event.target.value })}
+                placeholder="********"
+              />
+            </label>
+            <button className="primary wide-button" type="submit">
+              Ingresar a cuenta
+            </button>
+          </form>
+        </div>
+        <div className="account-column">
+          <h2>Aun no tienes cuenta?</h2>
+          <button className="green-button" type="button" onClick={() => setMode("register")}>
+            Registrate
+          </button>
+          {mode === "register" ? (
+            <form onSubmit={submit}>
+              <label className="field">
+                <span>Nombre completo</span>
+                <input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
+              </label>
+              <label className="field">
+                <span>Correo</span>
+                <input required type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} />
+              </label>
+              <label className="field">
+                <span>Edad</span>
+                <input required type="number" min="18" value={form.age} onChange={(event) => setForm({ ...form, age: event.target.value })} />
+              </label>
+              <button className="primary wide-button" type="submit">
+                Crear cuenta
+              </button>
+            </form>
+          ) : null}
+          <p className="muted center-text">Login con Facebook o Google</p>
+          <button className="facebook-button" type="button" onClick={() => social("Facebook")}>
+            Continuar con Facebook
+          </button>
+          <button className="google-button-solid" type="button" onClick={() => social("Google")}>
+            Conectar con Google
+          </button>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -319,7 +463,7 @@ function ListingCard({ listing, onSelect }) {
   );
 }
 
-function ListingDetail({ listing, onClose }) {
+function ListingDetail({ listing, profile, onRequireAccount, onClose }) {
   const [activeImage, setActiveImage] = useState(0);
   const images = [...(listing.images || [])].sort((a, b) => a.position - b.position);
   const image = images[activeImage]?.url;
@@ -379,14 +523,20 @@ function ListingDetail({ listing, onClose }) {
 
             <div className="detail-actions">
               {whatsapp ? (
-                <a
-                  className="primary"
-                  href={`https://wa.me/${whatsapp}?text=${whatsappMessage}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Enviar mensaje
-                </a>
+                profile ? (
+                  <a
+                    className="primary"
+                    href={`https://wa.me/${whatsapp}?text=${whatsappMessage}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Enviar mensaje
+                  </a>
+                ) : (
+                  <button className="primary" type="button" onClick={onRequireAccount}>
+                    Registrate para responder
+                  </button>
+                )
               ) : null}
               {listing.website_url ? (
                 <a className="secondary" href={listing.website_url} target="_blank" rel="noreferrer">
@@ -477,4 +627,14 @@ function PriceBlock({ listing, large = false }) {
       {hasDiscount && listing.discount_percent ? <span className="discount-badge">{listing.discount_percent}% menos</span> : null}
     </div>
   );
+}
+
+function initials(value) {
+  const text = String(value || "PA").trim();
+  return text
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
 }

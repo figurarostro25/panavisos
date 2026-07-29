@@ -31,6 +31,7 @@ create table if not exists public.listings (
   advertiser_name text,
   advertiser_phone text,
   advertiser_email text,
+  advertiser_age integer,
   lat numeric(10, 6),
   lng numeric(10, 6),
   status text not null default 'active',
