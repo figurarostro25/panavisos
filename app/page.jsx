@@ -65,7 +65,7 @@ export default function HomePage() {
               Propiedades, autos, servicios y ofertas locales con busqueda sencilla y contacto directo.
             </p>
             <div className="hero-actions">
-              <Link className="primary" href="/admin">
+              <Link className="primary" href="/publicar">
                 Publicar anuncio
               </Link>
               <a className="secondary" href="#anuncios">
@@ -121,7 +121,7 @@ export default function HomePage() {
               <h2>Categorias populares</h2>
               <p className="muted">Entrada rapida al estilo marketplace para navegar sin aprender nada nuevo.</p>
             </div>
-            <Link className="nav-link" href="/admin">
+            <Link className="nav-link" href="/publicar">
               Publicar
             </Link>
           </div>
@@ -276,8 +276,8 @@ function Topbar() {
       </Link>
       <nav className="top-actions">
         <a href="#anuncios">Anuncios</a>
-        <Link href="/admin">Mi cuenta</Link>
-        <Link className="primary" href="/admin">
+        <Link href="/admin">Admin</Link>
+        <Link className="primary" href="/publicar">
           Publicar
         </Link>
       </nav>
@@ -326,7 +326,7 @@ function ListingCard({ listing, onSelect }) {
       </button>
       <div className="card-body">
         {listing.featured ? <span className="fresh-badge">Recien publicado</span> : null}
-        <strong className="price">{money(listing.price)}</strong>
+        <PriceBlock listing={listing} />
         <button className="listing-title-button" type="button" onClick={() => onSelect(listing)}>
           {listing.title}
         </button>
@@ -400,7 +400,7 @@ function ListingDetail({ listing, onClose }) {
         <aside className="listing-info">
           <div className="listing-info-scroll">
             <h2>{listing.title}</h2>
-            <strong className="detail-price">{money(listing.price)}</strong>
+            <PriceBlock listing={listing} large />
             <p className="muted">Publicado en {listing.district}, {listing.province}</p>
 
             <div className="detail-actions">
@@ -485,4 +485,15 @@ function normalize(value) {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
+}
+
+function PriceBlock({ listing, large = false }) {
+  const hasDiscount = Number(listing.original_price) > Number(listing.price || 0);
+  return (
+    <div className={`price-stack ${large ? "large" : ""}`}>
+      {hasDiscount ? <span className="old-price">{money(listing.original_price)}</span> : null}
+      <strong className={large ? "detail-price" : "price"}>{money(listing.price)}</strong>
+      {hasDiscount && listing.discount_percent ? <span className="discount-badge">{listing.discount_percent}% menos</span> : null}
+    </div>
+  );
 }

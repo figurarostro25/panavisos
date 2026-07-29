@@ -9,6 +9,8 @@ const emptyListing = {
   category_id: "",
   operation: "Venta",
   price: "",
+  original_price: "",
+  discount_percent: "",
   province: "Panama",
   district: "",
   address_reference: "",
@@ -19,10 +21,14 @@ const emptyListing = {
   whatsapp: "",
   email: "",
   website_url: "",
+  advertiser_name: "",
+  advertiser_phone: "",
+  advertiser_email: "",
   lat: "",
   lng: "",
   status: "active",
   featured: false,
+  expires_at: "",
   images: []
 };
 
@@ -34,7 +40,9 @@ const emptyBanner = {
   image_url: "",
   placement: "home",
   status: "active",
-  sort_order: 0
+  sort_order: 0,
+  starts_at: "",
+  ends_at: ""
 };
 
 export default function AdminPage() {
@@ -198,6 +206,8 @@ export default function AdminPage() {
       category_id: listing.category_id || "",
       operation: listing.operation || "Venta",
       price: listing.price || "",
+      original_price: listing.original_price || "",
+      discount_percent: listing.discount_percent || "",
       province: listing.province || "Panama",
       district: listing.district || "",
       address_reference: listing.address_reference || "",
@@ -208,10 +218,14 @@ export default function AdminPage() {
       whatsapp: listing.whatsapp || "",
       email: listing.email || "",
       website_url: listing.website_url || "",
+      advertiser_name: listing.advertiser_name || "",
+      advertiser_phone: listing.advertiser_phone || "",
+      advertiser_email: listing.advertiser_email || "",
       lat: listing.lat || "",
       lng: listing.lng || "",
       status: listing.status || "active",
       featured: Boolean(listing.featured),
+      expires_at: toDateInput(listing.expires_at),
       images: (listing.images || []).sort((a, b) => a.position - b.position)
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -307,6 +321,15 @@ export default function AdminPage() {
 
   const selectedCategory = categories.find((category) => category.id === listingForm.category_id);
   const isRealEstate = selectedCategory?.slug === "bienes-raices";
+
+  function applyDiscount(discountPercent) {
+    const originalPrice = Number(listingForm.original_price || 0);
+    const nextPrice =
+      originalPrice > 0 && Number(discountPercent) > 0
+        ? Math.round(originalPrice * (1 - Number(discountPercent) / 100))
+        : listingForm.price;
+    setListingForm({ ...listingForm, discount_percent: discountPercent, price: nextPrice });
+  }
 
   return (
     <>
@@ -421,12 +444,43 @@ export default function AdminPage() {
                     </select>
                   </label>
                   <label className="field">
-                    <span>Precio USD</span>
+                    <span>Precio final USD</span>
                     <input
                       required
                       type="number"
                       value={listingForm.price}
                       onChange={(event) => setListingForm({ ...listingForm, price: event.target.value })}
+                    />
+                  </label>
+                </div>
+
+                <div className="field-row">
+                  <label className="field">
+                    <span>Precio anterior</span>
+                    <input
+                      type="number"
+                      value={listingForm.original_price}
+                      onChange={(event) =>
+                        setListingForm({ ...listingForm, original_price: event.target.value })
+                      }
+                    />
+                  </label>
+                  <label className="field">
+                    <span>Descuento %</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="99"
+                      value={listingForm.discount_percent}
+                      onChange={(event) => applyDiscount(event.target.value)}
+                    />
+                  </label>
+                  <label className="field">
+                    <span>Vence</span>
+                    <input
+                      type="date"
+                      value={listingForm.expires_at}
+                      onChange={(event) => setListingForm({ ...listingForm, expires_at: event.target.value })}
                     />
                   </label>
                 </div>
@@ -534,6 +588,38 @@ export default function AdminPage() {
                   />
                 </label>
 
+                <div className="field-row">
+                  <label className="field">
+                    <span>Nombre del anunciante</span>
+                    <input
+                      value={listingForm.advertiser_name}
+                      onChange={(event) =>
+                        setListingForm({ ...listingForm, advertiser_name: event.target.value })
+                      }
+                    />
+                  </label>
+                  <label className="field">
+                    <span>Telefono anunciante</span>
+                    <input
+                      value={listingForm.advertiser_phone}
+                      onChange={(event) =>
+                        setListingForm({ ...listingForm, advertiser_phone: event.target.value })
+                      }
+                    />
+                  </label>
+                </div>
+
+                <label className="field">
+                  <span>Email anunciante</span>
+                  <input
+                    type="email"
+                    value={listingForm.advertiser_email}
+                    onChange={(event) =>
+                      setListingForm({ ...listingForm, advertiser_email: event.target.value })
+                    }
+                  />
+                </label>
+
                 <label className="field">
                   <span>Referencia de ubicacion</span>
                   <input
@@ -624,6 +710,10 @@ export default function AdminPage() {
                     <h3>{listing.title}</h3>
                     <p className="muted">
                       {money(listing.price)} - {listing.status} - {listing.province}
+                    </p>
+                    <p className="muted">
+                      {listing.advertiser_name || "Admin"}
+                      {listing.expires_at ? ` - vence ${toDateInput(listing.expires_at)}` : ""}
                     </p>
                     <div className="admin-actions">
                       <button className="secondary" type="button" onClick={() => editListing(listing)}>
@@ -718,6 +808,24 @@ export default function AdminPage() {
                     </select>
                   </label>
                 </div>
+                <div className="field-row">
+                  <label className="field">
+                    <span>Fecha inicio</span>
+                    <input
+                      type="date"
+                      value={bannerForm.starts_at ? toDateInput(bannerForm.starts_at) : ""}
+                      onChange={(event) => setBannerForm({ ...bannerForm, starts_at: event.target.value })}
+                    />
+                  </label>
+                  <label className="field">
+                    <span>Fecha final</span>
+                    <input
+                      type="date"
+                      value={bannerForm.ends_at ? toDateInput(bannerForm.ends_at) : ""}
+                      onChange={(event) => setBannerForm({ ...bannerForm, ends_at: event.target.value })}
+                    />
+                  </label>
+                </div>
                 <button className="primary" type="submit" disabled={saving}>
                   {saving ? "Guardando..." : "Guardar banner"}
                 </button>
@@ -732,6 +840,7 @@ export default function AdminPage() {
                     <h3>{banner.title}</h3>
                     <p className="muted">
                       {banner.status} - orden {banner.sort_order}
+                      {banner.ends_at ? ` - hasta ${toDateInput(banner.ends_at)}` : ""}
                     </p>
                     <div className="admin-actions">
                       <button className="secondary" type="button" onClick={() => setBannerForm(banner)}>
@@ -805,4 +914,9 @@ export default function AdminPage() {
       </main>
     </>
   );
+}
+
+function toDateInput(value) {
+  if (!value) return "";
+  return String(value).slice(0, 10);
 }

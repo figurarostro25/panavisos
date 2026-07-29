@@ -16,6 +16,8 @@ create table if not exists public.listings (
   slug text not null unique,
   operation text not null default 'Venta',
   price numeric(12, 2) not null default 0,
+  original_price numeric(12, 2),
+  discount_percent numeric(5, 2),
   province text not null,
   district text not null,
   address_reference text,
@@ -26,10 +28,14 @@ create table if not exists public.listings (
   whatsapp text,
   email text,
   website_url text,
+  advertiser_name text,
+  advertiser_phone text,
+  advertiser_email text,
   lat numeric(10, 6),
   lng numeric(10, 6),
   status text not null default 'active',
   featured boolean not null default false,
+  expires_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -53,6 +59,8 @@ create table if not exists public.banners (
   placement text not null default 'home',
   status text not null default 'active',
   sort_order integer not null default 0,
+  starts_at timestamptz,
+  ends_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -60,9 +68,11 @@ create table if not exists public.banners (
 create index if not exists listings_status_idx on public.listings(status);
 create index if not exists listings_category_idx on public.listings(category_id);
 create index if not exists listings_featured_idx on public.listings(featured);
+create index if not exists listings_expires_at_idx on public.listings(expires_at);
 create index if not exists listing_images_listing_idx on public.listing_images(listing_id);
 create index if not exists banners_status_idx on public.banners(status);
 create index if not exists banners_placement_idx on public.banners(placement);
+create index if not exists banners_dates_idx on public.banners(starts_at, ends_at);
 
 alter table public.categories enable row level security;
 alter table public.listings enable row level security;
