@@ -895,7 +895,7 @@ textarea {
 .publish-form {
   height: calc(100vh - 68px);
   overflow: auto;
-  padding: 18px;
+  padding: 18px 18px 98px;
   border-right: 1px solid var(--line);
   background: #fff;
 }
@@ -916,6 +916,32 @@ textarea {
   margin: 0;
   font-size: 1.6rem;
   line-height: 1.05;
+}
+
+.step-meter {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin: 12px 0 8px;
+}
+
+.step-meter span {
+  height: 7px;
+  border-radius: 999px;
+  background: #e6edf1;
+}
+
+.step-meter span.active {
+  background: #0b84ff;
+}
+
+.step-copy {
+  margin: 0 0 10px;
+}
+
+.step-pane {
+  display: grid;
+  gap: 10px;
 }
 
 .upload-box {
@@ -969,6 +995,58 @@ textarea {
 
 .suggestion-list button:hover {
   background: #f0f6f7;
+}
+
+.account-box,
+.review-card {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafb;
+}
+
+.account-box h2,
+.review-card h2 {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+}
+
+.account-box p,
+.review-card p {
+  margin: 0;
+}
+
+.review-card {
+  display: grid;
+  gap: 12px;
+}
+
+.review-row {
+  display: grid;
+  gap: 4px;
+}
+
+.review-row span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.publish-bottom-bar {
+  position: sticky;
+  bottom: -18px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 18px -18px -98px;
+  padding: 12px 18px 18px;
+  border-top: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(12px);
+}
+
+.publish-bottom-bar button {
+  min-height: 48px;
 }
 
 .publish-preview {

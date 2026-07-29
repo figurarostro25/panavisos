@@ -38,6 +38,8 @@ const emptyForm = {
 export default function PublicarPage() {
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState(emptyForm);
+  const [step, setStep] = useState(1);
+  const [locationOpen, setLocationOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -61,7 +63,9 @@ export default function PublicarPage() {
     return locationSuggestions
       .filter((location) => normalize(location.label).includes(query) || normalize(location.district).includes(query))
       .slice(0, 5);
-  }, [form.district, form.address_reference]);
+  }, [form.district]);
+
+  const currentStep = Math.min(step, 3);
 
   function setCategory(categoryId) {
     const nextCategory = categories.find((category) => category.id === categoryId);
@@ -90,6 +94,22 @@ export default function PublicarPage() {
       district: location.district,
       address_reference: location.label
     });
+    setLocationOpen(false);
+  }
+
+  function goNext() {
+    setError("");
+    if (currentStep === 1 && (!form.title || !form.price || !form.category_id || !form.description)) {
+      setError("Completa titulo, precio, categoria y descripcion.");
+      return;
+    }
+
+    if (currentStep === 2 && (!form.district || !form.advertiser_name || !form.advertiser_phone)) {
+      setError("Completa ubicacion, nombre y WhatsApp para continuar.");
+      return;
+    }
+
+    setStep((value) => Math.min(3, value + 1));
   }
 
   async function uploadImages(files) {
@@ -183,130 +203,198 @@ export default function PublicarPage() {
               <span className="eyebrow">Marketplace</span>
               <h1>Articulo en venta</h1>
             </div>
-            <button className="primary" type="submit" disabled={saving}>
-              {saving ? "Enviando..." : "Enviar"}
-            </button>
           </div>
+
+          <div className="step-meter" aria-label="Progreso">
+            <span className={currentStep >= 1 ? "active" : ""} />
+            <span className={currentStep >= 2 ? "active" : ""} />
+            <span className={currentStep >= 3 ? "active" : ""} />
+          </div>
+
+          <p className="muted step-copy">
+            {currentStep === 1 ? "Fotos y contenido del anuncio." : null}
+            {currentStep === 2 ? "Ubicacion y datos de tu cuenta." : null}
+            {currentStep === 3 ? "Revisa la vista previa y publica." : null}
+          </p>
 
           {message ? <p className="notice">{message}</p> : null}
           {error ? <p className="error">{error}</p> : null}
 
-          <label className="upload-box">
-            <input type="file" accept="image/*" multiple onChange={(event) => uploadImages(event.target.files)} />
-            <strong>Anadir fotos</strong>
-            <span>o arrastrar y soltar</span>
-          </label>
-
-          <label className="field">
-            <span>Titulo</span>
-            <input required value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
-          </label>
-
-          <div className="field-row">
-            <label className="field">
-              <span>Precio final</span>
-              <input required type="number" value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} />
-            </label>
-            <label className="field">
-              <span>Precio anterior</span>
-              <input type="number" value={form.original_price} onChange={(event) => setForm({ ...form, original_price: event.target.value })} />
-            </label>
-          </div>
-
-          <label className="field">
-            <span>Descuento %</span>
-            <input type="number" min="0" max="99" value={form.discount_percent} onChange={(event) => applyDiscount(event.target.value)} />
-          </label>
-
-          <div className="field-row">
-            <label className="field">
-              <span>Categoria</span>
-              <select required value={form.category_id} onChange={(event) => setCategory(event.target.value)}>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              <span>Tipo</span>
-              <select value={form.operation} onChange={(event) => setForm({ ...form, operation: event.target.value })}>
-                <option>Venta</option>
-                <option>Alquiler</option>
-                <option>Servicio</option>
-                <option>Oferta</option>
-              </select>
-            </label>
-          </div>
-
-          {isRealEstate ? (
-            <div className="field-row">
-              <label className="field">
-                <span>Recamaras</span>
-                <input type="number" value={form.bedrooms} onChange={(event) => setForm({ ...form, bedrooms: event.target.value })} />
+          {currentStep === 1 ? (
+            <div className="step-pane">
+              <label className="upload-box">
+                <input type="file" accept="image/*" multiple onChange={(event) => uploadImages(event.target.files)} />
+                <strong>Anadir fotos</strong>
+                <span>o arrastrar y soltar</span>
               </label>
+
               <label className="field">
-                <span>Banos</span>
-                <input type="number" value={form.bathrooms} onChange={(event) => setForm({ ...form, bathrooms: event.target.value })} />
+                <span>Titulo</span>
+                <input required value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
               </label>
+
+              <div className="field-row">
+                <label className="field">
+                  <span>Precio final</span>
+                  <input required type="number" value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} />
+                </label>
+                <label className="field">
+                  <span>Precio anterior</span>
+                  <input type="number" value={form.original_price} onChange={(event) => setForm({ ...form, original_price: event.target.value })} />
+                </label>
+              </div>
+
               <label className="field">
-                <span>Area m2</span>
-                <input type="number" value={form.area_m2} onChange={(event) => setForm({ ...form, area_m2: event.target.value })} />
+                <span>Descuento %</span>
+                <input type="number" min="0" max="99" value={form.discount_percent} onChange={(event) => applyDiscount(event.target.value)} />
+              </label>
+
+              <div className="field-row">
+                <label className="field">
+                  <span>Categoria</span>
+                  <select required value={form.category_id} onChange={(event) => setCategory(event.target.value)}>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field">
+                  <span>Tipo</span>
+                  <select value={form.operation} onChange={(event) => setForm({ ...form, operation: event.target.value })}>
+                    <option>Venta</option>
+                    <option>Alquiler</option>
+                    <option>Servicio</option>
+                    <option>Oferta</option>
+                  </select>
+                </label>
+              </div>
+
+              {isRealEstate ? (
+                <div className="field-row">
+                  <label className="field">
+                    <span>Recamaras</span>
+                    <input type="number" value={form.bedrooms} onChange={(event) => setForm({ ...form, bedrooms: event.target.value })} />
+                  </label>
+                  <label className="field">
+                    <span>Banos</span>
+                    <input type="number" value={form.bathrooms} onChange={(event) => setForm({ ...form, bathrooms: event.target.value })} />
+                  </label>
+                  <label className="field">
+                    <span>Area m2</span>
+                    <input type="number" value={form.area_m2} onChange={(event) => setForm({ ...form, area_m2: event.target.value })} />
+                  </label>
+                </div>
+              ) : null}
+
+              <label className="field">
+                <span>Descripcion</span>
+                <textarea required rows={5} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
+              </label>
+
+              <label className="field">
+                <span>Sitio web</span>
+                <input type="url" value={form.website_url} onChange={(event) => setForm({ ...form, website_url: event.target.value })} placeholder="https://cliente.com" />
               </label>
             </div>
           ) : null}
 
-          <label className="field location-field">
-            <span>Ubicacion</span>
-            <input required value={form.district} onChange={(event) => setForm({ ...form, district: event.target.value })} placeholder="Ej: Parque Lefevre, Coronado..." />
-            {locationMatches.length ? (
-              <div className="suggestion-list">
-                {locationMatches.map((location) => (
-                  <button type="button" key={location.label} onClick={() => chooseLocation(location)}>
-                    {location.label}
-                  </button>
-                ))}
+          {currentStep === 2 ? (
+            <div className="step-pane">
+              <label className="field location-field">
+                <span>Ubicacion</span>
+                <input
+                  required
+                  value={form.district}
+                  onChange={(event) => {
+                    setForm({ ...form, district: event.target.value });
+                    setLocationOpen(true);
+                  }}
+                  onFocus={() => setLocationOpen(true)}
+                  placeholder="Ej: Parque Lefevre, Coronado..."
+                />
+                {locationOpen && locationMatches.length ? (
+                  <div className="suggestion-list">
+                    {locationMatches.map((location) => (
+                      <button type="button" key={location.label} onClick={() => chooseLocation(location)}>
+                        {location.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </label>
+
+              <label className="field">
+                <span>Provincia</span>
+                <select value={form.province} onChange={(event) => setForm({ ...form, province: event.target.value })}>
+                  {provinces.map((province) => (
+                    <option key={province} value={province}>
+                      {province}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="account-box">
+                <h2>Cuenta del anunciante</h2>
+                <p className="muted">En la proxima fase esto sera login con Google o correo. Por ahora guardamos tus datos para aprobar el anuncio sin perder lo que llenaste.</p>
               </div>
-            ) : null}
-          </label>
 
-          <label className="field">
-            <span>Provincia</span>
-            <select value={form.province} onChange={(event) => setForm({ ...form, province: event.target.value })}>
-              {provinces.map((province) => (
-                <option key={province} value={province}>
-                  {province}
-                </option>
-              ))}
-            </select>
-          </label>
+              <div className="field-row">
+                <label className="field">
+                  <span>Tu nombre</span>
+                  <input required value={form.advertiser_name} onChange={(event) => setForm({ ...form, advertiser_name: event.target.value })} />
+                </label>
+                <label className="field">
+                  <span>WhatsApp</span>
+                  <input required value={form.advertiser_phone} onChange={(event) => setForm({ ...form, advertiser_phone: event.target.value, whatsapp: event.target.value })} />
+                </label>
+              </div>
 
-          <label className="field">
-            <span>Descripcion</span>
-            <textarea required rows={5} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
-          </label>
+              <label className="field">
+                <span>Email opcional</span>
+                <input type="email" value={form.advertiser_email} onChange={(event) => setForm({ ...form, advertiser_email: event.target.value, email: event.target.value })} />
+              </label>
+            </div>
+          ) : null}
 
-          <label className="field">
-            <span>Sitio web</span>
-            <input type="url" value={form.website_url} onChange={(event) => setForm({ ...form, website_url: event.target.value })} placeholder="https://cliente.com" />
-          </label>
+          {currentStep === 3 ? (
+            <div className="step-pane">
+              <div className="review-card">
+                <h2>Publicar en PanAvisos</h2>
+                <p className="muted">Tu anuncio quedara pendiente de aprobacion. No se borra lo que llenaste si vuelves atras.</p>
+                <div className="review-row">
+                  <span>Titulo</span>
+                  <strong>{form.title || "Sin titulo"}</strong>
+                </div>
+                <div className="review-row">
+                  <span>Precio</span>
+                  <strong>{money(form.price)}</strong>
+                </div>
+                <div className="review-row">
+                  <span>Ubicacion</span>
+                  <strong>{form.district || "Sin ubicacion"}</strong>
+                </div>
+              </div>
+            </div>
+          ) : null}
 
-          <div className="field-row">
-            <label className="field">
-              <span>Tu nombre</span>
-              <input required value={form.advertiser_name} onChange={(event) => setForm({ ...form, advertiser_name: event.target.value })} />
-            </label>
-            <label className="field">
-              <span>WhatsApp</span>
-              <input required value={form.advertiser_phone} onChange={(event) => setForm({ ...form, advertiser_phone: event.target.value, whatsapp: event.target.value })} />
-            </label>
+          <div className="publish-bottom-bar">
+            <button className="secondary" type="button" disabled={currentStep === 1 || saving} onClick={() => setStep((value) => Math.max(1, value - 1))}>
+              Anterior
+            </button>
+            {currentStep < 3 ? (
+              <button className="primary" type="button" onClick={goNext} disabled={saving}>
+                Siguiente
+              </button>
+            ) : (
+              <button className="primary" type="submit" disabled={saving}>
+                {saving ? "Publicando..." : "Publicar"}
+              </button>
+            )}
           </div>
 
-          <label className="field">
-            <span>Email opcional</span>
-            <input type="email" value={form.advertiser_email} onChange={(event) => setForm({ ...form, advertiser_email: event.target.value, email: event.target.value })} />
-          </label>
         </form>
 
         <section className="publish-preview">
