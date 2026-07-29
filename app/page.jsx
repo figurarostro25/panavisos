@@ -56,70 +56,20 @@ export default function HomePage() {
   return (
     <>
       <Topbar />
-      <main>
-        <section className="market-hero">
-          <div className="hero-copy">
-            <span className="eyebrow">Marketplace de Panama</span>
-            <h1>Compra, vende y promociona cerca de ti.</h1>
-            <p>
-              Propiedades, autos, servicios y ofertas locales con busqueda sencilla y contacto directo.
-            </p>
-            <div className="hero-actions">
-              <Link className="primary" href="/publicar">
-                Publicar anuncio
-              </Link>
-              <a className="secondary" href="#anuncios">
-                Explorar
-              </a>
+      <main className="market-home">
+        <section className="home-band hero-banner-band">
+          <PromoBanner banner={primaryBanner} large />
+          {secondaryBanners.length ? (
+            <div className="mini-banner-row">
+              {secondaryBanners.map((banner) => <PromoBanner key={banner.id} banner={banner} />)}
             </div>
-          </div>
-          <form className="hero-search" onSubmit={(event) => event.preventDefault()}>
-            <label className="field">
-              <span>Que buscas?</span>
-              <input
-                value={filters.q}
-                onChange={(event) => setFilters({ ...filters, q: event.target.value })}
-                placeholder="Ej: apartamento, estetica, Toyota..."
-              />
-            </label>
-            <div className="field-row">
-              <label className="field">
-                <span>Categoria</span>
-                <select
-                  value={filters.category}
-                  onChange={(event) => setFilters({ ...filters, category: event.target.value })}
-                >
-                  <option value="">Todas</option>
-                  {data.categories?.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="field">
-                <span>Provincia</span>
-                <select
-                  value={filters.province}
-                  onChange={(event) => setFilters({ ...filters, province: event.target.value })}
-                >
-                  <option value="">Todas</option>
-                  {provinces.map((province) => (
-                    <option key={province} value={province}>
-                      {province}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-          </form>
+          ) : null}
         </section>
 
-        <section className="home-band">
+        <section className="home-band category-band">
           <div className="section-head">
             <div>
               <h2>Categorias populares</h2>
-              <p className="muted">Entrada rapida al estilo marketplace para navegar sin aprender nada nuevo.</p>
             </div>
             <Link className="nav-link" href="/publicar">
               Publicar
@@ -146,20 +96,6 @@ export default function HomePage() {
                 </button>
               );
             })}
-          </div>
-        </section>
-
-        <section className="home-band banner-grid">
-          <PromoBanner banner={primaryBanner} large />
-          <div className="side-promos">
-            {secondaryBanners.length ? (
-              secondaryBanners.map((banner) => <PromoBanner key={banner.id} banner={banner} />)
-            ) : (
-              <>
-                <PromoBanner banner={{ title: "Destaca tu negocio", subtitle: "Banners administrables para promociones." }} />
-                <PromoBanner banner={{ title: "Anuncios premium", subtitle: "Espacio para ofertas, proyectos y campanas." }} />
-              </>
-            )}
           </div>
         </section>
 
@@ -289,24 +225,28 @@ function PromoBanner({ banner, large = false }) {
   const content = banner || {
     title: "Promociona aqui",
     subtitle: "Crea banners desde el panel admin y mostrarlos en portada.",
-    cta_label: "Administrar",
-    cta_url: "/admin"
+    cta_label: "Publicar ahora",
+    cta_url: "/publicar"
   };
+  const Wrapper = content.cta_url ? "a" : "article";
+  const wrapperProps = content.cta_url
+    ? { href: content.cta_url, target: content.cta_url.startsWith("http") ? "_blank" : undefined, rel: content.cta_url.startsWith("http") ? "noreferrer" : undefined }
+    : {};
 
   return (
-    <article className={`promo-banner ${large ? "large" : ""}`}>
+    <Wrapper className={`promo-banner ${large ? "large" : ""}`} {...wrapperProps}>
       {content.image_url ? <img src={content.image_url} alt="" /> : null}
       <div>
-        <span className="eyebrow">Destacado</span>
+        <span className="eyebrow">{content.ends_at ? `Vigente hasta ${formatDate(content.ends_at)}` : "Destacado"}</span>
         <h2>{content.title}</h2>
         {content.subtitle ? <p>{content.subtitle}</p> : null}
         {content.cta_label && content.cta_url ? (
-          <a className="secondary" href={content.cta_url}>
+          <span className="secondary">
             {content.cta_label}
-          </a>
+          </span>
         ) : null}
       </div>
-    </article>
+    </Wrapper>
   );
 }
 
@@ -485,6 +425,13 @@ function normalize(value) {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
+}
+
+function formatDate(value) {
+  return new Intl.DateTimeFormat("es-PA", {
+    day: "2-digit",
+    month: "short"
+  }).format(new Date(value));
 }
 
 function PriceBlock({ listing, large = false }) {
