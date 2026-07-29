@@ -15,6 +15,7 @@ export default function HomePage() {
   const [selected, setSelected] = useState(null);
   const [profile, setProfile] = useState(null);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [activeBanner, setActiveBanner] = useState(0);
   const [filters, setFilters] = useState({
     q: "",
     category: "",
@@ -68,23 +69,57 @@ export default function HomePage() {
   }, [data, filters]);
 
   const featured = listings.filter((listing) => listing.featured).slice(0, 6);
-  const primaryBanner = data.banners?.[0];
-  const secondaryBanners = (data.banners || []).slice(1, 9);
+  const sortedBanners = useMemo(
+    () =>
+      [...(data.banners || [])].sort(
+        (a, b) =>
+          new Date(b.created_at || b.starts_at || 0).getTime() -
+          new Date(a.created_at || a.starts_at || 0).getTime()
+      ),
+    [data.banners]
+  );
+  const heroBanners = sortedBanners.slice(0, 5);
+  const overflowBanners = sortedBanners.slice(5);
+  const activeHeroBanner = heroBanners[activeBanner % Math.max(heroBanners.length, 1)];
+
+  useEffect(() => {
+    if (heroBanners.length <= 1) return;
+    const timer = setInterval(() => {
+      setActiveBanner((current) => (current + 1) % heroBanners.length);
+    }, 3000);
+
+    return () => clearInterval(timer);
+  }, [heroBanners.length]);
 
   return (
     <>
       <Topbar profile={profile} onOpenAccount={() => setAccountOpen(true)} onLogout={logoutProfile} />
       <main className="market-home">
         <section className="home-band hero-banner-band">
-          <PromoBanner banner={primaryBanner} large />
-          {secondaryBanners.length ? (
+          <div className="hero-carousel">
+            <PromoBanner banner={activeHeroBanner} large />
+            {heroBanners.length > 1 ? (
+              <div className="banner-dots" aria-label="Banners principales">
+                {heroBanners.map((banner, index) => (
+                  <button
+                    className={index === activeBanner % heroBanners.length ? "active" : ""}
+                    type="button"
+                    key={banner.id}
+                    onClick={() => setActiveBanner(index)}
+                    aria-label={`Ver banner ${index + 1}`}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </div>
+          {overflowBanners.length ? (
             <section className="featured-promos" aria-label="Destacados">
               <div className="rail-head">
                 <h2>Destacados</h2>
                 <small>Promociones activas</small>
               </div>
               <div className="promo-rail">
-                {secondaryBanners.map((banner) => <PromoBanner key={banner.id} banner={banner} compact />)}
+                {overflowBanners.map((banner) => <PromoBanner key={banner.id} banner={banner} compact />)}
               </div>
             </section>
           ) : null}
@@ -113,10 +148,9 @@ export default function HomePage() {
             <button className="category-tile" type="button" onClick={() => setFilters({ ...filters, category: "" })}>
               <span className="category-icon">TO</span>
               <strong>Todo</strong>
-              <small>Ver anuncios</small>
             </button>
             {data.categories?.map((category) => {
-              const look = categoryLooks[category.slug] || { icon: category.name.slice(0, 2), label: category.description };
+              const look = categoryLooks[category.slug] || { icon: category.name.slice(0, 2) };
               return (
                 <button
                   className="category-tile"
@@ -126,7 +160,6 @@ export default function HomePage() {
                 >
                   <span className="category-icon">{look.icon}</span>
                   <strong>{category.name}</strong>
-                  <small>{look.label}</small>
                 </button>
               );
             })}

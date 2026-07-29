@@ -651,13 +651,12 @@ textarea {
 
 .category-tile {
   display: grid;
-  grid-template-columns: auto minmax(96px, 1fr);
-  grid-template-rows: auto auto;
+  grid-template-columns: auto minmax(72px, 1fr);
   column-gap: 10px;
-  row-gap: 3px;
-  min-width: 190px;
-  min-height: 74px;
-  padding: 10px 12px;
+  align-items: center;
+  min-width: 156px;
+  min-height: 72px;
+  padding: 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
@@ -670,24 +669,17 @@ textarea {
 
 .category-icon {
   display: grid;
-  grid-row: 1 / span 2;
   place-items: center;
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   border-radius: 8px;
   color: #fff;
   background: var(--teal);
   font-weight: 950;
 }
 
-.category-tile strong,
-.category-tile small {
+.category-tile strong {
   display: block;
-}
-
-.category-tile small {
-  color: var(--muted);
-  font-size: 0.78rem;
 }
 
 .promo-banner {
@@ -705,7 +697,7 @@ textarea {
 }
 
 .promo-banner.large {
-  min-height: clamp(260px, 30vw, 390px);
+  min-height: clamp(360px, 40vw, 540px);
 }
 
 .promo-banner.compact {
@@ -721,7 +713,13 @@ textarea {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center 34%;
   opacity: 0.62;
+}
+
+.promo-banner.large img {
+  object-position: center 28%;
+  opacity: 0.72;
 }
 
 .promo-banner > div {
@@ -792,6 +790,38 @@ textarea {
   overflow-x: auto;
   padding-bottom: 2px;
   scrollbar-width: thin;
+}
+
+.hero-carousel {
+  position: relative;
+}
+
+.banner-dots {
+  position: absolute;
+  right: 18px;
+  bottom: 16px;
+  z-index: 2;
+  display: flex;
+  gap: 7px;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.34);
+  backdrop-filter: blur(8px);
+}
+
+.banner-dots button {
+  width: 10px;
+  height: 10px;
+  min-height: 0;
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.banner-dots button.active {
+  width: 24px;
+  background: #fff;
 }
 
 .market-layout {
