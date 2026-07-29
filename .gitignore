@@ -3,4 +3,6 @@ node_modules
 .env
 .env.local
 .vercel
+.npm-cache
+.vercel-local
 *.log
