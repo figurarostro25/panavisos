@@ -7,6 +7,7 @@ import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
 export default function AccountPage() {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
+  const [authMode, setAuthMode] = useState("login");
   const [form, setForm] = useState({ name: "", email: "", phone: "", age: "" });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -61,6 +62,12 @@ export default function AccountPage() {
     event.preventDefault();
     setMessage("");
     setError("");
+
+    if (authMode === "register" && !form.name.trim()) {
+      setError("Escribe tu nombre completo para crear la cuenta.");
+      return;
+    }
+
     try {
       const { error: otpError } = await getSupabaseBrowser().auth.signInWithOtp({
         email: form.email,
@@ -75,7 +82,11 @@ export default function AccountPage() {
         return;
       }
 
-      setMessage("Te enviamos un enlace para entrar a tu correo.");
+      setMessage(
+        authMode === "register"
+          ? "Te enviamos un enlace para confirmar tu cuenta."
+          : "Te enviamos un enlace para entrar a tu correo."
+      );
     } catch {
       setError("No pudimos enviar el enlace ahora. Revisa el correo e intenta nuevamente.");
     }
@@ -174,25 +185,46 @@ export default function AccountPage() {
             </>
           ) : (
             <>
-              <h1>Entra o crea tu cuenta</h1>
+              <h1>{authMode === "register" ? "Crea tu cuenta" : "Inicia sesion"}</h1>
               <p className="muted">
-                Usa tu correo para entrar rapido. Google y Facebook quedan para la siguiente conexion.
+                {authMode === "register"
+                  ? "Crea tu perfil con nombre y correo. Te enviaremos un enlace seguro para confirmar."
+                  : "Escribe tu correo y te enviaremos un enlace seguro para entrar."}
               </p>
 
               <div className="login-options">
                 <form className="email-login" onSubmit={sendEmailLink}>
-                  <label className="field">
-                    <span>Nombre completo</span>
-                    <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
-                  </label>
+                  {authMode === "register" ? (
+                    <label className="field">
+                      <span>Nombre completo</span>
+                      <input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
+                    </label>
+                  ) : null}
                   <label className="field">
                     <span>Correo electronico</span>
                     <input required type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} />
                   </label>
                   <button className="primary" type="submit">
-                    Enviar enlace de acceso
+                    {authMode === "register" ? "Crear cuenta por correo" : "Enviar enlace de acceso"}
                   </button>
                 </form>
+                <div className="auth-switch">
+                  {authMode === "register" ? (
+                    <>
+                      <span>Ya tienes cuenta?</span>
+                      <button type="button" onClick={() => setAuthMode("login")}>
+                        Inicia sesion
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span>Aun no tienes cuenta?</span>
+                      <button type="button" onClick={() => setAuthMode("register")}>
+                        Crear cuenta
+                      </button>
+                    </>
+                  )}
+                </div>
                 <div className="social-disabled-group" aria-label="Opciones disponibles proximamente">
                   <p className="muted center-text">Google y Facebook se conectan despues.</p>
                   <button className="facebook-button" type="button" disabled>

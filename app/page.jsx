@@ -353,16 +353,17 @@ function AccountButton({ profile, onOpen, onLogout }) {
 }
 
 function AccountModal({ onClose }) {
+  const [authMode, setAuthMode] = useState("login");
   const [form, setForm] = useState({ name: "", email: "" });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  async function submit(event, intent) {
+  async function submit(event) {
     event.preventDefault();
     setMessage("");
     setError("");
 
-    if (intent === "register" && !form.name.trim()) {
+    if (authMode === "register" && !form.name.trim()) {
       setError("Escribe tu nombre completo para crear la cuenta.");
       return;
     }
@@ -382,7 +383,7 @@ function AccountModal({ onClose }) {
         return;
       }
 
-      setMessage(intent === "register" ? "Te enviamos un enlace para confirmar tu cuenta." : "Te enviamos un enlace de acceso al correo.");
+      setMessage(authMode === "register" ? "Te enviamos un enlace para confirmar tu cuenta." : "Te enviamos un enlace de acceso al correo.");
     } catch {
       setError("No pudimos enviar el enlace ahora. Revisa el correo e intenta nuevamente.");
     }
@@ -396,14 +397,20 @@ function AccountModal({ onClose }) {
           X
         </button>
         <div className="account-column account-primary-panel">
-          <span className="account-kicker">Registro por correo</span>
-          <h2>Crea tu cuenta</h2>
-          <p className="muted account-copy">Usa tu nombre y correo para responder anuncios. Te enviaremos un enlace seguro para entrar.</p>
-          <form onSubmit={(event) => submit(event, "register")}>
-            <label className="field">
-              <span>Nombre completo</span>
-              <input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Tu nombre" />
-            </label>
+          <span className="account-kicker">Cuenta PanAvisos</span>
+          <h2>{authMode === "register" ? "Crea tu cuenta" : "Inicia sesion"}</h2>
+          <p className="muted account-copy">
+            {authMode === "register"
+              ? "Crea tu perfil con nombre y correo para publicar o responder anuncios."
+              : "Entra con tu correo. Te enviaremos un enlace seguro sin contrasena."}
+          </p>
+          <form onSubmit={submit}>
+            {authMode === "register" ? (
+              <label className="field">
+                <span>Nombre completo</span>
+                <input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Tu nombre" />
+              </label>
+            ) : null}
             <label className="field">
               <span>Correo</span>
               <input
@@ -415,26 +422,33 @@ function AccountModal({ onClose }) {
               />
             </label>
             <button className="primary wide-button" type="submit">
-              Crear cuenta por correo
+              {authMode === "register" ? "Crear cuenta por correo" : "Enviar enlace de acceso"}
             </button>
           </form>
+          <div className="auth-switch">
+            {authMode === "register" ? (
+              <>
+                <span>Ya tienes cuenta?</span>
+                <button type="button" onClick={() => setAuthMode("login")}>
+                  Inicia sesion
+                </button>
+              </>
+            ) : (
+              <>
+                <span>Aun no tienes cuenta?</span>
+                <button type="button" onClick={() => setAuthMode("register")}>
+                  Crear cuenta
+                </button>
+              </>
+            )}
+          </div>
           {message ? <p className="notice">{message}</p> : null}
           {error ? <p className="error">{error}</p> : null}
         </div>
         <div className="account-column account-secondary-panel">
-          <h2>Ya tienes cuenta?</h2>
-          <p className="muted account-copy">Entra con el mismo enlace seguro que recibes por correo.</p>
-          <form onSubmit={(event) => submit(event, "login")}>
-            <label className="field">
-              <span>Correo</span>
-              <input required type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} placeholder="correo@email.com" />
-            </label>
-            <button className="secondary wide-button" type="submit">
-              Enviar enlace de acceso
-            </button>
-          </form>
+          <h2>Acceso social</h2>
+          <p className="muted account-copy">Google y Facebook quedaran disponibles cuando conectemos sus credenciales reales.</p>
           <div className="social-disabled-group" aria-label="Opciones disponibles proximamente">
-            <p className="muted center-text">Google y Facebook se conectan despues.</p>
             <button className="facebook-button" type="button" disabled>
               Facebook proximamente
             </button>

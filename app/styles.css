@@ -992,6 +992,26 @@ button:disabled {
   margin-top: 12px;
 }
 
+.auth-switch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding-top: 6px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.auth-switch button {
+  border: 0;
+  padding: 0;
+  color: var(--teal);
+  background: transparent;
+  font: inherit;
+  font-weight: 900;
+  text-decoration: underline;
+}
+
 .google-button {
   min-height: 48px;
 }
