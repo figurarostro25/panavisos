@@ -345,6 +345,9 @@ function authErrorMessage(value) {
   if (text.includes("email not confirmed")) {
     return "Falta confirmar tu correo. Revisa tu email.";
   }
+  if (text.includes("failed to fetch") || text.includes("network")) {
+    return "No pudimos conectar con Supabase. Revisa en Vercel que NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY esten completas en Production, y redeploya.";
+  }
   if (text.includes("password")) {
     return "Revisa la contrasena. Debe tener al menos 6 caracteres.";
   }
