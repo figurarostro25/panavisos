@@ -1012,6 +1012,17 @@ button:disabled {
   text-decoration: underline;
 }
 
+.text-button {
+  border: 0;
+  padding: 6px 0 0;
+  color: var(--teal);
+  background: transparent;
+  font: inherit;
+  font-weight: 900;
+  text-align: center;
+  text-decoration: underline;
+}
+
 .google-button {
   min-height: 48px;
 }

@@ -8,7 +8,7 @@ export default function AccountPage() {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [authMode, setAuthMode] = useState("login");
-  const [form, setForm] = useState({ name: "", email: "", phone: "", age: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", confirmPassword: "", phone: "", age: "" });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -53,12 +53,14 @@ export default function AccountPage() {
     setForm({
       name: nextProfile.name || "",
       email: nextProfile.email || "",
+      password: "",
+      confirmPassword: "",
       phone: nextProfile.phone || "",
       age: nextProfile.age || ""
     });
   }
 
-  async function sendEmailLink(event) {
+  async function submitAuth(event) {
     event.preventDefault();
     setMessage("");
     setError("");
@@ -68,27 +70,70 @@ export default function AccountPage() {
       return;
     }
 
-    try {
-      const { error: otpError } = await getSupabaseBrowser().auth.signInWithOtp({
-        email: form.email,
-        options: {
-          emailRedirectTo: window.location.origin + "/cuenta",
-          data: form.name.trim() ? { full_name: form.name.trim() } : undefined
-        }
-      });
+    if (!form.password || form.password.length < 6) {
+      setError("La contrasena debe tener al menos 6 caracteres.");
+      return;
+    }
 
-      if (otpError) {
-        setError(otpError.message);
+    if (authMode === "register" && form.password !== form.confirmPassword) {
+      setError("Las contrasenas no coinciden.");
+      return;
+    }
+
+    try {
+      const supabase = getSupabaseBrowser();
+      const result =
+        authMode === "register"
+          ? await supabase.auth.signUp({
+              email: form.email,
+              password: form.password,
+              options: {
+                emailRedirectTo: window.location.origin + "/cuenta",
+                data: { full_name: form.name.trim() }
+              }
+            })
+          : await supabase.auth.signInWithPassword({
+              email: form.email,
+              password: form.password
+            });
+
+      if (result.error) {
+        setError(result.error.message);
         return;
       }
 
       setMessage(
         authMode === "register"
-          ? "Te enviamos un enlace para confirmar tu cuenta."
-          : "Te enviamos un enlace para entrar a tu correo."
+          ? "Cuenta creada. Si se requiere confirmacion, revisa tu correo antes de entrar."
+          : "Sesion iniciada."
       );
     } catch {
-      setError("No pudimos enviar el enlace ahora. Revisa el correo e intenta nuevamente.");
+      setError("No pudimos completar el acceso ahora. Revisa tus datos e intenta nuevamente.");
+    }
+  }
+
+  async function sendRecoveryLink() {
+    setMessage("");
+    setError("");
+
+    if (!form.email) {
+      setError("Escribe tu correo para enviarte la recuperacion.");
+      return;
+    }
+
+    try {
+      const { error: recoveryError } = await getSupabaseBrowser().auth.resetPasswordForEmail(form.email, {
+        redirectTo: window.location.origin + "/cuenta"
+      });
+
+      if (recoveryError) {
+        setError(recoveryError.message);
+        return;
+      }
+
+      setMessage("Te enviamos un enlace para recuperar tu contrasena.");
+    } catch {
+      setError("No pudimos enviar la recuperacion ahora.");
     }
   }
 
@@ -188,12 +233,12 @@ export default function AccountPage() {
               <h1>{authMode === "register" ? "Crea tu cuenta" : "Inicia sesion"}</h1>
               <p className="muted">
                 {authMode === "register"
-                  ? "Crea tu perfil con nombre y correo. Te enviaremos un enlace seguro para confirmar."
-                  : "Escribe tu correo y te enviaremos un enlace seguro para entrar."}
+                  ? "Crea tu perfil con nombre, correo y contrasena."
+                  : "Entra con tu correo y contrasena."}
               </p>
 
               <div className="login-options">
-                <form className="email-login" onSubmit={sendEmailLink}>
+                <form className="email-login" onSubmit={submitAuth}>
                   {authMode === "register" ? (
                     <label className="field">
                       <span>Nombre completo</span>
@@ -204,9 +249,24 @@ export default function AccountPage() {
                     <span>Correo electronico</span>
                     <input required type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} />
                   </label>
+                  <label className="field">
+                    <span>Contrasena</span>
+                    <input required type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} />
+                  </label>
+                  {authMode === "register" ? (
+                    <label className="field">
+                      <span>Confirmar contrasena</span>
+                      <input required type="password" value={form.confirmPassword} onChange={(event) => setForm({ ...form, confirmPassword: event.target.value })} />
+                    </label>
+                  ) : null}
                   <button className="primary" type="submit">
-                    {authMode === "register" ? "Crear cuenta por correo" : "Enviar enlace de acceso"}
+                    {authMode === "register" ? "Crear cuenta" : "Iniciar sesion"}
                   </button>
+                  {authMode === "login" ? (
+                    <button className="text-button" type="button" onClick={sendRecoveryLink}>
+                      Olvidaste tu contrasena?
+                    </button>
+                  ) : null}
                 </form>
                 <div className="auth-switch">
                   {authMode === "register" ? (

@@ -354,7 +354,7 @@ function AccountButton({ profile, onOpen, onLogout }) {
 
 function AccountModal({ onClose }) {
   const [authMode, setAuthMode] = useState("login");
-  const [form, setForm] = useState({ name: "", email: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", confirmPassword: "" });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -368,24 +368,66 @@ function AccountModal({ onClose }) {
       return;
     }
 
+    if (!form.password || form.password.length < 6) {
+      setError("La contrasena debe tener al menos 6 caracteres.");
+      return;
+    }
+
+    if (authMode === "register" && form.password !== form.confirmPassword) {
+      setError("Las contrasenas no coinciden.");
+      return;
+    }
+
     try {
       const supabase = getSupabaseBrowser();
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        email: form.email,
-        options: {
-          emailRedirectTo: window.location.origin,
-          data: form.name.trim() ? { full_name: form.name.trim() } : undefined
-        }
-      });
+      const result =
+        authMode === "register"
+          ? await supabase.auth.signUp({
+              email: form.email,
+              password: form.password,
+              options: {
+                emailRedirectTo: window.location.origin,
+                data: { full_name: form.name.trim() }
+              }
+            })
+          : await supabase.auth.signInWithPassword({
+              email: form.email,
+              password: form.password
+            });
 
-      if (otpError) {
-        setError(otpError.message);
+      if (result.error) {
+        setError(result.error.message);
         return;
       }
 
-      setMessage(authMode === "register" ? "Te enviamos un enlace para confirmar tu cuenta." : "Te enviamos un enlace de acceso al correo.");
+      setMessage(authMode === "register" ? "Cuenta creada. Si se requiere confirmacion, revisa tu correo antes de entrar." : "Sesion iniciada.");
     } catch {
-      setError("No pudimos enviar el enlace ahora. Revisa el correo e intenta nuevamente.");
+      setError("No pudimos completar el acceso ahora. Revisa tus datos e intenta nuevamente.");
+    }
+  }
+
+  async function sendRecoveryLink() {
+    setMessage("");
+    setError("");
+
+    if (!form.email) {
+      setError("Escribe tu correo para enviarte la recuperacion.");
+      return;
+    }
+
+    try {
+      const { error: recoveryError } = await getSupabaseBrowser().auth.resetPasswordForEmail(form.email, {
+        redirectTo: window.location.origin
+      });
+
+      if (recoveryError) {
+        setError(recoveryError.message);
+        return;
+      }
+
+      setMessage("Te enviamos un enlace para recuperar tu contrasena.");
+    } catch {
+      setError("No pudimos enviar la recuperacion ahora.");
     }
   }
 
@@ -401,8 +443,8 @@ function AccountModal({ onClose }) {
           <h2>{authMode === "register" ? "Crea tu cuenta" : "Inicia sesion"}</h2>
           <p className="muted account-copy">
             {authMode === "register"
-              ? "Crea tu perfil con nombre y correo para publicar o responder anuncios."
-              : "Entra con tu correo. Te enviaremos un enlace seguro sin contrasena."}
+              ? "Crea tu perfil con nombre, correo y contrasena para publicar o responder anuncios."
+              : "Entra con tu correo y contrasena."}
           </p>
           <form onSubmit={submit}>
             {authMode === "register" ? (
@@ -421,9 +463,36 @@ function AccountModal({ onClose }) {
                 placeholder="correo@email.com"
               />
             </label>
+            <label className="field">
+              <span>Contrasena</span>
+              <input
+                required
+                type="password"
+                value={form.password}
+                onChange={(event) => setForm({ ...form, password: event.target.value })}
+                placeholder="Minimo 6 caracteres"
+              />
+            </label>
+            {authMode === "register" ? (
+              <label className="field">
+                <span>Confirmar contrasena</span>
+                <input
+                  required
+                  type="password"
+                  value={form.confirmPassword}
+                  onChange={(event) => setForm({ ...form, confirmPassword: event.target.value })}
+                  placeholder="Repite tu contrasena"
+                />
+              </label>
+            ) : null}
             <button className="primary wide-button" type="submit">
-              {authMode === "register" ? "Crear cuenta por correo" : "Enviar enlace de acceso"}
+              {authMode === "register" ? "Crear cuenta" : "Iniciar sesion"}
             </button>
+            {authMode === "login" ? (
+              <button className="text-button" type="button" onClick={sendRecoveryLink}>
+                Olvidaste tu contrasena?
+              </button>
+            ) : null}
           </form>
           <div className="auth-switch">
             {authMode === "register" ? (
