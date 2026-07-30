@@ -1,11 +1,28 @@
 import { NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 import { requireAdmin } from "@/lib/auth";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
 
-export async function POST() {
-  if (!(await requireAdmin())) {
+function getBearerToken(request) {
+  const header = request.headers.get("authorization") || "";
+  const [type, token] = header.split(" ");
+  return type?.toLowerCase() === "bearer" ? token : "";
+}
+
+async function canUpload(request) {
+  if (await requireAdmin()) return true;
+
+  const token = getBearerToken(request);
+  if (!token) return false;
+
+  const { data, error } = await getSupabaseAdmin().auth.getUser(token);
+  return !error && Boolean(data?.user);
+}
+
+export async function POST(request) {
+  if (!(await canUpload(request))) {
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   }
 

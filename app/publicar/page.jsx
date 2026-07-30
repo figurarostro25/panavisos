@@ -185,9 +185,12 @@ export default function PublicarPage() {
     try {
       const nextImages = [];
       for (const file of Array.from(files || [])) {
-        const signed = await fetch("/api/cloudinary/sign", { method: "POST" }).then((response) =>
-          response.json()
-        );
+        const signed = await fetch("/api/cloudinary/sign", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session?.access_token || ""}`
+          }
+        }).then((response) => response.json());
 
         if (signed.error) throw new Error(signed.error);
 
