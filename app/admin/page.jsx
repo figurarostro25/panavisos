@@ -21,6 +21,7 @@ const emptyListing = {
   whatsapp: "",
   email: "",
   website_url: "",
+  video_url: "",
   advertiser_name: "",
   advertiser_phone: "",
   advertiser_email: "",
@@ -60,6 +61,7 @@ export default function AdminPage() {
   const [categoryForm, setCategoryForm] = useState({ id: "", name: "", description: "", sort_order: 0 });
   const [listingForm, setListingForm] = useState(emptyListing);
   const [bannerForm, setBannerForm] = useState(emptyBanner);
+  const [settings, setSettings] = useState({ maxListingImages: 5 });
   const [listingFilter, setListingFilter] = useState("all");
   const [saving, setSaving] = useState(false);
 
@@ -68,14 +70,21 @@ export default function AdminPage() {
   }, []);
 
   async function loadAdmin() {
-    const [catResponse, listingResponse, bannerResponse, messageResponse] = await Promise.all([
+    const [catResponse, listingResponse, bannerResponse, messageResponse, settingsResponse] = await Promise.all([
       fetch("/api/admin/categories"),
       fetch("/api/admin/listings"),
       fetch("/api/admin/banners"),
-      fetch("/api/admin/messages")
+      fetch("/api/admin/messages"),
+      fetch("/api/admin/settings")
     ]);
 
-    if (catResponse.status === 401 || listingResponse.status === 401 || bannerResponse.status === 401 || messageResponse.status === 401) {
+    if (
+      catResponse.status === 401 ||
+      listingResponse.status === 401 ||
+      bannerResponse.status === 401 ||
+      messageResponse.status === 401 ||
+      settingsResponse.status === 401
+    ) {
       setLoggedIn(false);
       return;
     }
@@ -84,10 +93,12 @@ export default function AdminPage() {
     const listingData = await listingResponse.json();
     const bannerData = await bannerResponse.json();
     const messageData = await messageResponse.json();
+    const settingsData = await settingsResponse.json().catch(() => ({}));
     setCategories(catData.categories || []);
     setListings(listingData.listings || []);
     setBanners(bannerData.banners || []);
     setMessages(messageData.messages || []);
+    setSettings(settingsData.settings || { maxListingImages: 5 });
     setSelectedMessageId((current) => current || messageData.messages?.[0]?.id || "");
     setLoggedIn(true);
   }
@@ -202,6 +213,27 @@ export default function AdminPage() {
     await loadAdmin();
   }
 
+  async function saveSettings(event) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    const response = await fetch("/api/admin/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(settings)
+    });
+    setSaving(false);
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      setError(payload.error || "No se pudo guardar la configuracion.");
+      return;
+    }
+
+    const payload = await response.json();
+    setSettings(payload.settings || settings);
+  }
+
   async function deleteListing(id) {
     if (!confirm("Eliminar este anuncio?")) return;
     await fetch(`/api/admin/listings/${id}`, { method: "DELETE" });
@@ -273,6 +305,7 @@ export default function AdminPage() {
       whatsapp: listing.whatsapp || "",
       email: listing.email || "",
       website_url: listing.website_url || "",
+      video_url: listing.video_url || "",
       advertiser_name: listing.advertiser_name || "",
       advertiser_phone: listing.advertiser_phone || "",
       advertiser_email: listing.advertiser_email || "",
@@ -292,7 +325,15 @@ export default function AdminPage() {
     setError("");
     try {
       const nextImages = [];
-      for (const file of Array.from(files)) {
+      const selectedFiles = Array.from(files || []);
+      const availableSlots = Number(settings.maxListingImages || 5) - listingForm.images.length;
+
+      if (availableSlots <= 0) {
+        setError(`Este anuncio ya tiene el limite de ${settings.maxListingImages || 5} fotos.`);
+        return;
+      }
+
+      for (const file of selectedFiles.slice(0, availableSlots)) {
         const signed = await fetch("/api/cloudinary/sign", { method: "POST" }).then((response) =>
           response.json()
         );
@@ -320,6 +361,9 @@ export default function AdminPage() {
       }
 
       setListingForm((current) => ({ ...current, images: [...current.images, ...nextImages] }));
+      if (selectedFiles.length > availableSlots) {
+        setError(`Solo se agregaron ${availableSlots} foto(s). El limite actual es ${settings.maxListingImages || 5}.`);
+      }
     } catch (uploadError) {
       setError(uploadError.message || "No se pudieron subir las imagenes.");
     } finally {
@@ -476,6 +520,9 @@ export default function AdminPage() {
                 <button className={activeAdminSection === "messages" ? "active" : ""} type="button" onClick={() => setActiveAdminSection("messages")}>
                   <span>Mensajes</span>
                   {unreadMessages ? <strong>{unreadMessages}</strong> : null}
+                </button>
+                <button className={activeAdminSection === "settings" ? "active" : ""} type="button" onClick={() => setActiveAdminSection("settings")}>
+                  Configuracion
                 </button>
               </aside>
 
@@ -705,6 +752,16 @@ export default function AdminPage() {
                     value={listingForm.website_url}
                     onChange={(event) => setListingForm({ ...listingForm, website_url: event.target.value })}
                     placeholder="https://cliente.com"
+                  />
+                </label>
+
+                <label className="field">
+                  <span>Link de video</span>
+                  <input
+                    type="url"
+                    value={listingForm.video_url}
+                    onChange={(event) => setListingForm({ ...listingForm, video_url: event.target.value })}
+                    placeholder="https://www.youtube.com/watch?v=..."
                   />
                 </label>
 
@@ -1153,8 +1210,32 @@ export default function AdminPage() {
                 </article>
               </div>
             </section>
-            </div>
+
+            <section className={`panel admin-full-row ${activeAdminSection !== "settings" ? "admin-section-hidden" : ""}`}>
+              <div className="form-head">
+                <div>
+                  <h2>Configuracion</h2>
+                  <p className="muted">Ajustes generales para el flujo de publicacion.</p>
+                </div>
               </div>
+              <form className="settings-form" onSubmit={saveSettings}>
+                <label className="field">
+                  <span>Fotos maximas por anuncio</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={settings.maxListingImages}
+                    onChange={(event) => setSettings({ ...settings, maxListingImages: event.target.value })}
+                  />
+                </label>
+                <button className="primary" type="submit" disabled={saving}>
+                  {saving ? "Guardando..." : "Guardar configuracion"}
+                </button>
+              </form>
+            </section>
+            </div>
+          </div>
             </div>
           </>
         ) : null}

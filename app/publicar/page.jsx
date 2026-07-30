@@ -6,6 +6,8 @@ import { locationSuggestions } from "@/lib/locations";
 import { money, provinces } from "@/lib/format";
 import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
 
+const DEFAULT_MAX_IMAGES = 5;
+
 function defaultExpiresAt() {
   const date = new Date();
   date.setMonth(date.getMonth() + 3);
@@ -29,6 +31,7 @@ const emptyForm = {
   whatsapp: "",
   email: "",
   website_url: "",
+  video_url: "",
   expires_at: defaultExpiresAt(),
   images: []
 };
@@ -42,6 +45,8 @@ export default function PublicarPage() {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [uploadingPhotos, setUploadingPhotos] = useState(0);
+  const [maxImages, setMaxImages] = useState(DEFAULT_MAX_IMAGES);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -53,6 +58,16 @@ export default function PublicarPage() {
         setCategories(nextCategories);
         setForm((current) => ({ ...current, category_id: current.category_id || nextCategories[0]?.id || "" }));
       });
+
+    fetch("/api/config")
+      .then((response) => response.json())
+      .then((payload) => {
+        const configuredMax = Number(payload.maxListingImages);
+        if (Number.isFinite(configuredMax) && configuredMax > 0) {
+          setMaxImages(Math.min(10, Math.max(1, configuredMax)));
+        }
+      })
+      .catch(() => setMaxImages(DEFAULT_MAX_IMAGES));
   }, []);
 
   useEffect(() => {
@@ -158,15 +173,6 @@ export default function PublicarPage() {
     });
   }
 
-  function applyDiscount(discountPercent) {
-    const originalPrice = Number(form.original_price || 0);
-    const nextPrice =
-      originalPrice > 0 && Number(discountPercent) > 0
-        ? Math.round(originalPrice * (1 - Number(discountPercent) / 100))
-        : form.price;
-    setForm({ ...form, discount_percent: discountPercent, price: nextPrice });
-  }
-
   function chooseLocation(location) {
     setForm({
       ...form,
@@ -203,17 +209,31 @@ export default function PublicarPage() {
   }
 
   async function uploadImages(files) {
-    setSaving(true);
     setError("");
     if (!session?.access_token) {
-      setSaving(false);
       setError("Inicia sesion antes de subir fotos.");
       return;
     }
 
+    const selectedFiles = Array.from(files || []);
+    const availableSlots = maxImages - form.images.length - uploadingPhotos;
+    if (!selectedFiles.length) return;
+
+    if (availableSlots <= 0) {
+      setError(`Puedes subir hasta ${maxImages} fotos por anuncio.`);
+      return;
+    }
+
+    const filesToUpload = selectedFiles.slice(0, availableSlots);
+    if (selectedFiles.length > availableSlots) {
+      setError(`Solo se agregaron ${availableSlots} foto(s). El limite actual es ${maxImages}.`);
+    }
+
+    setSaving(true);
+    setUploadingPhotos((count) => count + filesToUpload.length);
     try {
       const nextImages = [];
-      for (const file of Array.from(files || [])) {
+      for (const file of filesToUpload) {
         const signed = await fetch("/api/cloudinary/sign", {
           method: "POST",
           headers: {
@@ -237,14 +257,23 @@ export default function PublicarPage() {
 
         if (uploaded.error) throw new Error(uploaded.error.message);
         nextImages.push({ url: uploaded.secure_url, public_id: uploaded.public_id });
+        setUploadingPhotos((count) => Math.max(0, count - 1));
       }
 
       setForm((current) => ({ ...current, images: [...current.images, ...nextImages] }));
     } catch (uploadError) {
       setError(uploadError.message || "No se pudieron subir las imagenes.");
     } finally {
+      setUploadingPhotos(0);
       setSaving(false);
     }
+  }
+
+  function removeImage(index) {
+    setForm((current) => ({
+      ...current,
+      images: current.images.filter((_, itemIndex) => itemIndex !== index)
+    }));
   }
 
   async function submitListing(event) {
@@ -334,31 +363,22 @@ export default function PublicarPage() {
 
           {currentStep === 1 ? (
             <div className="step-pane">
-              <label className="upload-box">
-                <input type="file" accept="image/*" multiple onChange={(event) => uploadImages(event.target.files)} />
-                <strong>Anadir fotos</strong>
-                <span>o arrastrar y soltar</span>
-              </label>
+              <PhotoUploader
+                images={form.images}
+                maxImages={maxImages}
+                uploadingPhotos={uploadingPhotos}
+                onUpload={uploadImages}
+                onRemove={removeImage}
+              />
 
               <label className="field">
                 <span>Titulo</span>
                 <input required value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
               </label>
 
-              <div className="field-row">
-                <label className="field">
-                  <span>Precio final</span>
-                  <input required type="number" value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} />
-                </label>
-                <label className="field">
-                  <span>Precio anterior</span>
-                  <input type="number" value={form.original_price} onChange={(event) => setForm({ ...form, original_price: event.target.value })} />
-                </label>
-              </div>
-
               <label className="field">
-                <span>Descuento %</span>
-                <input type="number" min="0" max="99" value={form.discount_percent} onChange={(event) => applyDiscount(event.target.value)} />
+                <span>Precio USD</span>
+                <input required type="number" value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} />
               </label>
 
               <div className="field-row">
@@ -420,6 +440,16 @@ export default function PublicarPage() {
               <label className="field">
                 <span>Sitio web</span>
                 <input type="url" value={form.website_url} onChange={(event) => setForm({ ...form, website_url: event.target.value })} placeholder="https://cliente.com" />
+              </label>
+
+              <label className="field">
+                <span>Link de video opcional</span>
+                <input
+                  type="url"
+                  value={form.video_url}
+                  onChange={(event) => setForm({ ...form, video_url: event.target.value })}
+                  placeholder="https://www.youtube.com/watch?v=..."
+                />
               </label>
             </div>
           ) : null}
@@ -537,6 +567,11 @@ export default function PublicarPage() {
               <p className="muted">Publicado hace unos segundos en {form.district || "Ciudad de Panama"}</p>
               <h4>Detalles</h4>
               <p>{form.description || "La descripcion aparecera aqui."}</p>
+              {form.video_url ? (
+                <a className="secondary preview-link" href={form.video_url} target="_blank" rel="noreferrer">
+                  Ver video
+                </a>
+              ) : null}
               <h4>Informacion del vendedor</h4>
               <p>{profile?.name || "Tu cuenta"}</p>
               <button className="primary" type="button" disabled>
@@ -547,6 +582,46 @@ export default function PublicarPage() {
         </section>
       </main>
     </>
+  );
+}
+
+function PhotoUploader({ images, maxImages, uploadingPhotos, onUpload, onRemove }) {
+  const placeholders = Array.from({ length: uploadingPhotos });
+  const canAdd = images.length + uploadingPhotos < maxImages;
+
+  return (
+    <div className="photo-uploader">
+      <div className="photo-count">
+        <strong>Fotos</strong>
+        <span>
+          {images.length}/{maxImages}
+        </span>
+      </div>
+      <div className="photo-grid">
+        {images.map((image, index) => (
+          <div className="photo-tile filled" key={`${image.url}-${index}`}>
+            <img src={image.url} alt={`Foto ${index + 1}`} />
+            <button type="button" className="photo-remove" onClick={() => onRemove(index)} aria-label={`Quitar foto ${index + 1}`}>
+              x
+            </button>
+          </div>
+        ))}
+        {placeholders.map((_, index) => (
+          <div className="photo-tile loading" key={`loading-${index}`}>
+            <span />
+            <small>Subiendo</small>
+          </div>
+        ))}
+        {canAdd ? (
+          <label className="photo-tile add-photo">
+            <input type="file" accept="image/*" multiple onChange={(event) => onUpload(event.target.files)} />
+            <strong>+</strong>
+            <span>Anadir foto</span>
+          </label>
+        ) : null}
+      </div>
+      <p className="muted photo-help">Puedes subir hasta {maxImages} fotos. La primera sera la imagen principal.</p>
+    </div>
   );
 }
 
@@ -591,6 +666,7 @@ function listingToForm(listing) {
     whatsapp: listing.whatsapp || "",
     email: listing.email || "",
     website_url: listing.website_url || "",
+    video_url: listing.video_url || "",
     expires_at: listing.expires_at ? String(listing.expires_at).slice(0, 10) : defaultExpiresAt(),
     images
   };

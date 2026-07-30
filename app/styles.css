@@ -1863,6 +1863,117 @@ button:disabled {
   color: var(--muted);
 }
 
+.photo-uploader {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 4px;
+}
+
+.photo-count {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.photo-count strong {
+  color: var(--ink);
+}
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.photo-tile {
+  position: relative;
+  display: grid;
+  min-height: 96px;
+  aspect-ratio: 1;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #eef2f5;
+  color: var(--muted);
+  text-align: center;
+}
+
+.photo-tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo-tile input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.add-photo {
+  cursor: pointer;
+  border-style: dashed;
+  background: #f8fafb;
+  font-weight: 900;
+}
+
+.add-photo strong {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--teal);
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.add-photo span,
+.photo-tile small {
+  font-size: 0.8rem;
+}
+
+.photo-remove {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.92);
+  font-weight: 900;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.16);
+}
+
+.photo-tile.loading span {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #cbd5dc;
+  border-top-color: var(--teal);
+  border-radius: 999px;
+  animation: photo-spin 0.8s linear infinite;
+}
+
+.photo-help {
+  margin: 0;
+  font-size: 0.84rem;
+}
+
+@keyframes photo-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .location-field {
   position: relative;
 }
@@ -1999,6 +2110,10 @@ button:disabled {
 
 .preview-info h4 {
   margin: 14px 0 0;
+}
+
+.preview-link {
+  justify-self: start;
 }
 
 @media (max-width: 900px) {

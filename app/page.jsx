@@ -848,6 +848,11 @@ function ListingDetail({ listing, profile, onRequireAccount, onClose }) {
                   Sitio web
                 </a>
               ) : null}
+              {listing.video_url ? (
+                <a className="secondary" href={listing.video_url} target="_blank" rel="noreferrer">
+                  Video
+                </a>
+              ) : null}
               {listing.email ? (
                 <a className="secondary" href={`mailto:${listing.email}`}>
                   Email
