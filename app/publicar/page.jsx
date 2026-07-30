@@ -502,7 +502,7 @@ export default function PublicarPage() {
             <div className="step-pane">
               <div className="review-card">
               <h2>{editingId ? "Enviar cambios" : "Publicar en PanAvisos"}</h2>
-              <p className="muted">Tu anuncio quedara pendiente de aprobacion. No se borra lo que llenaste si vuelves atras.</p>
+              <p className="muted">Tu anuncio se publicara de inmediato. No se borra lo que llenaste si vuelves atras.</p>
                 <div className="review-row">
                   <span>Titulo</span>
                   <strong>{form.title || "Sin titulo"}</strong>

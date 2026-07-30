@@ -460,7 +460,7 @@ textarea {
 
 .admin-metrics {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 18px;
 }
@@ -477,6 +477,11 @@ textarea {
 .admin-metrics .stat.selected {
   border-color: var(--teal);
   box-shadow: 0 0 0 2px rgba(8, 127, 140, 0.12);
+}
+
+.admin-metrics .alert-stat {
+  border-color: #ffd66b;
+  background: #fffbeb;
 }
 
 .admin-metrics .stat span {
@@ -1083,6 +1088,189 @@ button:disabled {
 .card-location {
   color: var(--muted);
   font-size: 0.88rem;
+}
+
+.public-detail-page,
+.seller-public-page {
+  min-height: calc(100vh - 72px);
+  padding: 26px clamp(14px, 4vw, 44px) 56px;
+  background: var(--soft);
+}
+
+.miniweb-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(330px, 400px);
+  max-width: 1220px;
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.miniweb-gallery {
+  min-width: 0;
+  background: #101820;
+}
+
+.miniweb-stage {
+  position: relative;
+  display: grid;
+  min-height: min(72vh, 640px);
+  place-items: center;
+  background: #101820;
+}
+
+.miniweb-stage img {
+  width: 100%;
+  max-height: min(72vh, 640px);
+  object-fit: contain;
+}
+
+.miniweb-info {
+  display: grid;
+  align-content: flex-start;
+  gap: 14px;
+  padding: clamp(20px, 3vw, 30px);
+}
+
+.miniweb-info h1,
+.miniweb-info h2 {
+  margin: 0;
+}
+
+.miniweb-info h1 {
+  font-size: clamp(1.7rem, 3vw, 2.45rem);
+  line-height: 1.05;
+}
+
+.share-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.share-actions .primary,
+.share-actions .secondary,
+.compact-link,
+.small-action {
+  width: auto;
+  min-height: 38px;
+  padding: 0 14px;
+}
+
+.seller-panel {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fbfc;
+}
+
+.seller-panel h2,
+.seller-panel h3,
+.seller-panel p {
+  margin: 0 0 6px;
+}
+
+.compact-seller-panel {
+  margin: 16px 0;
+}
+
+.avatar-badge {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--teal);
+  font-weight: 950;
+}
+
+.avatar-badge.large {
+  width: 72px;
+  height: 72px;
+  font-size: 1.3rem;
+}
+
+.seller-more {
+  max-width: 1220px;
+  margin: 22px auto 0;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.section-heading h2 {
+  margin: 0;
+}
+
+.public-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 14px;
+}
+
+.public-listing-card {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: inherit;
+  background: #fff;
+  text-decoration: none;
+}
+
+.public-listing-card img,
+.public-listing-card .mini-image-placeholder {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 7px;
+  object-fit: cover;
+}
+
+.public-listing-card strong {
+  color: var(--teal-dark);
+  font-size: 1.05rem;
+}
+
+.public-listing-card span {
+  font-weight: 900;
+}
+
+.public-listing-card small {
+  color: var(--muted);
+}
+
+.seller-hero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  max-width: 1220px;
+  margin: 0 auto 22px;
+  padding: clamp(20px, 3vw, 30px);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.seller-hero h1 {
+  margin: 4px 0;
+  font-size: clamp(2rem, 4vw, 3rem);
 }
 
 .fresh-badge {
@@ -2128,6 +2316,7 @@ button:disabled {
   .message-inbox,
   .listing-dialog,
   .publish-workspace,
+  .miniweb-layout,
   .preview-shell {
     grid-template-columns: 1fr;
   }
@@ -2168,6 +2357,14 @@ button:disabled {
 
   .listing-info {
     border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .miniweb-stage {
+    min-height: 360px;
+  }
+
+  .miniweb-info {
     border-top: 1px solid var(--line);
   }
 

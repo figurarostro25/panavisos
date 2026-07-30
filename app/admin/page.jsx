@@ -421,12 +421,14 @@ export default function AdminPage() {
 
   const selectedCategory = categories.find((category) => category.id === listingForm.category_id);
   const isRealEstate = selectedCategory?.slug === "bienes-raices";
+  const recentCutoff = Date.now() - 24 * 60 * 60 * 1000;
   const listingStats = {
     total: listings.length,
     active: listings.filter((listing) => listing.status === "active").length,
     pending: listings.filter((listing) => listing.status === "pending").length,
     paused: listings.filter((listing) => listing.status === "paused").length,
-    featured: listings.filter((listing) => listing.featured).length
+    featured: listings.filter((listing) => listing.featured).length,
+    new24h: listings.filter((listing) => new Date(listing.created_at).getTime() >= recentCutoff).length
   };
   const filteredListings =
     listingFilter === "all"
@@ -506,7 +508,8 @@ export default function AdminPage() {
                   Tablero
                 </button>
                 <button className={activeAdminSection === "listings" ? "active" : ""} type="button" onClick={() => setActiveAdminSection("listings")}>
-                  Anuncios
+                  <span>Anuncios</span>
+                  {listingStats.new24h ? <strong>{listingStats.new24h}</strong> : null}
                 </button>
                 <button className={activeAdminSection === "users" ? "active" : ""} type="button" onClick={() => setActiveAdminSection("users")}>
                   Usuarios
@@ -531,6 +534,10 @@ export default function AdminPage() {
               <button className={`stat ${listingFilter === "all" ? "selected" : ""}`} type="button" onClick={() => setListingFilter("all")}>
                 <span>Total anuncios</span>
                 <strong>{listingStats.total}</strong>
+              </button>
+              <button className="stat alert-stat" type="button" onClick={() => setActiveAdminSection("listings")}>
+                <span>Nuevos 24h</span>
+                <strong>{listingStats.new24h}</strong>
               </button>
               <button className={`stat ${listingFilter === "pending" ? "selected" : ""}`} type="button" onClick={() => setListingFilter("pending")}>
                 <span>Pendientes</span>

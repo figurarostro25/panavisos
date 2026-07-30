@@ -38,10 +38,10 @@ export default function AccountPage() {
         setMessage("Correo confirmado. Tu cuenta ya esta lista.");
         window.history.replaceState({}, "", window.location.pathname);
       } else if (cameFromPublish && data.session?.user) {
-        setMessage("Anuncio enviado. Queda pendiente de aprobacion y ya aparece en tus publicaciones.");
+        setMessage("Anuncio publicado. Ya aparece activo en tus publicaciones.");
         window.history.replaceState({}, "", window.location.pathname);
       } else if (cameFromUpdate && data.session?.user) {
-        setMessage("Cambios enviados. El anuncio queda pendiente de revision.");
+        setMessage("Cambios guardados. Tu anuncio sigue disponible.");
         window.history.replaceState({}, "", window.location.pathname);
       }
     }
@@ -435,6 +435,11 @@ function AccountListingCard({ listing }) {
         </div>
         <strong>{money(listing.price)}</strong>
         <div className="account-listing-actions">
+          {listing.slug ? (
+            <Link className="secondary" href={`/anuncio/${listing.slug}`}>
+              Ver anuncio
+            </Link>
+          ) : null}
           <Link className="secondary" href={`/publicar?edit=${listing.id}`}>
             Editar
           </Link>

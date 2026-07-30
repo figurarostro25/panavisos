@@ -770,6 +770,7 @@ function ListingCard({ listing, onSelect }) {
 
 function ListingDetail({ listing, profile, onRequireAccount, onClose }) {
   const [activeImage, setActiveImage] = useState(0);
+  const [copied, setCopied] = useState(false);
   const images = [...(listing.images || [])].sort((a, b) => a.position - b.position);
   const image = images[activeImage]?.url;
   const hasMap = listing.lat && listing.lng;
@@ -780,6 +781,13 @@ function ListingDetail({ listing, profile, onRequireAccount, onClose }) {
   function moveImage(direction) {
     if (!images.length) return;
     setActiveImage((current) => (current + direction + images.length) % images.length);
+  }
+
+  async function copyListingLink() {
+    const url = `${window.location.origin}/anuncio/${listing.slug}`;
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1800);
   }
 
   return (
@@ -827,6 +835,12 @@ function ListingDetail({ listing, profile, onRequireAccount, onClose }) {
             <p className="muted">Publicado en {listing.district}, {listing.province}</p>
 
             <div className="detail-actions">
+              <Link className="secondary" href={`/anuncio/${listing.slug}`}>
+                Abrir anuncio
+              </Link>
+              <button className="secondary" type="button" onClick={copyListingLink}>
+                {copied ? "Link copiado" : "Copiar link"}
+              </button>
               {whatsapp ? (
                 profile ? (
                   <a
@@ -906,6 +920,18 @@ function ListingDetail({ listing, profile, onRequireAccount, onClose }) {
               >
                 Ver ubicacion aproximada
               </a>
+            ) : null}
+
+            {listing.user_id ? (
+              <div className="seller-panel compact-seller-panel">
+                <span className="avatar-badge">{initials(listing.profile?.full_name || listing.advertiser_name || "PA")}</span>
+                <div>
+                  <h3>{listing.profile?.full_name || listing.advertiser_name || "Anunciante PanAvisos"}</h3>
+                  <Link className="secondary compact-link" href={`/vendedor/${listing.user_id}`}>
+                    Ver mas anuncios
+                  </Link>
+                </div>
+              </div>
             ) : null}
 
             <FeedbackForm profile={profile} listing={listing} compact />

@@ -44,7 +44,7 @@ export async function PATCH(request, { params }) {
     {
       ...body,
       user_id: user.id,
-      status: "pending",
+      status: existing.status === "inactive" || existing.status === "paused" ? existing.status : "active",
       featured: existing.featured
     },
     existing.slug
@@ -57,7 +57,7 @@ export async function PATCH(request, { params }) {
   if (imageError) return NextResponse.json({ error: imageError.message }, { status: 500 });
 
   const { data: listing } = await getOwnedListing(supabase, id, user.id);
-  return NextResponse.json({ listing, status: "pending" });
+  return NextResponse.json({ listing, status: listing?.status || "active" });
 }
 
 export async function DELETE(request, { params }) {

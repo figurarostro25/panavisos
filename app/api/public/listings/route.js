@@ -74,7 +74,7 @@ export async function POST(request) {
       advertiser_phone: advertiserPhone,
       advertiser_email: user.email,
       whatsapp: advertiserPhone,
-      status: "pending",
+      status: "active",
       featured: false,
       expires_at: body.expires_at || defaultExpiresAt()
     },
@@ -92,5 +92,5 @@ export async function POST(request) {
   const imageError = await replaceImages(supabase, listing.id, body.images || []);
   if (imageError) return NextResponse.json({ error: imageError.message }, { status: 500 });
 
-  return NextResponse.json({ listing, status: "pending" });
+  return NextResponse.json({ listing, status: "active" });
 }
