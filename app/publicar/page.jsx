@@ -29,11 +29,6 @@ const emptyForm = {
   whatsapp: "",
   email: "",
   website_url: "",
-  advertiser_name: "",
-  advertiser_phone: "",
-  advertiser_email: "",
-  advertiser_age: "",
-  adult_confirmed: false,
   expires_at: defaultExpiresAt(),
   images: []
 };
@@ -117,19 +112,13 @@ export default function PublicarPage() {
       name: data?.full_name || metadata.full_name || metadata.name || nextSession.user.email,
       email: nextSession.user.email,
       phone: data?.phone || "",
-      age: data?.age || metadata.age || "",
       avatar: data?.avatar_url || metadata.avatar_url || metadata.picture || ""
     };
 
     setProfile(nextProfile);
     setForm((current) => ({
       ...current,
-      advertiser_name: current.advertiser_name || nextProfile.name || "",
-      advertiser_phone: current.advertiser_phone || nextProfile.phone || "",
-      whatsapp: current.whatsapp || nextProfile.phone || "",
-      advertiser_email: current.advertiser_email || nextProfile.email || "",
-      email: current.email || nextProfile.email || "",
-      advertiser_age: current.advertiser_age || nextProfile.age || ""
+      whatsapp: current.whatsapp || nextProfile.phone || ""
     }));
   }
 
@@ -139,9 +128,21 @@ export default function PublicarPage() {
   const locationMatches = useMemo(() => {
     const query = normalize(form.district);
     if (!query || query.length < 2) return [];
+    const tokens = query.split(/\s+/).filter(Boolean);
     return locationSuggestions
-      .filter((location) => normalize(location.label).includes(query) || normalize(location.district).includes(query))
-      .slice(0, 5);
+      .map((location) => {
+        const label = normalize(location.label);
+        const district = normalize(location.district);
+        const exact = district === query ? 0 : 10;
+        const starts = district.startsWith(query) || label.startsWith(query) ? 1 : 10;
+        const contains = label.includes(query) || district.includes(query) ? 2 : 10;
+        const tokenMatch = tokens.every((token) => label.includes(token) || district.includes(token)) ? 3 : 10;
+        return { location, rank: Math.min(exact, starts, contains, tokenMatch) };
+      })
+      .filter((item) => item.rank < 10)
+      .sort((a, b) => a.rank - b.rank || a.location.label.localeCompare(b.location.label))
+      .slice(0, 7)
+      .map((item) => item.location);
   }, [form.district]);
 
   const currentStep = Math.min(step, 3);
@@ -188,13 +189,8 @@ export default function PublicarPage() {
       return;
     }
 
-    if (currentStep === 2 && (!form.district || !form.advertiser_name || !form.advertiser_phone || !form.advertiser_email)) {
-      setError("Completa ubicacion, nombre, correo y WhatsApp para continuar.");
-      return;
-    }
-
-    if (currentStep === 2 && !form.adult_confirmed) {
-      setError("Confirma que eres mayor de edad para publicar.");
+    if (currentStep === 2 && !form.district) {
+      setError("Completa la ubicacion para continuar.");
       return;
     }
 
@@ -268,7 +264,10 @@ export default function PublicarPage() {
       bedrooms: isRealEstate ? form.bedrooms : "",
       bathrooms: isRealEstate ? form.bathrooms : "",
       area_m2: isRealEstate ? form.area_m2 : "",
-      whatsapp: form.whatsapp || form.advertiser_phone
+      advertiser_name: profile?.name || session.user.email,
+      advertiser_email: session.user.email,
+      advertiser_phone: form.whatsapp || "",
+      whatsapp: form.whatsapp || ""
     };
 
     const response = await fetch(editingId ? `/api/account/listings/${editingId}` : "/api/public/listings", {
@@ -475,31 +474,9 @@ export default function PublicarPage() {
                 </div>
               </div>
 
-              <div className="field-row">
-                <label className="field">
-                  <span>Tu nombre</span>
-                  <input required value={form.advertiser_name} onChange={(event) => setForm({ ...form, advertiser_name: event.target.value })} />
-                </label>
-                <label className="field">
-                  <span>WhatsApp</span>
-                  <input required value={form.advertiser_phone} onChange={(event) => setForm({ ...form, advertiser_phone: event.target.value, whatsapp: event.target.value })} />
-                </label>
-              </div>
-
-              <div className="field-row">
-                <label className="field">
-                  <span>Correo</span>
-                  <input required type="email" value={form.advertiser_email} onChange={(event) => setForm({ ...form, advertiser_email: event.target.value, email: event.target.value })} />
-                </label>
-              </div>
-
-              <label className="check-row">
-                <input
-                  type="checkbox"
-                  checked={form.adult_confirmed}
-                  onChange={(event) => setForm({ ...form, adult_confirmed: event.target.checked })}
-                />
-                <span>Confirmo que soy mayor de 18 anos y acepto publicar con mis datos reales.</span>
+              <label className="field">
+                <span>WhatsApp opcional</span>
+                <input value={form.whatsapp} onChange={(event) => setForm({ ...form, whatsapp: event.target.value })} placeholder="Ej: 6000-0000" />
               </label>
             </div>
           ) : null}
@@ -561,7 +538,7 @@ export default function PublicarPage() {
               <h4>Detalles</h4>
               <p>{form.description || "La descripcion aparecera aqui."}</p>
               <h4>Informacion del vendedor</h4>
-              <p>{form.advertiser_name || "Nombre del anunciante"}</p>
+              <p>{profile?.name || "Tu cuenta"}</p>
               <button className="primary" type="button" disabled>
                 Enviar mensaje
               </button>
@@ -614,11 +591,6 @@ function listingToForm(listing) {
     whatsapp: listing.whatsapp || "",
     email: listing.email || "",
     website_url: listing.website_url || "",
-    advertiser_name: listing.advertiser_name || "",
-    advertiser_phone: listing.advertiser_phone || listing.whatsapp || "",
-    advertiser_email: listing.advertiser_email || listing.email || "",
-    advertiser_age: listing.advertiser_age || "",
-    adult_confirmed: true,
     expires_at: listing.expires_at ? String(listing.expires_at).slice(0, 10) : defaultExpiresAt(),
     images
   };

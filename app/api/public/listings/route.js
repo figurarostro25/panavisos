@@ -23,14 +23,6 @@ export async function POST(request) {
     return NextResponse.json({ error: "Faltan datos obligatorios." }, { status: 400 });
   }
 
-  if (!body.advertiser_name || !body.advertiser_phone || !body.advertiser_email) {
-    return NextResponse.json({ error: "Agrega nombre, correo y telefono del anunciante." }, { status: 400 });
-  }
-
-  if (!body.adult_confirmed) {
-    return NextResponse.json({ error: "Debes confirmar que eres mayor de edad para publicar." }, { status: 400 });
-  }
-
   if (body.operation === "Oferta" && !body.expires_at) {
     return NextResponse.json({ error: "Las ofertas deben tener fecha de vigencia." }, { status: 400 });
   }
@@ -46,11 +38,12 @@ export async function POST(request) {
   const user = authData.user;
   const metadata = user.user_metadata || {};
   const provider = user.app_metadata?.provider || "email";
+  const advertiserName = body.advertiser_name || metadata.full_name || metadata.name || user.email;
+  const advertiserPhone = body.whatsapp || body.advertiser_phone || null;
   const profilePayload = {
     id: user.id,
-    full_name: body.advertiser_name || metadata.full_name || metadata.name || user.email,
-    phone: body.advertiser_phone || null,
-    age: body.advertiser_age ? Number(body.advertiser_age) : null,
+    full_name: advertiserName,
+    phone: advertiserPhone,
     avatar_url: metadata.avatar_url || metadata.picture || null,
     provider,
     status: "active",
@@ -77,7 +70,10 @@ export async function POST(request) {
     {
       ...body,
       user_id: user.id,
-      advertiser_email: body.advertiser_email || user.email,
+      advertiser_name: advertiserName,
+      advertiser_phone: advertiserPhone,
+      advertiser_email: user.email,
+      whatsapp: advertiserPhone,
       status: "pending",
       featured: false,
       expires_at: body.expires_at || defaultExpiresAt()
