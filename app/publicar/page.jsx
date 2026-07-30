@@ -42,6 +42,7 @@ export default function PublicarPage() {
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [step, setStep] = useState(1);
+  const [editingId, setEditingId] = useState("");
   const [locationOpen, setLocationOpen] = useState(false);
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -66,6 +67,7 @@ export default function PublicarPage() {
       const { data } = await supabase.auth.getSession();
       setSession(data.session);
       await hydrateProfile(data.session);
+      await loadEditableListing(data.session);
     }
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
@@ -76,6 +78,31 @@ export default function PublicarPage() {
     loadSession();
     return () => listener.subscription.unsubscribe();
   }, []);
+
+  async function loadEditableListing(nextSession) {
+    const editId = new URLSearchParams(window.location.search).get("edit");
+    if (!editId) return;
+
+    setEditingId(editId);
+    if (!nextSession?.access_token) {
+      setError("Inicia sesion para editar este anuncio.");
+      return;
+    }
+
+    const response = await fetch(`/api/account/listings/${editId}`, {
+      headers: {
+        Authorization: `Bearer ${nextSession.access_token}`
+      }
+    });
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      setError(payload.error || "No pudimos cargar ese anuncio.");
+      return;
+    }
+
+    setForm(listingToForm(payload.listing));
+  }
 
   async function hydrateProfile(nextSession) {
     if (!nextSession?.user) {
@@ -182,6 +209,12 @@ export default function PublicarPage() {
   async function uploadImages(files) {
     setSaving(true);
     setError("");
+    if (!session?.access_token) {
+      setSaving(false);
+      setError("Inicia sesion antes de subir fotos.");
+      return;
+    }
+
     try {
       const nextImages = [];
       for (const file of Array.from(files || [])) {
@@ -238,8 +271,8 @@ export default function PublicarPage() {
       whatsapp: form.whatsapp || form.advertiser_phone
     };
 
-    const response = await fetch("/api/public/listings", {
-      method: "POST",
+    const response = await fetch(editingId ? `/api/account/listings/${editingId}` : "/api/public/listings", {
+      method: editingId ? "PATCH" : "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${session?.access_token || ""}`
@@ -255,8 +288,8 @@ export default function PublicarPage() {
       return;
     }
 
-    setMessage("Anuncio enviado. Queda pendiente de aprobacion.");
-    setForm({ ...emptyForm, category_id: categories[0]?.id || "" });
+    setMessage(editingId ? "Cambios enviados. El anuncio queda pendiente de revision." : "Anuncio enviado. Queda pendiente de aprobacion.");
+    if (!editingId) setForm({ ...emptyForm, category_id: categories[0]?.id || "" });
   }
 
   return (
@@ -272,7 +305,6 @@ export default function PublicarPage() {
         <nav className="top-actions">
           <Link href="/">Catalogo</Link>
           <Link href="/cuenta">Cuenta</Link>
-          <Link href="/admin">Dashboard</Link>
         </nav>
       </header>
 
@@ -282,6 +314,7 @@ export default function PublicarPage() {
             <div>
               <span className="eyebrow">Marketplace</span>
               <h1>Articulo en venta</h1>
+              {editingId ? <p className="muted">Editando publicacion existente</p> : null}
             </div>
           </div>
 
@@ -474,8 +507,8 @@ export default function PublicarPage() {
           {currentStep === 3 ? (
             <div className="step-pane">
               <div className="review-card">
-                <h2>Publicar en PanAvisos</h2>
-                <p className="muted">Tu anuncio quedara pendiente de aprobacion. No se borra lo que llenaste si vuelves atras.</p>
+              <h2>{editingId ? "Enviar cambios" : "Publicar en PanAvisos"}</h2>
+              <p className="muted">Tu anuncio quedara pendiente de aprobacion. No se borra lo que llenaste si vuelves atras.</p>
                 <div className="review-row">
                   <span>Titulo</span>
                   <strong>{form.title || "Sin titulo"}</strong>
@@ -508,7 +541,7 @@ export default function PublicarPage() {
               </button>
             ) : (
               <button className="primary" type="submit" disabled={saving}>
-                {saving ? "Publicando..." : "Publicar"}
+                {saving ? "Guardando..." : editingId ? "Guardar cambios" : "Publicar"}
               </button>
             )}
           </div>
@@ -556,4 +589,37 @@ function normalize(value) {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
+}
+
+function listingToForm(listing) {
+  const images = [...(listing.images || [])]
+    .sort((a, b) => a.position - b.position)
+    .map((image) => ({ url: image.url, public_id: image.public_id }));
+
+  return {
+    ...emptyForm,
+    title: listing.title || "",
+    category_id: listing.category_id || "",
+    operation: listing.operation || "Venta",
+    price: listing.price ?? "",
+    original_price: listing.original_price ?? "",
+    discount_percent: listing.discount_percent ?? "",
+    province: listing.province || "Panama",
+    district: listing.district || "",
+    address_reference: listing.address_reference || "",
+    bedrooms: listing.bedrooms || "",
+    bathrooms: listing.bathrooms || "",
+    area_m2: listing.area_m2 || "",
+    description: listing.description || "",
+    whatsapp: listing.whatsapp || "",
+    email: listing.email || "",
+    website_url: listing.website_url || "",
+    advertiser_name: listing.advertiser_name || "",
+    advertiser_phone: listing.advertiser_phone || listing.whatsapp || "",
+    advertiser_email: listing.advertiser_email || listing.email || "",
+    advertiser_age: listing.advertiser_age || "",
+    adult_confirmed: true,
+    expires_at: listing.expires_at ? String(listing.expires_at).slice(0, 10) : defaultExpiresAt(),
+    images
+  };
 }

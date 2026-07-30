@@ -323,7 +323,7 @@ function Topbar({ profile, onOpenAccount, onLogout }) {
       </Link>
       <nav className="top-actions">
         <a href="#anuncios">Anuncios</a>
-        <Link href="/admin">Dashboard</Link>
+        <Link href="/cuenta">Mi cuenta</Link>
         <AccountButton profile={profile} onOpen={onOpenAccount} onLogout={onLogout} />
         <Link className="primary" href="/publicar">
           Publicar
@@ -357,11 +357,52 @@ function AccountButton({ profile, onOpen, onLogout }) {
 }
 
 function AccountModal({ onClose }) {
+  const [sessionProfile, setSessionProfile] = useState(null);
+  const [myListings, setMyListings] = useState([]);
+  const [loadingAccount, setLoadingAccount] = useState(true);
   const [authMode, setAuthMode] = useState("login");
   const [form, setForm] = useState({ name: "", email: "", password: "", confirmPassword: "" });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [savingAuth, setSavingAuth] = useState(false);
+
+  useEffect(() => {
+    async function loadAccount() {
+      const supabase = getSupabaseBrowser();
+      const { data } = await supabase.auth.getSession();
+
+      if (!data.session?.user) {
+        setLoadingAccount(false);
+        return;
+      }
+
+      const metadata = data.session.user.user_metadata || {};
+      const { data: savedProfile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", data.session.user.id)
+        .maybeSingle();
+
+      setSessionProfile({
+        id: data.session.user.id,
+        name: savedProfile?.full_name || metadata.full_name || metadata.name || data.session.user.email,
+        email: data.session.user.email,
+        phone: savedProfile?.phone || "",
+        avatar: savedProfile?.avatar_url || metadata.avatar_url || metadata.picture || ""
+      });
+
+      const response = await fetch("/api/account/listings", {
+        headers: {
+          Authorization: `Bearer ${data.session.access_token}`
+        }
+      });
+      const payload = await response.json().catch(() => ({}));
+      setMyListings(payload.listings || []);
+      setLoadingAccount(false);
+    }
+
+    loadAccount();
+  }, []);
 
   async function submit(event) {
     event.preventDefault();
@@ -407,6 +448,7 @@ function AccountModal({ onClose }) {
       }
 
       setMessage(authMode === "register" ? "Cuenta creada. Si se requiere confirmacion, revisa tu correo antes de entrar." : "Sesion iniciada.");
+      if (authMode === "login") window.location.href = "/cuenta";
     } catch {
       setError("No pudimos completar el acceso ahora. Revisa tus datos e intenta nuevamente.");
     } finally {
@@ -449,7 +491,16 @@ function AccountModal({ onClose }) {
         <button className="modal-close account-close" type="button" onClick={onClose} aria-label="Cerrar">
           X
         </button>
-        <div className="account-column account-primary-panel">
+        {loadingAccount ? (
+          <div className="account-column account-primary-panel">
+            <span className="account-kicker">Cuenta PanAvisos</span>
+            <h2>Cargando cuenta...</h2>
+          </div>
+        ) : sessionProfile ? (
+          <AccountQuickPanel profile={sessionProfile} listings={myListings} onClose={onClose} />
+        ) : (
+          <>
+            <div className="account-column account-primary-panel">
           <span className="account-kicker">Cuenta PanAvisos</span>
           <h2>{authMode === "register" ? "Crea tu cuenta" : "Inicia sesion"}</h2>
           <p className="muted account-copy">
@@ -525,21 +576,96 @@ function AccountModal({ onClose }) {
             )}
           </div>
         </div>
-        <div className="account-column account-secondary-panel">
-          <h2>Acceso social</h2>
-          <p className="muted account-copy">Google y Facebook quedaran disponibles cuando conectemos sus credenciales reales.</p>
-          <div className="social-disabled-group" aria-label="Opciones disponibles proximamente">
-            <button className="facebook-button" type="button" disabled>
-              Facebook proximamente
-            </button>
-            <button className="google-button-solid" type="button" disabled>
-              Google proximamente
-            </button>
-          </div>
-        </div>
+            <div className="account-column account-secondary-panel">
+              <h2>Acceso social</h2>
+              <p className="muted account-copy">Google y Facebook quedaran disponibles cuando conectemos sus credenciales reales.</p>
+              <div className="social-disabled-group" aria-label="Opciones disponibles proximamente">
+                <button className="facebook-button" type="button" disabled>
+                  Facebook proximamente
+                </button>
+                <button className="google-button-solid" type="button" disabled>
+                  Google proximamente
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </section>
     </div>
   );
+}
+
+function AccountQuickPanel({ profile, listings, onClose }) {
+  const activeCount = listings.filter((listing) => listing.status === "active").length;
+  const pendingCount = listings.filter((listing) => listing.status === "pending").length;
+
+  return (
+    <>
+      <div className="account-column account-primary-panel user-menu-panel">
+        <span className="account-kicker">Mi cuenta</span>
+        <div className="profile-summary">
+          {profile.avatar ? (
+            <img className="profile-photo" src={profile.avatar} alt="" />
+          ) : (
+            <span className="avatar large-avatar">{initials(profile.name || profile.email)}</span>
+          )}
+          <div>
+            <h2>{profile.name}</h2>
+            <p className="muted account-copy">{profile.email}</p>
+          </div>
+        </div>
+        <div className="account-stats compact-stats">
+          <span><strong>{listings.length}</strong> anuncios</span>
+          <span><strong>{activeCount}</strong> activos</span>
+          <span><strong>{pendingCount}</strong> pendientes</span>
+        </div>
+        <div className="account-actions">
+          <Link className="primary" href="/publicar" onClick={onClose}>
+            Publicar otro
+          </Link>
+          <Link className="secondary" href="/cuenta" onClick={onClose}>
+            Ver mi panel
+          </Link>
+        </div>
+      </div>
+      <div className="account-column account-secondary-panel user-listings-panel">
+        <h2>Mis anuncios</h2>
+        {listings.length ? (
+          <div className="mini-listing-list">
+            {listings.slice(0, 5).map((listing) => (
+              <MiniListing key={listing.id} listing={listing} />
+            ))}
+          </div>
+        ) : (
+          <p className="muted account-copy">Todavia no tienes anuncios publicados.</p>
+        )}
+      </div>
+    </>
+  );
+}
+
+function MiniListing({ listing }) {
+  const image = [...(listing.images || [])].sort((a, b) => a.position - b.position)[0]?.url;
+  return (
+    <article className="mini-listing">
+      {image ? <img src={image} alt="" /> : <span className="mini-image-placeholder">PA</span>}
+      <div>
+        <strong>{listing.title}</strong>
+        <small>{money(listing.price)} · {statusLabel(listing.status)}</small>
+        <Link href={`/publicar?edit=${listing.id}`}>Editar</Link>
+      </div>
+    </article>
+  );
+}
+
+function statusLabel(status) {
+  const labels = {
+    active: "Activo",
+    pending: "Pendiente",
+    inactive: "Pausado",
+    rejected: "Rechazado"
+  };
+  return labels[status] || "Pendiente";
 }
 
 function PromoBanner({ banner, large = false, compact = false }) {

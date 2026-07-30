@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { money } from "@/lib/format";
 import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
 
 export default function AccountPage() {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
+  const [listings, setListings] = useState([]);
+  const [loadingListings, setLoadingListings] = useState(false);
   const [authMode, setAuthMode] = useState("login");
   const [form, setForm] = useState({ name: "", email: "", password: "", confirmPassword: "", phone: "", age: "" });
   const [showProfileEditor, setShowProfileEditor] = useState(false);
@@ -28,6 +31,7 @@ export default function AccountPage() {
       const { data } = await supabase.auth.getSession();
       setSession(data.session);
       await loadProfile(data.session);
+      await loadMyListings(data.session);
       if (cameFromEmail && data.session?.user) {
         setMessage("Correo confirmado. Tu cuenta ya esta lista.");
         window.history.replaceState({}, "", window.location.pathname);
@@ -37,6 +41,7 @@ export default function AccountPage() {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
       loadProfile(nextSession);
+      loadMyListings(nextSession);
     });
 
     loadSession();
@@ -71,6 +76,23 @@ export default function AccountPage() {
       phone: nextProfile.phone || "",
       age: nextProfile.age || ""
     });
+  }
+
+  async function loadMyListings(nextSession) {
+    if (!nextSession?.access_token) {
+      setListings([]);
+      return;
+    }
+
+    setLoadingListings(true);
+    const response = await fetch("/api/account/listings", {
+      headers: {
+        Authorization: `Bearer ${nextSession.access_token}`
+      }
+    });
+    const payload = await response.json().catch(() => ({}));
+    setListings(payload.listings || []);
+    setLoadingListings(false);
   }
 
   async function submitAuth(event) {
@@ -190,7 +212,15 @@ export default function AccountPage() {
     await getSupabaseBrowser().auth.signOut();
     setSession(null);
     setProfile(null);
+    setListings([]);
   }
+
+  const listingStats = {
+    total: listings.length,
+    active: listings.filter((listing) => listing.status === "active").length,
+    pending: listings.filter((listing) => listing.status === "pending").length,
+    inactive: listings.filter((listing) => listing.status === "inactive").length
+  };
 
   return (
     <>
@@ -211,7 +241,7 @@ export default function AccountPage() {
       </header>
 
       <main className="account-page">
-        <section className="account-card">
+        <section className={`account-card ${profile ? "account-dashboard-card" : ""}`}>
           <span className="eyebrow">Anunciantes</span>
           {profile ? (
             <>
@@ -226,18 +256,43 @@ export default function AccountPage() {
                   <p className="muted">{profile.email}</p>
                 </div>
               </div>
-              <div className="account-ready">
-                <h2>Cuenta lista</h2>
-                <p className="muted">Ya puedes publicar anuncios, responder interesados y guardar tus datos de contacto.</p>
-                <div className="account-actions">
-                  <Link className="primary" href="/publicar">
-                    Publicar anuncio
-                  </Link>
-                  <Link className="secondary" href="/">
-                    Ver catalogo
-                  </Link>
-                </div>
+              <div className="account-stats">
+                <span><strong>{listingStats.total}</strong> anuncios</span>
+                <span><strong>{listingStats.active}</strong> activos</span>
+                <span><strong>{listingStats.pending}</strong> pendientes</span>
+                <span><strong>{listingStats.inactive}</strong> pausados</span>
               </div>
+              <div className="account-actions">
+                <Link className="primary" href="/publicar">
+                  Publicar anuncio
+                </Link>
+                <Link className="secondary" href="/">
+                  Ver catalogo
+                </Link>
+              </div>
+              <section className="my-listings-section">
+                <div className="section-head compact-head">
+                  <div>
+                    <h2>Mis anuncios</h2>
+                    <p className="muted">{loadingListings ? "Cargando..." : "Edita, revisa estado o publica mas."}</p>
+                  </div>
+                </div>
+                {listings.length ? (
+                  <div className="my-listings-grid">
+                    {listings.map((listing) => (
+                      <AccountListingCard key={listing.id} listing={listing} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="empty-account-state">
+                    <h3>Aun no tienes anuncios</h3>
+                    <p className="muted">Cuando publiques, apareceran aqui como tarjetas pequenas para editarlos rapido.</p>
+                    <Link className="primary" href="/publicar">
+                      Crear primer anuncio
+                    </Link>
+                  </div>
+                )}
+              </section>
               <button className="secondary" type="button" onClick={() => setShowProfileEditor((value) => !value)}>
                 {showProfileEditor ? "Ocultar datos de contacto" : "Completar datos de contacto"}
               </button>
@@ -357,6 +412,38 @@ function initials(value) {
     .map((part) => part[0])
     .join("")
     .toUpperCase();
+}
+
+function AccountListingCard({ listing }) {
+  const image = [...(listing.images || [])].sort((a, b) => a.position - b.position)[0]?.url;
+  return (
+    <article className="account-listing-card">
+      {image ? <img src={image} alt="" /> : <span className="mini-image-placeholder">PA</span>}
+      <div className="account-listing-body">
+        <div>
+          <span className={`status-pill ${listing.status || "pending"}`}>{statusLabel(listing.status)}</span>
+          <h3>{listing.title}</h3>
+          <p className="muted">{listing.district || "Sin ubicacion"}, {listing.province}</p>
+        </div>
+        <strong>{money(listing.price)}</strong>
+        <div className="account-listing-actions">
+          <Link className="secondary" href={`/publicar?edit=${listing.id}`}>
+            Editar
+          </Link>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function statusLabel(status) {
+  const labels = {
+    active: "Activo",
+    pending: "Pendiente",
+    inactive: "Pausado",
+    rejected: "Rechazado"
+  };
+  return labels[status] || "Pendiente";
 }
 
 function authErrorMessage(value) {
