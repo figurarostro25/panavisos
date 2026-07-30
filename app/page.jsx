@@ -357,6 +357,7 @@ function AccountModal({ onClose }) {
   const [form, setForm] = useState({ name: "", email: "", password: "", confirmPassword: "" });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [savingAuth, setSavingAuth] = useState(false);
 
   async function submit(event) {
     event.preventDefault();
@@ -379,6 +380,7 @@ function AccountModal({ onClose }) {
     }
 
     try {
+      setSavingAuth(true);
       const supabase = getSupabaseBrowser();
       const result =
         authMode === "register"
@@ -396,13 +398,15 @@ function AccountModal({ onClose }) {
             });
 
       if (result.error) {
-        setError(result.error.message);
+        setError(authErrorMessage(result.error.message));
         return;
       }
 
       setMessage(authMode === "register" ? "Cuenta creada. Si se requiere confirmacion, revisa tu correo antes de entrar." : "Sesion iniciada.");
     } catch {
       setError("No pudimos completar el acceso ahora. Revisa tus datos e intenta nuevamente.");
+    } finally {
+      setSavingAuth(false);
     }
   }
 
@@ -416,18 +420,21 @@ function AccountModal({ onClose }) {
     }
 
     try {
+      setSavingAuth(true);
       const { error: recoveryError } = await getSupabaseBrowser().auth.resetPasswordForEmail(form.email, {
         redirectTo: window.location.origin
       });
 
       if (recoveryError) {
-        setError(recoveryError.message);
+        setError(authErrorMessage(recoveryError.message));
         return;
       }
 
       setMessage("Te enviamos un enlace para recuperar tu contrasena.");
     } catch {
       setError("No pudimos enviar la recuperacion ahora.");
+    } finally {
+      setSavingAuth(false);
     }
   }
 
@@ -485,14 +492,16 @@ function AccountModal({ onClose }) {
                 />
               </label>
             ) : null}
-            <button className="primary wide-button" type="submit">
-              {authMode === "register" ? "Crear cuenta" : "Iniciar sesion"}
+            <button className="primary wide-button" type="submit" disabled={savingAuth}>
+              {savingAuth ? (authMode === "register" ? "Creando cuenta..." : "Entrando...") : authMode === "register" ? "Crear cuenta" : "Iniciar sesion"}
             </button>
             {authMode === "login" ? (
-              <button className="text-button" type="button" onClick={sendRecoveryLink}>
+              <button className="text-button" type="button" onClick={sendRecoveryLink} disabled={savingAuth}>
                 Olvidaste tu contrasena?
               </button>
             ) : null}
+            {message ? <p className="notice inline-auth-message">{message}</p> : null}
+            {error ? <p className="error inline-auth-message">{error}</p> : null}
           </form>
           <div className="auth-switch">
             {authMode === "register" ? (
@@ -511,8 +520,6 @@ function AccountModal({ onClose }) {
               </>
             )}
           </div>
-          {message ? <p className="notice">{message}</p> : null}
-          {error ? <p className="error">{error}</p> : null}
         </div>
         <div className="account-column account-secondary-panel">
           <h2>Acceso social</h2>
@@ -558,6 +565,23 @@ function PromoBanner({ banner, large = false, compact = false }) {
       </div>
     </Wrapper>
   );
+}
+
+function authErrorMessage(value) {
+  const text = String(value || "").toLowerCase();
+  if (text.includes("already registered") || text.includes("already exists")) {
+    return "Ese correo ya tiene cuenta. Prueba iniciar sesion.";
+  }
+  if (text.includes("invalid login credentials")) {
+    return "Correo o contrasena incorrectos.";
+  }
+  if (text.includes("email not confirmed")) {
+    return "Falta confirmar tu correo. Revisa tu email.";
+  }
+  if (text.includes("password")) {
+    return "Revisa la contrasena. Debe tener al menos 6 caracteres.";
+  }
+  return value || "No pudimos completar la accion.";
 }
 
 function SiteFooter() {

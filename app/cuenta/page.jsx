@@ -11,6 +11,7 @@ export default function AccountPage() {
   const [form, setForm] = useState({ name: "", email: "", password: "", confirmPassword: "", phone: "", age: "" });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [savingAuth, setSavingAuth] = useState(false);
 
   useEffect(() => {
     const supabase = getSupabaseBrowser();
@@ -81,6 +82,7 @@ export default function AccountPage() {
     }
 
     try {
+      setSavingAuth(true);
       const supabase = getSupabaseBrowser();
       const result =
         authMode === "register"
@@ -98,7 +100,7 @@ export default function AccountPage() {
             });
 
       if (result.error) {
-        setError(result.error.message);
+        setError(authErrorMessage(result.error.message));
         return;
       }
 
@@ -109,6 +111,8 @@ export default function AccountPage() {
       );
     } catch {
       setError("No pudimos completar el acceso ahora. Revisa tus datos e intenta nuevamente.");
+    } finally {
+      setSavingAuth(false);
     }
   }
 
@@ -122,18 +126,21 @@ export default function AccountPage() {
     }
 
     try {
+      setSavingAuth(true);
       const { error: recoveryError } = await getSupabaseBrowser().auth.resetPasswordForEmail(form.email, {
         redirectTo: window.location.origin + "/cuenta"
       });
 
       if (recoveryError) {
-        setError(recoveryError.message);
+        setError(authErrorMessage(recoveryError.message));
         return;
       }
 
       setMessage("Te enviamos un enlace para recuperar tu contrasena.");
     } catch {
       setError("No pudimos enviar la recuperacion ahora.");
+    } finally {
+      setSavingAuth(false);
     }
   }
 
@@ -259,14 +266,16 @@ export default function AccountPage() {
                       <input required type="password" value={form.confirmPassword} onChange={(event) => setForm({ ...form, confirmPassword: event.target.value })} />
                     </label>
                   ) : null}
-                  <button className="primary" type="submit">
-                    {authMode === "register" ? "Crear cuenta" : "Iniciar sesion"}
+                  <button className="primary" type="submit" disabled={savingAuth}>
+                    {savingAuth ? (authMode === "register" ? "Creando cuenta..." : "Entrando...") : authMode === "register" ? "Crear cuenta" : "Iniciar sesion"}
                   </button>
                   {authMode === "login" ? (
-                    <button className="text-button" type="button" onClick={sendRecoveryLink}>
+                    <button className="text-button" type="button" onClick={sendRecoveryLink} disabled={savingAuth}>
                       Olvidaste tu contrasena?
                     </button>
                   ) : null}
+                  {message ? <p className="notice inline-auth-message">{message}</p> : null}
+                  {error ? <p className="error inline-auth-message">{error}</p> : null}
                 </form>
                 <div className="auth-switch">
                   {authMode === "register" ? (
@@ -297,8 +306,8 @@ export default function AccountPage() {
               </div>
             </>
           )}
-          {message ? <p className="notice">{message}</p> : null}
-          {error ? <p className="error">{error}</p> : null}
+          {profile && message ? <p className="notice">{message}</p> : null}
+          {profile && error ? <p className="error">{error}</p> : null}
         </section>
 
         <aside className="account-side">
@@ -323,4 +332,21 @@ function initials(value) {
     .map((part) => part[0])
     .join("")
     .toUpperCase();
+}
+
+function authErrorMessage(value) {
+  const text = String(value || "").toLowerCase();
+  if (text.includes("already registered") || text.includes("already exists")) {
+    return "Ese correo ya tiene cuenta. Prueba iniciar sesion.";
+  }
+  if (text.includes("invalid login credentials")) {
+    return "Correo o contrasena incorrectos.";
+  }
+  if (text.includes("email not confirmed")) {
+    return "Falta confirmar tu correo. Revisa tu email.";
+  }
+  if (text.includes("password")) {
+    return "Revisa la contrasena. Debe tener al menos 6 caracteres.";
+  }
+  return value || "No pudimos completar la accion.";
 }

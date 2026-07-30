@@ -1023,6 +1023,10 @@ button:disabled {
   text-decoration: underline;
 }
 
+.inline-auth-message {
+  margin: 4px 0 0;
+}
+
 .google-button {
   min-height: 48px;
 }
