@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { locationSuggestions } from "@/lib/locations";
 import { money, provinces } from "@/lib/format";
 import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
@@ -37,6 +38,7 @@ const emptyForm = {
 };
 
 export default function PublicarPage() {
+  const router = useRouter();
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [step, setStep] = useState(1);
@@ -316,8 +318,7 @@ export default function PublicarPage() {
       return;
     }
 
-    setMessage(editingId ? "Cambios enviados. El anuncio queda pendiente de revision." : "Anuncio enviado. Queda pendiente de aprobacion.");
-    if (!editingId) setForm({ ...emptyForm, category_id: categories[0]?.id || "" });
+    router.push(editingId ? "/cuenta?updated=1" : "/cuenta?published=1");
   }
 
   return (
@@ -354,7 +355,7 @@ export default function PublicarPage() {
 
           <p className="muted step-copy">
             {currentStep === 1 ? "Fotos y contenido del anuncio." : null}
-            {currentStep === 2 ? "Ubicacion y datos de tu cuenta." : null}
+            {currentStep === 2 ? "Ubicacion del anuncio." : null}
             {currentStep === 3 ? "Revisa la vista previa y publica." : null}
           </p>
 
@@ -443,6 +444,11 @@ export default function PublicarPage() {
               </label>
 
               <label className="field">
+                <span>WhatsApp opcional</span>
+                <input value={form.whatsapp} onChange={(event) => setForm({ ...form, whatsapp: event.target.value })} placeholder="Ej: 6000-0000" />
+              </label>
+
+              <label className="field">
                 <span>Link de video opcional</span>
                 <input
                   type="url"
@@ -488,25 +494,6 @@ export default function PublicarPage() {
                     </option>
                   ))}
                 </select>
-              </label>
-
-              <div className="account-box">
-                <h2>Cuenta del anunciante</h2>
-                <p className="muted">
-                  {profile
-                    ? `Publicaras como ${profile.name}.`
-                    : "Debes entrar con Google, Facebook o correo antes de publicar."}
-                </p>
-                <div className="account-actions">
-                  <Link className="secondary" href="/cuenta">
-                    {profile ? "Ver cuenta" : "Entrar o registrarme"}
-                  </Link>
-                </div>
-              </div>
-
-              <label className="field">
-                <span>WhatsApp opcional</span>
-                <input value={form.whatsapp} onChange={(event) => setForm({ ...form, whatsapp: event.target.value })} placeholder="Ej: 6000-0000" />
               </label>
             </div>
           ) : null}

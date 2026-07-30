@@ -26,6 +26,8 @@ export default function AccountPage() {
       urlParams.get("type") === "signup" ||
       hashParams.has("access_token") ||
       hashParams.get("type") === "signup";
+    const cameFromPublish = urlParams.get("published") === "1";
+    const cameFromUpdate = urlParams.get("updated") === "1";
 
     async function loadSession() {
       const { data } = await supabase.auth.getSession();
@@ -34,6 +36,12 @@ export default function AccountPage() {
       await loadMyListings(data.session);
       if (cameFromEmail && data.session?.user) {
         setMessage("Correo confirmado. Tu cuenta ya esta lista.");
+        window.history.replaceState({}, "", window.location.pathname);
+      } else if (cameFromPublish && data.session?.user) {
+        setMessage("Anuncio enviado. Queda pendiente de aprobacion y ya aparece en tus publicaciones.");
+        window.history.replaceState({}, "", window.location.pathname);
+      } else if (cameFromUpdate && data.session?.user) {
+        setMessage("Cambios enviados. El anuncio queda pendiente de revision.");
         window.history.replaceState({}, "", window.location.pathname);
       }
     }
