@@ -992,6 +992,23 @@ button:disabled {
   margin-top: 12px;
 }
 
+.account-ready {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid #9ed7cb;
+  border-radius: 8px;
+  background: #f0fbf8;
+}
+
+.account-ready h2 {
+  margin: 0;
+}
+
+.profile-editor {
+  padding-top: 4px;
+}
+
 .auth-switch {
   display: flex;
   align-items: center;

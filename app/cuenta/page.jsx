@@ -9,17 +9,29 @@ export default function AccountPage() {
   const [profile, setProfile] = useState(null);
   const [authMode, setAuthMode] = useState("login");
   const [form, setForm] = useState({ name: "", email: "", password: "", confirmPassword: "", phone: "", age: "" });
+  const [showProfileEditor, setShowProfileEditor] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [savingAuth, setSavingAuth] = useState(false);
 
   useEffect(() => {
     const supabase = getSupabaseBrowser();
+    const urlParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const cameFromEmail =
+      urlParams.has("code") ||
+      urlParams.get("type") === "signup" ||
+      hashParams.has("access_token") ||
+      hashParams.get("type") === "signup";
 
     async function loadSession() {
       const { data } = await supabase.auth.getSession();
       setSession(data.session);
       await loadProfile(data.session);
+      if (cameFromEmail && data.session?.user) {
+        setMessage("Correo confirmado. Tu cuenta ya esta lista.");
+        window.history.replaceState({}, "", window.location.pathname);
+      }
     }
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
@@ -214,25 +226,38 @@ export default function AccountPage() {
                   <p className="muted">{profile.email}</p>
                 </div>
               </div>
-              <form className="email-login" onSubmit={saveProfile}>
-                <label className="field">
-                  <span>Nombre completo</span>
-                  <input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
-                </label>
-                <label className="field">
-                  <span>WhatsApp</span>
-                  <input value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} />
-                </label>
-                <label className="field">
-                  <span>Edad</span>
-                  <input type="number" min="18" value={form.age} onChange={(event) => setForm({ ...form, age: event.target.value })} />
-                </label>
-                <button className="primary" type="submit">
-                  Guardar perfil
-                </button>
-              </form>
-              <button className="secondary" type="button" onClick={logout}>
-                Salir
+              <div className="account-ready">
+                <h2>Cuenta lista</h2>
+                <p className="muted">Ya puedes publicar anuncios, responder interesados y guardar tus datos de contacto.</p>
+                <div className="account-actions">
+                  <Link className="primary" href="/publicar">
+                    Publicar anuncio
+                  </Link>
+                  <Link className="secondary" href="/">
+                    Ver catalogo
+                  </Link>
+                </div>
+              </div>
+              <button className="secondary" type="button" onClick={() => setShowProfileEditor((value) => !value)}>
+                {showProfileEditor ? "Ocultar datos de contacto" : "Completar datos de contacto"}
+              </button>
+              {showProfileEditor ? (
+                <form className="email-login profile-editor" onSubmit={saveProfile}>
+                  <label className="field">
+                    <span>Nombre completo</span>
+                    <input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
+                  </label>
+                  <label className="field">
+                    <span>WhatsApp</span>
+                    <input placeholder="Ej: 6000-0000" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} />
+                  </label>
+                  <button className="primary" type="submit">
+                    Guardar datos
+                  </button>
+                </form>
+              ) : null}
+              <button className="text-button" type="button" onClick={logout}>
+                Salir de la cuenta
               </button>
             </>
           ) : (
