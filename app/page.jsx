@@ -353,24 +353,27 @@ function AccountButton({ profile, onOpen, onLogout }) {
 }
 
 function AccountModal({ onClose }) {
-  const [mode, setMode] = useState("login");
   const [form, setForm] = useState({ name: "", email: "" });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  async function submit(event) {
+  async function submit(event, intent) {
     event.preventDefault();
     setMessage("");
     setError("");
+
+    if (intent === "register" && !form.name.trim()) {
+      setError("Escribe tu nombre completo para crear la cuenta.");
+      return;
+    }
+
     try {
       const supabase = getSupabaseBrowser();
       const { error: otpError } = await supabase.auth.signInWithOtp({
         email: form.email,
         options: {
           emailRedirectTo: window.location.origin,
-          data: {
-            full_name: form.name
-          }
+          data: form.name.trim() ? { full_name: form.name.trim() } : undefined
         }
       });
 
@@ -379,25 +382,9 @@ function AccountModal({ onClose }) {
         return;
       }
 
-      setMessage("Te enviamos un enlace de acceso al correo.");
+      setMessage(intent === "register" ? "Te enviamos un enlace para confirmar tu cuenta." : "Te enviamos un enlace de acceso al correo.");
     } catch {
-      setError("No se pudo conectar con Supabase. Revisa las variables publicas en Vercel y el ultimo deployment.");
-    }
-  }
-
-  async function social(provider) {
-    setError("");
-    try {
-      const { error: socialError } = await getSupabaseBrowser().auth.signInWithOAuth({
-        provider: provider.toLowerCase(),
-        options: {
-          redirectTo: window.location.origin
-        }
-      });
-
-      if (socialError) setError(socialError.message);
-    } catch {
-      setError("Google y Facebook se conectan despues desde Supabase.");
+      setError("No pudimos enviar el enlace ahora. Revisa el correo e intenta nuevamente.");
     }
   }
 
@@ -408,9 +395,15 @@ function AccountModal({ onClose }) {
         <button className="modal-close account-close" type="button" onClick={onClose} aria-label="Cerrar">
           X
         </button>
-        <div className="account-column">
-          <h2>Ya tienes cuenta?</h2>
-          <form onSubmit={submit}>
+        <div className="account-column account-primary-panel">
+          <span className="account-kicker">Registro por correo</span>
+          <h2>Crea tu cuenta</h2>
+          <p className="muted account-copy">Usa tu nombre y correo para responder anuncios. Te enviaremos un enlace seguro para entrar.</p>
+          <form onSubmit={(event) => submit(event, "register")}>
+            <label className="field">
+              <span>Nombre completo</span>
+              <input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Tu nombre" />
+            </label>
             <label className="field">
               <span>Correo</span>
               <input
@@ -422,39 +415,33 @@ function AccountModal({ onClose }) {
               />
             </label>
             <button className="primary wide-button" type="submit">
-              Enviar enlace de acceso
+              Crear cuenta por correo
             </button>
           </form>
           {message ? <p className="notice">{message}</p> : null}
           {error ? <p className="error">{error}</p> : null}
         </div>
-        <div className="account-column">
-          <h2>Aun no tienes cuenta?</h2>
-          <button className="green-button" type="button" onClick={() => setMode("register")}>
-            Registrate
-          </button>
-          {mode === "register" ? (
-            <form onSubmit={submit}>
-              <label className="field">
-                <span>Nombre completo</span>
-                <input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
-              </label>
-              <label className="field">
-                <span>Correo</span>
-                <input required type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} />
-              </label>
-              <button className="primary wide-button" type="submit">
-                Crear cuenta
-              </button>
-            </form>
-          ) : null}
-          <p className="muted center-text">Google y Facebook se conectan despues</p>
-          <button className="facebook-button" type="button" disabled onClick={() => social("Facebook")}>
-            Facebook proximamente
-          </button>
-          <button className="google-button-solid" type="button" disabled onClick={() => social("Google")}>
-            Google proximamente
-          </button>
+        <div className="account-column account-secondary-panel">
+          <h2>Ya tienes cuenta?</h2>
+          <p className="muted account-copy">Entra con el mismo enlace seguro que recibes por correo.</p>
+          <form onSubmit={(event) => submit(event, "login")}>
+            <label className="field">
+              <span>Correo</span>
+              <input required type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} placeholder="correo@email.com" />
+            </label>
+            <button className="secondary wide-button" type="submit">
+              Enviar enlace de acceso
+            </button>
+          </form>
+          <div className="social-disabled-group" aria-label="Opciones disponibles proximamente">
+            <p className="muted center-text">Google y Facebook se conectan despues.</p>
+            <button className="facebook-button" type="button" disabled>
+              Facebook proximamente
+            </button>
+            <button className="google-button-solid" type="button" disabled>
+              Google proximamente
+            </button>
+          </div>
         </div>
       </section>
     </div>

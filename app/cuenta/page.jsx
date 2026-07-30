@@ -66,9 +66,7 @@ export default function AccountPage() {
         email: form.email,
         options: {
           emailRedirectTo: window.location.origin + "/cuenta",
-          data: {
-            full_name: form.name
-          }
+          data: form.name.trim() ? { full_name: form.name.trim() } : undefined
         }
       });
 
@@ -79,23 +77,7 @@ export default function AccountPage() {
 
       setMessage("Te enviamos un enlace para entrar a tu correo.");
     } catch {
-      setError("No se pudo conectar con Supabase. Revisa que Vercel tenga la URL y la publishable key completas, y que el ultimo deployment este listo.");
-    }
-  }
-
-  async function signInProvider(provider) {
-    setError("");
-    try {
-      const { error: providerError } = await getSupabaseBrowser().auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: window.location.origin + "/cuenta"
-        }
-      });
-
-      if (providerError) setError(providerError.message);
-    } catch {
-      setError("Este proveedor aun no esta conectado en Supabase.");
+      setError("No pudimos enviar el enlace ahora. Revisa el correo e intenta nuevamente.");
     }
   }
 
@@ -198,12 +180,6 @@ export default function AccountPage() {
               </p>
 
               <div className="login-options">
-                <button className="facebook-button" type="button" disabled onClick={() => signInProvider("facebook")}>
-                  Facebook proximamente
-                </button>
-                <button className="google-button-solid" type="button" disabled onClick={() => signInProvider("google")}>
-                  Google proximamente
-                </button>
                 <form className="email-login" onSubmit={sendEmailLink}>
                   <label className="field">
                     <span>Nombre completo</span>
@@ -217,6 +193,15 @@ export default function AccountPage() {
                     Enviar enlace de acceso
                   </button>
                 </form>
+                <div className="social-disabled-group" aria-label="Opciones disponibles proximamente">
+                  <p className="muted center-text">Google y Facebook se conectan despues.</p>
+                  <button className="facebook-button" type="button" disabled>
+                    Facebook proximamente
+                  </button>
+                  <button className="google-button-solid" type="button" disabled>
+                    Google proximamente
+                  </button>
+                </div>
               </div>
             </>
           )}

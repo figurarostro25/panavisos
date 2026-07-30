@@ -1031,8 +1031,8 @@ button:disabled {
   position: relative;
   z-index: 2;
   display: grid;
-  grid-template-columns: repeat(2, minmax(260px, 1fr));
-  width: min(760px, 96vw);
+  grid-template-columns: minmax(300px, 1.08fr) minmax(260px, 0.92fr);
+  width: min(800px, 96vw);
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -1047,19 +1047,42 @@ button:disabled {
   padding: 30px;
 }
 
+.account-primary-panel {
+  background: linear-gradient(180deg, #f8fbfc 0%, #fff 48%);
+}
+
+.account-secondary-panel {
+  background: #fff;
+}
+
 .account-column + .account-column {
   border-left: 1px solid var(--line);
 }
 
 .account-column h2 {
   margin: 0;
-  text-align: center;
-  font-size: 1.05rem;
+  font-size: 1.35rem;
+  line-height: 1.15;
+}
+
+.account-kicker {
+  color: var(--teal);
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.account-copy {
+  margin: 0;
+  line-height: 1.45;
 }
 
 .account-close {
-  top: -48px;
-  right: 0;
+  top: 14px;
+  left: auto;
+  right: 14px;
+  background: #f0f4f6;
 }
 
 .wide-button,
@@ -1075,20 +1098,29 @@ button:disabled {
 .google-button-solid {
   border: 0;
   border-radius: 4px;
-  color: #fff;
   font-weight: 900;
 }
 
 .green-button {
+  color: #fff;
   background: #2ebf48;
 }
 
-.facebook-button {
-  background: #3b5998;
+.social-disabled-group {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
 }
 
+.facebook-button,
 .google-button-solid {
-  background: #df4b3f;
+  border: 1px solid #dce3e8;
+  color: #8c98a3;
+  background: #eef2f5;
+  cursor: not-allowed;
+  opacity: 1;
 }
 
 .center-text {
