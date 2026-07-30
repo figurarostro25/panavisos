@@ -390,6 +390,63 @@ textarea {
   padding: 20px;
 }
 
+.admin-board {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.admin-sidebar {
+  position: sticky;
+  top: 88px;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.admin-sidebar button {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 0 12px;
+  color: var(--ink);
+  background: transparent;
+  font-weight: 900;
+  text-align: left;
+}
+
+.admin-sidebar button.active {
+  border-color: #9ed7cb;
+  color: var(--teal-dark);
+  background: #f0fbf8;
+}
+
+.admin-sidebar strong {
+  display: grid;
+  min-width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--teal);
+  font-size: 0.78rem;
+}
+
+.admin-board-main {
+  min-width: 0;
+}
+
+.admin-section-hidden {
+  display: none !important;
+}
+
 .admin-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
@@ -544,6 +601,73 @@ textarea {
 
 .advertiser-card p {
   margin: 4px 0;
+}
+
+.message-inbox {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.42fr) minmax(0, 0.58fr);
+  min-height: 460px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.message-list {
+  display: grid;
+  align-content: flex-start;
+  overflow: auto;
+  border-right: 1px solid var(--line);
+}
+
+.message-row {
+  display: grid;
+  gap: 4px;
+  min-height: 78px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  padding: 12px;
+  background: #fff;
+  text-align: left;
+}
+
+.message-row.unread {
+  background: #f8fcff;
+}
+
+.message-row.selected {
+  box-shadow: inset 4px 0 0 var(--teal);
+}
+
+.message-row span,
+.message-row strong,
+.message-row small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.message-row small {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.message-detail {
+  display: grid;
+  align-content: flex-start;
+  gap: 12px;
+  padding: 18px;
+}
+
+.message-detail h3 {
+  margin: 8px 0 0;
+}
+
+.message-body {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.55;
 }
 
 .map-frame {
@@ -877,6 +1001,31 @@ button:disabled {
 
 .market-results {
   min-width: 0;
+}
+
+.feedback-band {
+  padding-bottom: 34px;
+}
+
+.feedback-panel {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.44fr) minmax(0, 0.56fr);
+  gap: 18px;
+  padding: clamp(18px, 3vw, 28px);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.feedback-panel.compact {
+  grid-template-columns: 1fr;
+  margin-top: 18px;
+  padding: 16px;
+  background: #f8fafb;
+}
+
+.feedback-panel h2 {
+  margin: 0;
 }
 
 .compact-grid {
@@ -1659,10 +1808,13 @@ button:disabled {
 @media (max-width: 900px) {
   .shell,
   .admin-grid,
+  .admin-board,
   .admin-metrics,
   .account-page,
   .account-dialog,
+  .feedback-panel,
   .market-layout,
+  .message-inbox,
   .listing-dialog,
   .publish-workspace,
   .preview-shell {
@@ -1678,6 +1830,17 @@ button:disabled {
 
   .market-filters {
     position: static;
+  }
+
+  .admin-sidebar {
+    position: static;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .message-list {
+    max-height: 260px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
   }
 
   .featured-promos {
@@ -1729,6 +1892,10 @@ button:disabled {
   .site-footer {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .admin-sidebar {
+    grid-template-columns: 1fr;
   }
 
   .quick-search {

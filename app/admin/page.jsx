@@ -54,6 +54,9 @@ export default function AdminPage() {
   const [categories, setCategories] = useState([]);
   const [listings, setListings] = useState([]);
   const [banners, setBanners] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [activeAdminSection, setActiveAdminSection] = useState("dashboard");
+  const [selectedMessageId, setSelectedMessageId] = useState("");
   const [categoryForm, setCategoryForm] = useState({ id: "", name: "", description: "", sort_order: 0 });
   const [listingForm, setListingForm] = useState(emptyListing);
   const [bannerForm, setBannerForm] = useState(emptyBanner);
@@ -65,13 +68,14 @@ export default function AdminPage() {
   }, []);
 
   async function loadAdmin() {
-    const [catResponse, listingResponse, bannerResponse] = await Promise.all([
+    const [catResponse, listingResponse, bannerResponse, messageResponse] = await Promise.all([
       fetch("/api/admin/categories"),
       fetch("/api/admin/listings"),
-      fetch("/api/admin/banners")
+      fetch("/api/admin/banners"),
+      fetch("/api/admin/messages")
     ]);
 
-    if (catResponse.status === 401 || listingResponse.status === 401 || bannerResponse.status === 401) {
+    if (catResponse.status === 401 || listingResponse.status === 401 || bannerResponse.status === 401 || messageResponse.status === 401) {
       setLoggedIn(false);
       return;
     }
@@ -79,9 +83,12 @@ export default function AdminPage() {
     const catData = await catResponse.json();
     const listingData = await listingResponse.json();
     const bannerData = await bannerResponse.json();
+    const messageData = await messageResponse.json();
     setCategories(catData.categories || []);
     setListings(listingData.listings || []);
     setBanners(bannerData.banners || []);
+    setMessages(messageData.messages || []);
+    setSelectedMessageId((current) => current || messageData.messages?.[0]?.id || "");
     setLoggedIn(true);
   }
 
@@ -218,6 +225,29 @@ export default function AdminPage() {
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}));
       setError(payload.error || "No se pudo actualizar el anuncio.");
+      return;
+    }
+
+    await loadAdmin();
+  }
+
+  async function updateMessage(message, changes) {
+    setSaving(true);
+    setError("");
+    const response = await fetch(`/api/admin/messages/${message.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        status: message.status,
+        admin_note: message.admin_note,
+        ...changes
+      })
+    });
+    setSaving(false);
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      setError(payload.error || "No se pudo actualizar el mensaje.");
       return;
     }
 
@@ -361,6 +391,8 @@ export default function AdminPage() {
         ? listings.filter((listing) => listing.featured)
         : listings.filter((listing) => listing.status === listingFilter);
   const advertisers = groupAdvertisers(listings);
+  const unreadMessages = messages.filter((message) => message.status === "unread").length;
+  const selectedMessage = messages.find((message) => message.id === selectedMessageId) || messages[0];
 
   function applyDiscount(discountPercent) {
     const originalPrice = Number(listingForm.original_price || 0);
@@ -424,7 +456,31 @@ export default function AdminPage() {
 
         {ready && loggedIn ? (
           <>
-            <section className="admin-metrics">
+            <div className="admin-board">
+              <aside className="admin-sidebar">
+                <button className={activeAdminSection === "dashboard" ? "active" : ""} type="button" onClick={() => setActiveAdminSection("dashboard")}>
+                  Tablero
+                </button>
+                <button className={activeAdminSection === "listings" ? "active" : ""} type="button" onClick={() => setActiveAdminSection("listings")}>
+                  Anuncios
+                </button>
+                <button className={activeAdminSection === "users" ? "active" : ""} type="button" onClick={() => setActiveAdminSection("users")}>
+                  Usuarios
+                </button>
+                <button className={activeAdminSection === "banners" ? "active" : ""} type="button" onClick={() => setActiveAdminSection("banners")}>
+                  Banners
+                </button>
+                <button className={activeAdminSection === "categories" ? "active" : ""} type="button" onClick={() => setActiveAdminSection("categories")}>
+                  Categorias
+                </button>
+                <button className={activeAdminSection === "messages" ? "active" : ""} type="button" onClick={() => setActiveAdminSection("messages")}>
+                  <span>Mensajes</span>
+                  {unreadMessages ? <strong>{unreadMessages}</strong> : null}
+                </button>
+              </aside>
+
+              <div className="admin-board-main">
+            <section className={`admin-metrics ${activeAdminSection !== "dashboard" ? "admin-section-hidden" : ""}`}>
               <button className={`stat ${listingFilter === "all" ? "selected" : ""}`} type="button" onClick={() => setListingFilter("all")}>
                 <span>Total anuncios</span>
                 <strong>{listingStats.total}</strong>
@@ -448,7 +504,7 @@ export default function AdminPage() {
             </section>
 
             <div className="admin-grid">
-            <section className="panel">
+            <section className={`panel ${!["dashboard", "listings"].includes(activeAdminSection) ? "admin-section-hidden" : ""}`}>
               <div className="form-head">
                 <h2>{listingForm.id ? "Editar anuncio" : "Nuevo anuncio"}</h2>
                 <button className="secondary" type="button" onClick={() => setListingForm(emptyListing)}>
@@ -779,7 +835,7 @@ export default function AdminPage() {
               </form>
             </section>
 
-            <aside className="panel">
+            <aside className={`panel ${!["dashboard", "listings"].includes(activeAdminSection) ? "admin-section-hidden" : ""}`}>
               <div className="form-head">
                 <h2>Anuncios</h2>
                 <span className="pill">{filteredListings.length}</span>
@@ -827,7 +883,7 @@ export default function AdminPage() {
               </div>
             </aside>
 
-            <aside className="panel admin-full-row">
+            <aside className={`panel admin-full-row ${!["dashboard", "users"].includes(activeAdminSection) ? "admin-section-hidden" : ""}`}>
               <div className="form-head">
                 <h2>Anunciantes</h2>
                 <span className="pill">{advertisers.length}</span>
@@ -857,7 +913,7 @@ export default function AdminPage() {
               </div>
             </aside>
 
-            <section className="panel">
+            <section className={`panel ${!["dashboard", "banners"].includes(activeAdminSection) ? "admin-section-hidden" : ""}`}>
               <div className="form-head">
                 <h2>{bannerForm.id ? "Editar banner" : "Nuevo banner de portada"}</h2>
                 <button className="secondary" type="button" onClick={() => setBannerForm(emptyBanner)}>
@@ -961,7 +1017,7 @@ export default function AdminPage() {
               </form>
             </section>
 
-            <aside className="panel">
+            <aside className={`panel ${!["dashboard", "banners"].includes(activeAdminSection) ? "admin-section-hidden" : ""}`}>
               <h2>Banners de portada</h2>
               <div className="list">
                 {banners.map((banner) => (
@@ -984,7 +1040,7 @@ export default function AdminPage() {
               </div>
             </aside>
 
-            <section className="panel">
+            <section className={`panel ${!["dashboard", "categories"].includes(activeAdminSection) ? "admin-section-hidden" : ""}`}>
               <div className="form-head">
                 <h2>{categoryForm.id ? "Editar categoria" : "Nueva categoria"}</h2>
                 <button
@@ -1019,7 +1075,7 @@ export default function AdminPage() {
               </form>
             </section>
 
-            <aside className="panel">
+            <aside className={`panel ${!["dashboard", "categories"].includes(activeAdminSection) ? "admin-section-hidden" : ""}`}>
               <h2>Categorias</h2>
               <div className="list">
                 {categories.map((category) => (
@@ -1038,6 +1094,67 @@ export default function AdminPage() {
                 ))}
               </div>
             </aside>
+
+            <section className={`panel admin-full-row ${!["dashboard", "messages"].includes(activeAdminSection) ? "admin-section-hidden" : ""}`}>
+              <div className="form-head">
+                <h2>Mensajes</h2>
+                <span className="pill">{messages.length}</span>
+              </div>
+              <div className="message-inbox">
+                <div className="message-list">
+                  {messages.map((message) => (
+                    <button
+                      className={`message-row ${message.id === selectedMessage?.id ? "selected" : ""} ${message.status}`}
+                      type="button"
+                      key={message.id}
+                      onClick={() => setSelectedMessageId(message.id)}
+                    >
+                      <span>{message.sender_name || message.sender_email || "Visitante"}</span>
+                      <strong>{message.subject || message.listing_title || messageKindLabel(message.kind)}</strong>
+                      <small>{formatDateTime(message.created_at)}</small>
+                    </button>
+                  ))}
+                  {!messages.length ? <p className="muted">Todavia no hay mensajes.</p> : null}
+                </div>
+                <article className="message-detail">
+                  {selectedMessage ? (
+                    <>
+                      <div className="form-head">
+                        <div>
+                          <span className={`status-badge ${selectedMessage.status === "unread" ? "pending" : "active"}`}>
+                            {selectedMessage.status === "unread" ? "Sin leer" : "Revisado"}
+                          </span>
+                          <h3>{selectedMessage.subject || selectedMessage.listing_title || messageKindLabel(selectedMessage.kind)}</h3>
+                        </div>
+                        <button
+                          className="secondary"
+                          type="button"
+                          disabled={saving}
+                          onClick={() => updateMessage(selectedMessage, { status: selectedMessage.status === "unread" ? "read" : "unread" })}
+                        >
+                          {selectedMessage.status === "unread" ? "Marcar revisado" : "Marcar sin leer"}
+                        </button>
+                      </div>
+                      <p className="muted">
+                        {selectedMessage.sender_name || "Sin nombre"} - {selectedMessage.sender_email || "Sin correo"}
+                        {selectedMessage.sender_phone ? ` - ${selectedMessage.sender_phone}` : ""}
+                      </p>
+                      {selectedMessage.listing_title ? <p className="fact">Anuncio: {selectedMessage.listing_title}</p> : null}
+                      <p className="message-body">{selectedMessage.message}</p>
+                      {selectedMessage.sender_email ? (
+                        <a className="primary" href={`mailto:${selectedMessage.sender_email}?subject=PanAvisos: ${encodeURIComponent(selectedMessage.subject || "respuesta a tu mensaje")}`}>
+                          Responder por correo
+                        </a>
+                      ) : null}
+                    </>
+                  ) : (
+                    <p className="muted">Selecciona un mensaje.</p>
+                  )}
+                </article>
+              </div>
+            </section>
+            </div>
+              </div>
             </div>
           </>
         ) : null}
@@ -1056,6 +1173,23 @@ function statusLabel(status) {
   if (status === "pending") return "Pendiente";
   if (status === "paused") return "Pausado";
   return status || "Sin estado";
+}
+
+function messageKindLabel(kind) {
+  if (kind === "report") return "Denuncia";
+  if (kind === "support") return "Ayuda";
+  if (kind === "lead") return "Quiero anunciarme";
+  return "Feedback";
+}
+
+function formatDateTime(value) {
+  if (!value) return "";
+  return new Intl.DateTimeFormat("es-PA", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(new Date(value));
 }
 
 function groupAdvertisers(listings) {

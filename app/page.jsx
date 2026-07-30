@@ -291,6 +291,10 @@ export default function HomePage() {
             )}
           </section>
         </section>
+
+        <section className="home-band feedback-band" id="contacto">
+          <FeedbackForm profile={profile} />
+        </section>
       </main>
 
       <SiteFooter />
@@ -772,10 +776,140 @@ function ListingDetail({ listing, profile, onRequireAccount, onClose }) {
                 Ver ubicacion aproximada
               </a>
             ) : null}
+
+            <FeedbackForm profile={profile} listing={listing} compact />
           </div>
         </aside>
       </article>
     </div>
+  );
+}
+
+function FeedbackForm({ profile, listing = null, compact = false }) {
+  const [form, setForm] = useState({
+    kind: listing ? "report" : "feedback",
+    sender_name: profile?.name || "",
+    sender_email: profile?.email || "",
+    sender_phone: "",
+    subject: listing ? `Mensaje sobre: ${listing.title}` : "",
+    message: ""
+  });
+  const [status, setStatus] = useState("");
+  const [error, setError] = useState("");
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    setForm((current) => ({
+      ...current,
+      sender_name: current.sender_name || profile?.name || "",
+      sender_email: current.sender_email || profile?.email || ""
+    }));
+  }, [profile]);
+
+  async function submit(event) {
+    event.preventDefault();
+    setStatus("");
+    setError("");
+    setSending(true);
+
+    const response = await fetch("/api/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...form,
+        listing_id: listing?.id || null,
+        listing_title: listing?.title || null
+      })
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    setSending(false);
+
+    if (!response.ok) {
+      setError(payload.error || "No pudimos enviar el mensaje.");
+      return;
+    }
+
+    setStatus("Mensaje enviado. Gracias, lo revisaremos pronto.");
+    setForm((current) => ({ ...current, subject: listing ? current.subject : "", message: "" }));
+  }
+
+  return (
+    <section className={`feedback-panel ${compact ? "compact" : ""}`}>
+      <div>
+        <span className="eyebrow">{listing ? "Reportar o consultar" : "Contacto"}</span>
+        <h2>{listing ? "Enviar mensaje sobre este anuncio" : "Cuéntanos cómo va PanAvisos"}</h2>
+        <p className="muted">
+          {listing
+            ? "Usa este espacio para reportar algo, pedir ayuda o dejar una observacion."
+            : "Recibimos feedback, reportes y mensajes para mejorar la plataforma."}
+        </p>
+      </div>
+      <form onSubmit={submit}>
+        <div className="field-row">
+          <label className="field">
+            <span>Tipo</span>
+            <select value={form.kind} onChange={(event) => setForm({ ...form, kind: event.target.value })}>
+              <option value="feedback">Feedback</option>
+              <option value="report">Denuncia</option>
+              <option value="support">Ayuda</option>
+              <option value="lead">Quiero anunciarme</option>
+            </select>
+          </label>
+          <label className="field">
+            <span>Correo</span>
+            <input
+              required
+              type="email"
+              value={form.sender_email}
+              onChange={(event) => setForm({ ...form, sender_email: event.target.value })}
+              placeholder="correo@email.com"
+            />
+          </label>
+        </div>
+        <div className="field-row">
+          <label className="field">
+            <span>Nombre</span>
+            <input
+              value={form.sender_name}
+              onChange={(event) => setForm({ ...form, sender_name: event.target.value })}
+              placeholder="Tu nombre"
+            />
+          </label>
+          <label className="field">
+            <span>WhatsApp opcional</span>
+            <input
+              value={form.sender_phone}
+              onChange={(event) => setForm({ ...form, sender_phone: event.target.value })}
+              placeholder="6000-0000"
+            />
+          </label>
+        </div>
+        <label className="field">
+          <span>Asunto</span>
+          <input
+            value={form.subject}
+            onChange={(event) => setForm({ ...form, subject: event.target.value })}
+            placeholder="Resumen corto"
+          />
+        </label>
+        <label className="field">
+          <span>Mensaje</span>
+          <textarea
+            required
+            rows={compact ? 3 : 4}
+            value={form.message}
+            onChange={(event) => setForm({ ...form, message: event.target.value })}
+            placeholder="Escribe tu mensaje"
+          />
+        </label>
+        <button className="primary" type="submit" disabled={sending}>
+          {sending ? "Enviando..." : "Enviar mensaje"}
+        </button>
+        {status ? <p className="notice inline-auth-message">{status}</p> : null}
+        {error ? <p className="error inline-auth-message">{error}</p> : null}
+      </form>
+    </section>
   );
 }
 
