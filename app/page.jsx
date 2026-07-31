@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { money, provinces } from "@/lib/format";
-import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
+import { getSupabaseBrowser, hasSupabaseBrowserConfig } from "@/lib/supabaseBrowser";
 
 const categoryLooks = {
   "bienes-raices": { icon: "BR", label: "Casas, apartamentos, lotes" },
@@ -25,29 +25,58 @@ const headerCategoryGroups = [
   { label: "Hojas de Vida", terms: ["hoja", "curriculum", "cv"] }
 ];
 
+const emptyFilters = {
+  q: "",
+  category: "",
+  province: "",
+  min: "",
+  max: ""
+};
+
 export default function HomePage() {
   const [data, setData] = useState({ categories: [], listings: [], banners: [] });
   const [selected, setSelected] = useState(null);
   const [profile, setProfile] = useState(null);
   const [accountOpen, setAccountOpen] = useState(false);
   const [activeBanner, setActiveBanner] = useState(0);
-  const [filters, setFilters] = useState({
-    q: "",
-    category: "",
-    province: "",
-    min: "",
-    max: ""
-  });
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [filters, setFilters] = useState(emptyFilters);
   const [loading, setLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState(false);
 
   useEffect(() => {
-    fetch("/api/catalog")
-      .then((response) => response.json())
-      .then((payload) => setData(payload))
-      .finally(() => setLoading(false));
+    let mounted = true;
+
+    async function loadCatalog() {
+      try {
+        const response = await fetch("/api/catalog");
+        if (!response.ok) throw new Error("Catalog request failed");
+
+        const payload = await response.json();
+        if (!mounted) return;
+
+        setData({
+          categories: payload.categories || [],
+          listings: payload.listings || [],
+          banners: payload.banners || []
+        });
+        setCatalogError(false);
+      } catch {
+        if (mounted) setCatalogError(true);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+
+    loadCatalog();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   useEffect(() => {
+    if (!hasSupabaseBrowserConfig()) return;
+
     const supabase = getSupabaseBrowser();
 
     async function loadSession() {
@@ -114,6 +143,9 @@ export default function HomePage() {
   }, [data, filters]);
 
   const featured = listings.filter((listing) => listing.featured).slice(0, 6);
+  const featuredListingIds = new Set(featured.map((listing) => listing.id));
+  const latestListings = listings.filter((listing) => !featuredListingIds.has(listing.id));
+  const activeFilterCount = Object.values(filters).filter(Boolean).length;
   const sortedBanners = useMemo(
     () =>
       [...(data.banners || [])].sort(
@@ -140,6 +172,7 @@ export default function HomePage() {
 
   function applyCategory(categoryId = "") {
     setFilters((current) => ({ ...current, category: categoryId }));
+    setMobileFiltersOpen(false);
     document.getElementById("anuncios")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -206,7 +239,7 @@ export default function HomePage() {
                   placeholder="Buscar..."
                 />
               </label>
-              <Link className="nav-link" href="/publicar">
+              <Link className="nav-link category-publish-link" href="/publicar">
                 Publicar
               </Link>
             </div>
@@ -250,8 +283,23 @@ export default function HomePage() {
         </section>
 
         <section className="market-layout home-band" id="anuncios">
-          <aside className="market-filters">
-            <h2>Filtrar anuncios</h2>
+          <aside className={`market-filters ${mobileFiltersOpen ? "open" : ""}`}>
+            <div className="filter-head">
+              <h2>Filtrar anuncios</h2>
+              <div className="filter-head-actions">
+                <button
+                  className="filter-reset"
+                  type="button"
+                  onClick={() => setFilters(emptyFilters)}
+                  disabled={!activeFilterCount}
+                >
+                  Limpiar
+                </button>
+                <button className="filter-close" type="button" onClick={() => setMobileFiltersOpen(false)}>
+                  Cerrar
+                </button>
+              </div>
+            </div>
             <label className="field">
               <span>Buscar</span>
               <input
@@ -311,12 +359,22 @@ export default function HomePage() {
           <section className="market-results">
             <div className="toolbar">
               <div>
-                <strong>{loading ? "Cargando..." : `${listings.length} anuncios`}</strong>
-                <span className="muted"> disponibles</span>
+                <strong>{loading ? "Cargando..." : catalogError ? "No disponible" : `${listings.length} anuncios`}</strong>
+                {!loading && !catalogError ? <span className="muted"> disponibles</span> : null}
               </div>
-              <div className="facts">
-                <span className="fact">Recientes</span>
-                <span className="fact">Contacto directo</span>
+              <div className="listing-tools">
+                <button
+                  className="mobile-filter-toggle"
+                  type="button"
+                  onClick={() => setMobileFiltersOpen((current) => !current)}
+                  aria-expanded={mobileFiltersOpen}
+                >
+                  Filtros{activeFilterCount ? ` (${activeFilterCount})` : ""}
+                </button>
+                <div className="facts">
+                  <span className="fact">Recientes</span>
+                  <span className="fact">Contacto directo</span>
+                </div>
               </div>
             </div>
 
@@ -331,16 +389,22 @@ export default function HomePage() {
               </>
             ) : null}
 
-            <h2 className="block-title">Ultimos anuncios</h2>
-            {!loading && listings.length === 0 ? (
-              <div className="notice">Todavia no hay anuncios con esos filtros.</div>
-            ) : (
-              <div className="grid">
-                {listings.map((listing) => (
-                  <ListingCard key={listing.id} listing={listing} onSelect={setSelected} />
-                ))}
-              </div>
-            )}
+            {catalogError ? (
+              <div className="notice">No pudimos cargar los anuncios. Intenta nuevamente.</div>
+            ) : latestListings.length || (!loading && listings.length === 0) ? (
+              <>
+                <h2 className="block-title">Ultimos anuncios</h2>
+                {!loading && listings.length === 0 ? (
+                  <div className="notice">Todavia no hay anuncios con esos filtros.</div>
+                ) : (
+                  <div className="grid">
+                    {latestListings.map((listing) => (
+                      <ListingCard key={listing.id} listing={listing} onSelect={setSelected} />
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : null}
           </section>
         </section>
 
@@ -376,31 +440,33 @@ function Topbar({ profile, categories = [], onPickCategory, onOpenAccount, onLog
 
   return (
     <header className="topbar marketplace-topbar">
-      <Link className="brand" href="/">
-        <span className="brand-mark">PA</span>
-        <span>
-          <strong>PanAvisos</strong>
-          <small>Anuncios de Panama</small>
-        </span>
-      </Link>
-      <nav className="main-menu" aria-label="Categorias principales">
-        {menuCategories.map((item) => (
-          <button type="button" key={item.label} onClick={() => onPickCategory(item.category.id)}>
-            {item.label}
-          </button>
-        ))}
-        <button type="button" onClick={() => onPickCategory("")}>
-          Marketplace
-        </button>
-      </nav>
-      <nav className="top-actions">
-        <a href="#anuncios">Anuncios</a>
-        <Link href="/cuenta">Mi cuenta</Link>
-        <AccountButton profile={profile} onOpen={onOpenAccount} onLogout={onLogout} />
-        <Link className="primary" href="/publicar">
-          Publicar
+      <div className="topbar-inner">
+        <Link className="brand" href="/">
+          <span className="brand-mark">PA</span>
+          <span>
+            <strong>PanAvisos</strong>
+            <small>Anuncios de Panama</small>
+          </span>
         </Link>
-      </nav>
+        <nav className="main-menu" aria-label="Categorias principales">
+          {menuCategories.map((item) => (
+            <button type="button" key={item.label} onClick={() => onPickCategory(item.category.id)}>
+              {item.label}
+            </button>
+          ))}
+          <button type="button" onClick={() => onPickCategory("")}>
+            Marketplace
+          </button>
+        </nav>
+        <nav className="top-actions">
+          <a className="desktop-top-link" href="#anuncios">Anuncios</a>
+          <Link className="desktop-top-link" href="/cuenta">Mi cuenta</Link>
+          <AccountButton profile={profile} onOpen={onOpenAccount} onLogout={onLogout} />
+          <Link className="primary" href="/publicar">
+            Publicar
+          </Link>
+        </nav>
+      </div>
     </header>
   );
 }
