@@ -186,6 +186,29 @@ export default function AccountPage() {
     }
   }
 
+  async function loginWithGoogle() {
+    setMessage("");
+    setError("");
+
+    try {
+      setSavingAuth(true);
+      const { error: googleError } = await getSupabaseBrowser().auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/cuenta`
+        }
+      });
+
+      if (googleError) {
+        setError(authErrorMessage(googleError.message));
+      }
+    } catch {
+      setError("Google todavia no esta conectado en Supabase.");
+    } finally {
+      setSavingAuth(false);
+    }
+  }
+
   async function saveProfile(event) {
     event.preventDefault();
     if (!session?.user) return;
@@ -383,12 +406,12 @@ export default function AccountPage() {
                   )}
                 </div>
                 <div className="social-disabled-group" aria-label="Opciones disponibles proximamente">
-                  <p className="muted center-text">Google y Facebook se conectan despues.</p>
+                  <p className="muted center-text">Google queda listo cuando activemos el proveedor en Supabase.</p>
                   <button className="facebook-button" type="button" disabled>
                     Facebook proximamente
                   </button>
-                  <button className="google-button-solid" type="button" disabled>
-                    Google proximamente
+                  <button className="google-button-solid active" type="button" onClick={loginWithGoogle} disabled={savingAuth}>
+                    Continuar con Google
                   </button>
                 </div>
               </div>

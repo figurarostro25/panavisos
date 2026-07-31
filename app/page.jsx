@@ -484,6 +484,29 @@ function AccountModal({ onClose }) {
     }
   }
 
+  async function loginWithGoogle() {
+    setMessage("");
+    setError("");
+
+    try {
+      setSavingAuth(true);
+      const { error: googleError } = await getSupabaseBrowser().auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/cuenta`
+        }
+      });
+
+      if (googleError) {
+        setError(authErrorMessage(googleError.message));
+      }
+    } catch {
+      setError("Google todavia no esta conectado en Supabase.");
+    } finally {
+      setSavingAuth(false);
+    }
+  }
+
   return (
     <div className="account-modal">
       <button className="modal-backdrop" type="button" onClick={onClose} aria-label="Cerrar" />
@@ -578,13 +601,13 @@ function AccountModal({ onClose }) {
         </div>
             <div className="account-column account-secondary-panel">
               <h2>Acceso social</h2>
-              <p className="muted account-copy">Google y Facebook quedaran disponibles cuando conectemos sus credenciales reales.</p>
-              <div className="social-disabled-group" aria-label="Opciones disponibles proximamente">
+              <p className="muted account-copy">Google ya queda listo para usarse cuando el proveedor este activo en Supabase.</p>
+              <div className="social-disabled-group" aria-label="Opciones de acceso social">
                 <button className="facebook-button" type="button" disabled>
                   Facebook proximamente
                 </button>
-                <button className="google-button-solid" type="button" disabled>
-                  Google proximamente
+                <button className="google-button-solid active" type="button" onClick={loginWithGoogle} disabled={savingAuth}>
+                  Continuar con Google
                 </button>
               </div>
             </div>
@@ -943,13 +966,17 @@ function ListingDetail({ listing, profile, onRequireAccount, onClose }) {
 }
 
 function FeedbackForm({ profile, listing = null, compact = false }) {
+  const sellerPhone = String(listing?.whatsapp || listing?.advertiser_phone || listing?.profile?.phone || "").replace(/\D/g, "");
+  const initialMessage = listing
+    ? `Me interesa el anuncio "${listing.title}" que tienes publicado en PanAvisos.`
+    : "";
   const [form, setForm] = useState({
-    kind: listing ? "report" : "feedback",
+    kind: listing ? "inquiry" : "feedback",
     sender_name: profile?.name || "",
     sender_email: profile?.email || "",
     sender_phone: "",
     subject: listing ? `Mensaje sobre: ${listing.title}` : "",
-    message: ""
+    message: initialMessage
   });
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
@@ -987,8 +1014,85 @@ function FeedbackForm({ profile, listing = null, compact = false }) {
       return;
     }
 
-    setStatus("Mensaje enviado. Gracias, lo revisaremos pronto.");
-    setForm((current) => ({ ...current, subject: listing ? current.subject : "", message: "" }));
+    setStatus(listing ? "Consulta enviada. El anunciante la recibira en PanAvisos." : "Mensaje enviado. Gracias, lo revisaremos pronto.");
+    setForm((current) => ({ ...current, subject: listing ? current.subject : "", message: listing ? initialMessage : "" }));
+  }
+
+  if (listing) {
+    const sellerDial = sellerPhone ? (sellerPhone.startsWith("507") ? sellerPhone : `507${sellerPhone}`) : "";
+    const whatsappText = encodeURIComponent(form.message || initialMessage);
+    return (
+      <section className={`seller-contact-card ${compact ? "compact" : ""}`}>
+        <div>
+          <span className="eyebrow">Consulta directa</span>
+          <h2>Enviar consulta</h2>
+          <p className="muted">Deja tus datos y el mensaje llega a la bandeja de PanAvisos.</p>
+        </div>
+        <form onSubmit={submit}>
+          <label className="field">
+            <span>Nombre</span>
+            <input
+              required
+              value={form.sender_name}
+              onChange={(event) => setForm({ ...form, sender_name: event.target.value })}
+              placeholder="Tu nombre"
+            />
+          </label>
+          <label className="field">
+            <span>Correo</span>
+            <input
+              required
+              type="email"
+              value={form.sender_email}
+              onChange={(event) => setForm({ ...form, sender_email: event.target.value })}
+              placeholder="correo@email.com"
+            />
+          </label>
+          <div className="contact-phone-row">
+            <span className="country-code">+507</span>
+            <label className="field">
+              <span>Telefono</span>
+              <input
+                value={form.sender_phone}
+                onChange={(event) => setForm({ ...form, sender_phone: event.target.value })}
+                placeholder="6000-0000"
+              />
+            </label>
+          </div>
+          <label className="field">
+            <span>Mensaje</span>
+            <textarea
+              required
+              rows={compact ? 4 : 5}
+              value={form.message}
+              onChange={(event) => setForm({ ...form, message: event.target.value })}
+              placeholder="Escribe tu consulta"
+            />
+          </label>
+          <button className="primary inquiry-submit" type="submit" disabled={sending}>
+            {sending ? "Enviando..." : "Enviar consulta"}
+          </button>
+          <div className="contact-shortcuts">
+            {sellerPhone ? (
+              <a className="phone-action" href={`tel:+${sellerDial}`}>
+                Llamar
+              </a>
+            ) : (
+              <span className="disabled-contact-action">Llamar</span>
+            )}
+            {sellerPhone ? (
+              <a className="whatsapp-action" href={`https://wa.me/${sellerDial}?text=${whatsappText}`} target="_blank" rel="noreferrer">
+                WhatsApp
+              </a>
+            ) : (
+              <span className="disabled-contact-action">WhatsApp</span>
+            )}
+          </div>
+          {status ? <p className="notice inline-auth-message">{status}</p> : null}
+          {error ? <p className="error inline-auth-message">{error}</p> : null}
+        </form>
+      </section>
+    );
   }
 
   return (

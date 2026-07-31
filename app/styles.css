@@ -1065,6 +1065,85 @@ button:disabled {
   margin: 0;
 }
 
+.seller-contact-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #d7e5ee;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(7, 52, 95, 0.07);
+}
+
+.seller-contact-card.compact {
+  margin-top: 18px;
+}
+
+.seller-contact-card h2,
+.seller-contact-card p {
+  margin: 0;
+}
+
+.seller-contact-card form {
+  display: grid;
+  gap: 10px;
+}
+
+.contact-phone-row {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr);
+  gap: 8px;
+  align-items: end;
+}
+
+.country-code {
+  display: grid;
+  min-height: 44px;
+  place-items: center;
+  border: 1px solid #d7e5ee;
+  border-radius: 8px;
+  color: var(--ink);
+  background: #f7fbfd;
+  font-weight: 900;
+}
+
+.inquiry-submit {
+  min-height: 46px;
+  border-radius: 999px;
+}
+
+.contact-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.phone-action,
+.whatsapp-action,
+.disabled-contact-action {
+  display: grid;
+  min-height: 40px;
+  place-items: center;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 900;
+}
+
+.phone-action {
+  color: #d73766;
+  background: #fff1f5;
+}
+
+.whatsapp-action {
+  color: #0a9f52;
+  background: #edfdf3;
+}
+
+.disabled-contact-action {
+  color: #9aa7b2;
+  background: #eef2f5;
+}
+
 .compact-grid {
   margin-bottom: 22px;
 }
@@ -1743,6 +1822,18 @@ button:disabled {
   background: #eef2f5;
   cursor: not-allowed;
   opacity: 1;
+}
+
+.google-button-solid.active {
+  border-color: #e4473d;
+  color: #fff;
+  background: #e4473d;
+  cursor: pointer;
+}
+
+.google-button-solid.active:disabled {
+  opacity: 0.72;
+  cursor: wait;
 }
 
 .center-text {

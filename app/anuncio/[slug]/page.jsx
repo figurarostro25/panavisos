@@ -184,7 +184,109 @@ function ListingMiniWeb({ listing }) {
             ) : null}
           </div>
         </div>
+
+        <ListingInquiryForm listing={listing} sellerName={sellerName} />
       </aside>
+    </section>
+  );
+}
+
+function ListingInquiryForm({ listing, sellerName }) {
+  const sellerPhone = String(listing.whatsapp || listing.advertiser_phone || listing.profile?.phone || "").replace(/\D/g, "");
+  const sellerDial = sellerPhone ? (sellerPhone.startsWith("507") ? sellerPhone : `507${sellerPhone}`) : "";
+  const defaultMessage = `Me interesa el anuncio "${listing.title}" que tienes publicado en PanAvisos.`;
+  const [form, setForm] = useState({
+    sender_name: "",
+    sender_email: "",
+    sender_phone: "",
+    message: defaultMessage
+  });
+  const [status, setStatus] = useState("");
+  const [error, setError] = useState("");
+  const [sending, setSending] = useState(false);
+  const whatsappText = encodeURIComponent(form.message || defaultMessage);
+
+  async function submit(event) {
+    event.preventDefault();
+    setStatus("");
+    setError("");
+    setSending(true);
+
+    const response = await fetch("/api/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kind: "inquiry",
+        subject: `Consulta sobre: ${listing.title}`,
+        message: form.message,
+        sender_name: form.sender_name,
+        sender_email: form.sender_email,
+        sender_phone: form.sender_phone,
+        listing_id: listing.id,
+        listing_title: listing.title
+      })
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    setSending(false);
+
+    if (!response.ok) {
+      setError(payload.error || "No pudimos enviar tu consulta.");
+      return;
+    }
+
+    setStatus("Consulta enviada. Gracias por escribir.");
+    setForm((current) => ({ ...current, message: defaultMessage }));
+  }
+
+  return (
+    <section className="seller-contact-card">
+      <div>
+        <span className="eyebrow">{sellerName}</span>
+        <h2>Enviar consulta</h2>
+      </div>
+      <form onSubmit={submit}>
+        <label className="field">
+          <span>Nombre</span>
+          <input required value={form.sender_name} onChange={(event) => setForm({ ...form, sender_name: event.target.value })} placeholder="Tu nombre" />
+        </label>
+        <label className="field">
+          <span>Correo</span>
+          <input
+            required
+            type="email"
+            value={form.sender_email}
+            onChange={(event) => setForm({ ...form, sender_email: event.target.value })}
+            placeholder="correo@email.com"
+          />
+        </label>
+        <div className="contact-phone-row">
+          <span className="country-code">+507</span>
+          <label className="field">
+            <span>Telefono</span>
+            <input value={form.sender_phone} onChange={(event) => setForm({ ...form, sender_phone: event.target.value })} placeholder="6000-0000" />
+          </label>
+        </div>
+        <label className="field">
+          <span>Mensaje</span>
+          <textarea required rows={5} value={form.message} onChange={(event) => setForm({ ...form, message: event.target.value })} />
+        </label>
+        <button className="primary inquiry-submit" type="submit" disabled={sending}>
+          {sending ? "Enviando..." : "Enviar consulta"}
+        </button>
+        <div className="contact-shortcuts">
+          {sellerPhone ? <a className="phone-action" href={`tel:+${sellerDial}`}>Llamar</a> : <span className="disabled-contact-action">Llamar</span>}
+          {sellerPhone ? (
+            <a className="whatsapp-action" href={`https://wa.me/${sellerDial}?text=${whatsappText}`} target="_blank" rel="noreferrer">
+              WhatsApp
+            </a>
+          ) : (
+            <span className="disabled-contact-action">WhatsApp</span>
+          )}
+        </div>
+        {status ? <p className="notice inline-auth-message">{status}</p> : null}
+        {error ? <p className="error inline-auth-message">{error}</p> : null}
+      </form>
     </section>
   );
 }
