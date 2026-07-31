@@ -7,9 +7,23 @@ import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
 
 const categoryLooks = {
   "bienes-raices": { icon: "BR", label: "Casas, apartamentos, lotes" },
+  propiedades: { icon: "PR", label: "Venta, alquiler y lotes" },
   autos: { icon: "AU", label: "Vehiculos y accesorios" },
-  servicios: { icon: "SV", label: "Negocios y profesionales" }
+  vehiculos: { icon: "VH", label: "Autos, motos y repuestos" },
+  servicios: { icon: "SV", label: "Negocios y profesionales" },
+  empleos: { icon: "EM", label: "Vacantes y oportunidades" },
+  "hojas-de-vida": { icon: "HV", label: "Talento disponible" },
+  "hoja-de-vida": { icon: "HV", label: "Talento disponible" },
+  marketplace: { icon: "MP", label: "Productos y ofertas" },
+  "estetica-integral": { icon: "ES", label: "Belleza, bienestar y cuidado" }
 };
+
+const headerCategoryGroups = [
+  { label: "Bienes Raices", terms: ["bienes", "propiedades", "inmuebles"] },
+  { label: "Vehiculos", terms: ["auto", "vehiculo", "carro", "moto"] },
+  { label: "Empleos y Servicios", terms: ["empleo", "servicio", "profesional"] },
+  { label: "Hojas de Vida", terms: ["hoja", "curriculum", "cv"] }
+];
 
 export default function HomePage() {
   const [data, setData] = useState({ categories: [], listings: [], banners: [] });
@@ -112,6 +126,22 @@ export default function HomePage() {
   const heroBanners = sortedBanners.slice(0, 5);
   const overflowBanners = sortedBanners.slice(5);
   const activeHeroBanner = heroBanners[activeBanner % Math.max(heroBanners.length, 1)];
+  const categoryImages = useMemo(() => {
+    const images = new Map();
+    (data.listings || []).forEach((listing) => {
+      const image = [...(listing.images || [])].sort((a, b) => a.position - b.position)[0]?.url;
+      if (listing.category_id && image && !images.has(listing.category_id)) {
+        images.set(listing.category_id, image);
+      }
+    });
+    return images;
+  }, [data.listings]);
+  const totalCategoryImage = [...categoryImages.values()][0];
+
+  function applyCategory(categoryId = "") {
+    setFilters((current) => ({ ...current, category: categoryId }));
+    document.getElementById("anuncios")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   useEffect(() => {
     if (heroBanners.length <= 1) return;
@@ -124,7 +154,13 @@ export default function HomePage() {
 
   return (
     <>
-      <Topbar profile={profile} onOpenAccount={() => setAccountOpen(true)} onLogout={logoutProfile} />
+      <Topbar
+        profile={profile}
+        categories={data.categories || []}
+        onPickCategory={applyCategory}
+        onOpenAccount={() => setAccountOpen(true)}
+        onLogout={logoutProfile}
+      />
       <main className="market-home">
         <section className="home-band hero-banner-band">
           <div className="hero-carousel">
@@ -176,21 +212,37 @@ export default function HomePage() {
             </div>
           </div>
           <div className="category-strip">
-            <button className="category-tile" type="button" onClick={() => setFilters({ ...filters, category: "" })}>
-              <span className="category-icon">TO</span>
-              <strong>Todo</strong>
+            <button
+              className={`category-tile ${!filters.category ? "active" : ""}`}
+              type="button"
+              onClick={() => applyCategory("")}
+            >
+              <span className="category-photo">
+                {totalCategoryImage ? <img src={totalCategoryImage} alt="" /> : <span>TO</span>}
+              </span>
+              <span>
+                <strong>Todo</strong>
+                <small>Ver anuncios</small>
+              </span>
             </button>
             {data.categories?.map((category) => {
               const look = categoryLooks[category.slug] || { icon: category.name.slice(0, 2) };
+              const image = categoryImages.get(category.id);
+              const listingCount = (data.listings || []).filter((listing) => listing.category_id === category.id).length;
               return (
                 <button
-                  className="category-tile"
+                  className={`category-tile ${filters.category === category.id ? "active" : ""}`}
                   type="button"
                   key={category.id}
-                  onClick={() => setFilters({ ...filters, category: category.id })}
+                  onClick={() => applyCategory(category.id)}
                 >
-                  <span className="category-icon">{look.icon}</span>
-                  <strong>{category.name}</strong>
+                  <span className="category-photo">
+                    {image ? <img src={image} alt="" /> : <span>{look.icon}</span>}
+                  </span>
+                  <span>
+                    <strong>{category.name}</strong>
+                    <small>{category.description || look.label || `${listingCount} anuncios`}</small>
+                  </span>
                 </button>
               );
             })}
@@ -311,7 +363,17 @@ export default function HomePage() {
   );
 }
 
-function Topbar({ profile, onOpenAccount, onLogout }) {
+function Topbar({ profile, categories = [], onPickCategory, onOpenAccount, onLogout }) {
+  const menuCategories = headerCategoryGroups
+    .map((group) => {
+      const category = categories.find((item) => {
+        const haystack = normalize(`${item.slug} ${item.name}`);
+        return group.terms.some((term) => haystack.includes(normalize(term)));
+      });
+      return category ? { ...group, category } : null;
+    })
+    .filter(Boolean);
+
   return (
     <header className="topbar marketplace-topbar">
       <Link className="brand" href="/">
@@ -321,6 +383,16 @@ function Topbar({ profile, onOpenAccount, onLogout }) {
           <small>Anuncios de Panama</small>
         </span>
       </Link>
+      <nav className="main-menu" aria-label="Categorias principales">
+        {menuCategories.map((item) => (
+          <button type="button" key={item.label} onClick={() => onPickCategory(item.category.id)}>
+            {item.label}
+          </button>
+        ))}
+        <button type="button" onClick={() => onPickCategory("")}>
+          Marketplace
+        </button>
+      </nav>
       <nav className="top-actions">
         <a href="#anuncios">Anuncios</a>
         <Link href="/cuenta">Mi cuenta</Link>
