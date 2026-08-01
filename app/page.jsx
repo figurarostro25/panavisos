@@ -169,9 +169,16 @@ export default function HomePage() {
     return images;
   }, [data.listings]);
   const totalCategoryImage = [...categoryImages.values()][0];
+  const heroBackdrop = activeHeroBanner?.image_url || totalCategoryImage;
 
   function applyCategory(categoryId = "") {
     setFilters((current) => ({ ...current, category: categoryId }));
+    setMobileFiltersOpen(false);
+    document.getElementById("anuncios")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function submitHeroSearch(event) {
+    event.preventDefault();
     setMobileFiltersOpen(false);
     document.getElementById("anuncios")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -195,50 +202,77 @@ export default function HomePage() {
         onLogout={logoutProfile}
       />
       <main className="market-home">
-        <section className="home-band hero-banner-band">
-          <div className="hero-carousel">
-            <PromoBanner banner={activeHeroBanner} large />
-            {heroBanners.length > 1 ? (
-              <div className="banner-dots" aria-label="Banners principales">
-                {heroBanners.map((banner, index) => (
-                  <button
-                    className={index === activeBanner % heroBanners.length ? "active" : ""}
-                    type="button"
-                    key={banner.id}
-                    onClick={() => setActiveBanner(index)}
-                    aria-label={`Ver banner ${index + 1}`}
-                  />
-                ))}
+        <section className="home-band search-hero-band">
+          <div className="search-hero">
+            {heroBackdrop ? <img className="search-hero-bg" src={heroBackdrop} alt="" /> : null}
+            <div className="hero-copy">
+              <span className="eyebrow">Clasificados de Panama</span>
+              <h1>Encuentra lo que necesitas cerca de ti</h1>
+              <p>Propiedades, vehiculos, empleos, servicios, productos y oportunidades locales en un solo lugar.</p>
+              <div className="hero-actions">
+                <Link className="primary hero-publish" href="/publicar">Publicar gratis</Link>
+                <a className="hero-secondary" href="#anuncios">Ver anuncios</a>
               </div>
-            ) : null}
+            </div>
+
+            <form className="hero-search-card" onSubmit={submitHeroSearch}>
+              <label className="field hero-keyword-field">
+                <span>Que buscas</span>
+                <input
+                  value={filters.q}
+                  onChange={(event) => setFilters({ ...filters, q: event.target.value })}
+                  placeholder="Apartamento, empleo, masaje, auto..."
+                />
+              </label>
+              <div className="hero-search-grid">
+                <label className="field">
+                  <span>Categoria</span>
+                  <select
+                    value={filters.category}
+                    onChange={(event) => setFilters({ ...filters, category: event.target.value })}
+                  >
+                    <option value="">Todas</option>
+                    {data.categories?.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field">
+                  <span>Provincia</span>
+                  <select
+                    value={filters.province}
+                    onChange={(event) => setFilters({ ...filters, province: event.target.value })}
+                  >
+                    <option value="">Todo Panama</option>
+                    {provinces.map((province) => (
+                      <option key={province} value={province}>
+                        {province}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className="search-submit-row">
+                <button className="primary" type="submit">Buscar anuncios</button>
+                {activeFilterCount ? (
+                  <button className="secondary" type="button" onClick={() => setFilters(emptyFilters)}>
+                    Limpiar filtros
+                  </button>
+                ) : null}
+              </div>
+            </form>
           </div>
-          {overflowBanners.length ? (
-            <section className="featured-promos" aria-label="Destacados">
-              <div className="rail-head">
-                <h2>Destacados</h2>
-                <small>Promociones activas</small>
-              </div>
-              <div className="promo-rail">
-                {overflowBanners.map((banner) => <PromoBanner key={banner.id} banner={banner} compact />)}
-              </div>
-            </section>
-          ) : null}
         </section>
 
         <section className="home-band category-band">
           <div className="section-head">
             <div>
-              <h2>Categorias populares</h2>
+              <h2>Explora por categoria</h2>
+              <p>Atajos rapidos para lo mas buscado en PanAvisos.</p>
             </div>
             <div className="category-actions">
-              <label className="quick-search">
-                <span className="sr-only">Buscar anuncios</span>
-                <input
-                  value={filters.q}
-                  onChange={(event) => setFilters({ ...filters, q: event.target.value })}
-                  placeholder="Buscar..."
-                />
-              </label>
               <Link className="nav-link category-publish-link" href="/publicar">
                 Publicar
               </Link>
@@ -407,6 +441,48 @@ export default function HomePage() {
             ) : null}
           </section>
         </section>
+
+        {heroBanners.length || overflowBanners.length ? (
+          <section className="home-band sponsored-band" aria-labelledby="sponsored-title">
+            <div className="section-head">
+              <div>
+                <h2 id="sponsored-title">Publicidad destacada</h2>
+                <p>Promociones activas y espacios patrocinados.</p>
+              </div>
+            </div>
+            <div className="sponsored-layout">
+              {heroBanners.length ? (
+                <div className="hero-carousel sponsored-carousel">
+                  <PromoBanner banner={activeHeroBanner} />
+                  {heroBanners.length > 1 ? (
+                    <div className="banner-dots" aria-label="Banners principales">
+                      {heroBanners.map((banner, index) => (
+                        <button
+                          className={index === activeBanner % heroBanners.length ? "active" : ""}
+                          type="button"
+                          key={banner.id}
+                          onClick={() => setActiveBanner(index)}
+                          aria-label={`Ver banner ${index + 1}`}
+                        />
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+              {overflowBanners.length ? (
+                <section className="featured-promos sponsored-rail" aria-label="Mas promociones">
+                  <div className="rail-head">
+                    <h2>Mas espacios</h2>
+                    <small>Promociones activas</small>
+                  </div>
+                  <div className="promo-rail">
+                    {overflowBanners.map((banner) => <PromoBanner key={banner.id} banner={banner} compact />)}
+                  </div>
+                </section>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
 
         <section className="home-band feedback-band" id="contacto">
           <FeedbackForm profile={profile} />
