@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title">
+  <title id="title">Simbolo de PanAvisos</title>
+  <rect x="8" y="8" width="144" height="144" rx="28" fill="#07345F"/>
+  <path
+    fill="#FFFFFF"
+    fill-rule="evenodd"
+    d="M34 32h39c24 0 39 14 39 35 0 22-16 36-40 36H56v21H34V32Zm22 20v31h16c11 0 18-6 18-16 0-10-7-15-18-15H56Z"
+  />
+  <path fill="#FFFFFF" d="M78 124 103 61l27 63h-22l-5-14H89l-5 14H78Z"/>
+  <path fill="#008A96" d="m94 96 8-21 9 21H94Z"/>
+</svg>

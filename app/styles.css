@@ -1,11 +1,11 @@
 :root {
-  --ink: #0b2341;
-  --muted: #647283;
+  --ink: #09264a;
+  --muted: #5f6f80;
   --paper: #ffffff;
-  --soft: #f4f8fb;
-  --line: #d8e3ea;
-  --teal: #008a96;
-  --teal-dark: #006b75;
+  --soft: #f6f8fa;
+  --line: #dce4e9;
+  --teal: #007f86;
+  --teal-dark: #00676d;
   --navy: #07345f;
   --navy-soft: #eaf3fb;
   --orange: #f47b20;
@@ -22,9 +22,7 @@
 body {
   margin: 0;
   color: var(--ink);
-  background:
-    radial-gradient(circle at top left, rgba(0, 138, 150, 0.08), transparent 32rem),
-    linear-gradient(180deg, #fbfdff 0%, var(--soft) 42%, #eef5f9 100%);
+  background: #fff;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
@@ -85,6 +83,12 @@ a {
   background: linear-gradient(145deg, var(--teal), var(--navy));
   font-weight: 900;
   box-shadow: 0 10px 20px rgba(0, 138, 150, 0.2);
+}
+
+.brand-logo {
+  display: block;
+  width: 170px;
+  height: auto;
 }
 
 .brand strong,
@@ -177,13 +181,24 @@ a {
 .primary {
   border-color: var(--teal);
   color: #fff;
-  background: linear-gradient(135deg, var(--teal), var(--teal-dark));
-  box-shadow: 0 8px 18px rgba(0, 138, 150, 0.16);
+  background: var(--teal);
+  box-shadow: 0 8px 18px rgba(0, 127, 134, 0.16);
 }
 
 .primary:hover {
-  border-color: var(--navy);
-  background: linear-gradient(135deg, var(--teal-dark), var(--navy));
+  border-color: var(--teal-dark);
+  background: var(--teal-dark);
+}
+
+.publish-cta {
+  border-color: var(--orange);
+  background: var(--orange);
+  box-shadow: 0 8px 18px rgba(244, 123, 32, 0.18);
+}
+
+.publish-cta:hover {
+  border-color: var(--orange-dark);
+  background: var(--orange-dark);
 }
 
 .danger {
@@ -808,9 +823,7 @@ button:disabled {
 }
 
 .market-home {
-  background:
-    linear-gradient(180deg, rgba(234, 243, 251, 0.75), rgba(244, 248, 251, 0.96) 280px),
-    var(--soft);
+  background: linear-gradient(180deg, #fff 0, #f7f9fb 360px, #f4f7f9 100%);
 }
 
 .home-band {
@@ -854,6 +867,17 @@ button:disabled {
   gap: 10px;
 }
 
+.category-publish-link {
+  border-color: var(--orange);
+  color: #fff;
+  background: var(--orange);
+}
+
+.category-publish-link:hover {
+  border-color: var(--orange-dark);
+  background: var(--orange-dark);
+}
+
 .quick-search {
   display: grid;
   width: min(280px, 34vw);
@@ -893,12 +917,12 @@ button:disabled {
 
 .category-tile:hover {
   border-color: var(--teal);
-  box-shadow: 0 12px 24px rgba(0, 138, 150, 0.12);
+  box-shadow: 0 12px 24px rgba(0, 127, 134, 0.1);
 }
 
 .category-tile.active {
   border-color: var(--teal);
-  background: #f0fbfc;
+  background: #f2faf9;
 }
 
 .category-photo {
@@ -946,7 +970,7 @@ button:disabled {
   border: 1px solid rgba(255, 255, 255, 0.34);
   border-radius: 10px;
   background:
-    linear-gradient(105deg, rgba(7, 52, 95, 0.96), rgba(0, 138, 150, 0.72) 54%, rgba(244, 123, 32, 0.42)),
+    linear-gradient(105deg, rgba(7, 52, 95, 0.97), rgba(0, 103, 109, 0.76) 58%, rgba(244, 123, 32, 0.34)),
     var(--navy);
   color: #fff;
   text-decoration: none;
@@ -962,7 +986,7 @@ button:disabled {
   min-height: 76px;
   padding: 12px 14px;
   background:
-    linear-gradient(135deg, rgba(7, 52, 95, 0.92), rgba(0, 138, 150, 0.86)),
+    linear-gradient(135deg, rgba(7, 52, 95, 0.95), rgba(0, 103, 109, 0.9)),
     var(--teal-dark);
 }
 
@@ -2682,6 +2706,10 @@ button:disabled {
     gap: 8px;
   }
 
+  .marketplace-topbar .brand-logo {
+    width: 132px;
+  }
+
   .marketplace-topbar .brand-mark {
     width: 38px;
     height: 38px;
@@ -2733,7 +2761,7 @@ button:disabled {
   }
 
   .market-home {
-    background: #f3f7fa;
+    background: #f6f8fa;
   }
 
   .home-band {

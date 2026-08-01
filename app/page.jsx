@@ -442,11 +442,7 @@ function Topbar({ profile, categories = [], onPickCategory, onOpenAccount, onLog
     <header className="topbar marketplace-topbar">
       <div className="topbar-inner">
         <Link className="brand" href="/">
-          <span className="brand-mark">PA</span>
-          <span>
-            <strong>PanAvisos</strong>
-            <small>Anuncios de Panama</small>
-          </span>
+          <img className="brand-logo" src="/brand/panavisos-logo.svg" alt="PanAvisos" />
         </Link>
         <nav className="main-menu" aria-label="Categorias principales">
           {menuCategories.map((item) => (
@@ -462,7 +458,7 @@ function Topbar({ profile, categories = [], onPickCategory, onOpenAccount, onLog
           <a className="desktop-top-link" href="#anuncios">Anuncios</a>
           <Link className="desktop-top-link" href="/cuenta">Mi cuenta</Link>
           <AccountButton profile={profile} onOpen={onOpenAccount} onLogout={onLogout} />
-          <Link className="primary" href="/publicar">
+          <Link className="primary publish-cta" href="/publicar">
             Publicar
           </Link>
         </nav>
