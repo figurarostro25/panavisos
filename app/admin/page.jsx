@@ -155,8 +155,12 @@ export default function AdminPage() {
 
   async function saveBanner(event) {
     event.preventDefault();
-    setSaving(true);
     setError("");
+    if (!String(bannerForm.image_url || "").trim() && !String(bannerForm.title || "").trim()) {
+      setError("Agrega una imagen o un titulo para guardar el banner.");
+      return;
+    }
+    setSaving(true);
     const method = bannerForm.id ? "PATCH" : "POST";
     const url = bannerForm.id ? `/api/admin/banners/${bannerForm.id}` : "/api/admin/banners";
     const response = await fetch(url, {
@@ -986,13 +990,13 @@ export default function AdminPage() {
               </div>
               <form onSubmit={saveBanner}>
                 <label className="field">
-                  <span>Titulo</span>
+                  <span>Titulo opcional</span>
                   <input
-                    required
                     value={bannerForm.title}
                     onChange={(event) => setBannerForm({ ...bannerForm, title: event.target.value })}
-                    placeholder="Ej: Publica tu propiedad destacada"
+                    placeholder="Solo si la imagen no incluye el texto"
                   />
+                  <small className="muted">Puedes dejarlo vacio cuando el arte ya contiene toda la informacion.</small>
                 </label>
                 <label className="field">
                   <span>Texto secundario</span>
@@ -1086,7 +1090,7 @@ export default function AdminPage() {
               <div className="list">
                 {banners.map((banner) => (
                   <article className="list-item" key={banner.id}>
-                    <h3>{banner.title}</h3>
+                    <h3>{banner.title || "Banner sin titulo"}</h3>
                     <p className="muted">
                       {banner.status} - orden {banner.sort_order}
                       {banner.ends_at ? ` - hasta ${toDateInput(banner.ends_at)}` : ""}

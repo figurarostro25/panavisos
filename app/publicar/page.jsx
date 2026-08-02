@@ -44,6 +44,7 @@ export default function PublicarPage() {
   const [step, setStep] = useState(1);
   const [editingId, setEditingId] = useState("");
   const [locationOpen, setLocationOpen] = useState(false);
+  const [selectedLocationKey, setSelectedLocationKey] = useState("");
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -145,6 +146,7 @@ export default function PublicarPage() {
   const locationMatches = useMemo(() => {
     const query = normalize(form.district);
     if (!query || query.length < 2) return [];
+    if (selectedLocationKey === query) return [];
     const tokens = query.split(/\s+/).filter(Boolean);
     return locationSuggestions
       .map((location) => {
@@ -160,7 +162,7 @@ export default function PublicarPage() {
       .sort((a, b) => a.rank - b.rank || a.location.label.localeCompare(b.location.label))
       .slice(0, 7)
       .map((item) => item.location);
-  }, [form.district]);
+  }, [form.district, selectedLocationKey]);
 
   const currentStep = Math.min(step, 3);
 
@@ -182,6 +184,7 @@ export default function PublicarPage() {
       district: location.district,
       address_reference: location.label
     });
+    setSelectedLocationKey(normalize(location.district));
     setLocationOpen(false);
   }
 
@@ -469,15 +472,29 @@ export default function PublicarPage() {
                   value={form.district}
                   onChange={(event) => {
                     setForm({ ...form, district: event.target.value });
+                    setSelectedLocationKey("");
                     setLocationOpen(true);
                   }}
-                  onFocus={() => setLocationOpen(true)}
+                  onFocus={() => {
+                    if (selectedLocationKey !== normalize(form.district)) setLocationOpen(true);
+                  }}
+                  onBlur={() => window.setTimeout(() => setLocationOpen(false), 120)}
+                  autoComplete="off"
+                  aria-expanded={locationOpen && locationMatches.length > 0}
                   placeholder="Ej: Parque Lefevre, Coronado..."
                 />
                 {locationOpen && locationMatches.length ? (
                   <div className="suggestion-list">
                     {locationMatches.map((location) => (
-                      <button type="button" key={location.label} onClick={() => chooseLocation(location)}>
+                      <button
+                        type="button"
+                        key={location.label}
+                        onPointerDown={(event) => {
+                          event.preventDefault();
+                          chooseLocation(location);
+                        }}
+                        onClick={() => chooseLocation(location)}
+                      >
                         {location.label}
                       </button>
                     ))}
@@ -514,6 +531,10 @@ export default function PublicarPage() {
                 <div className="review-row">
                   <span>Ubicacion</span>
                   <strong>{form.district || "Sin ubicacion"}</strong>
+                </div>
+                <div className="review-row">
+                  <span>Anunciante</span>
+                  <strong>{profile?.name || session?.user?.email || "Tu cuenta"}</strong>
                 </div>
                 {form.operation === "Oferta" ? (
                   <div className="review-row">

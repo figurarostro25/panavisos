@@ -216,6 +216,10 @@ export default function HomePage() {
             </div>
 
             <form className="hero-search-card" onSubmit={submitHeroSearch}>
+              <div className="hero-search-heading">
+                <strong>Busca en PanAvisos</strong>
+                <span>Encuentra anuncios por palabra, categoria o provincia.</span>
+              </div>
               <label className="field hero-keyword-field">
                 <span>Que buscas</span>
                 <input
@@ -912,22 +916,35 @@ function PromoBanner({ banner, large = false, compact = false }) {
   const wrapperProps = content.cta_url
     ? { href: content.cta_url, target: content.cta_url.startsWith("http") ? "_blank" : undefined, rel: content.cta_url.startsWith("http") ? "noreferrer" : undefined }
     : {};
+  const title = cleanBannerText(content.title);
+  const subtitle = cleanBannerText(content.subtitle);
+  const hasArtwork = Boolean(content.image_url);
+  const artworkOnly = hasArtwork && !title && !subtitle;
 
   return (
-    <Wrapper className={`promo-banner ${large ? "large" : ""} ${compact ? "compact" : ""}`} {...wrapperProps}>
+    <Wrapper
+      className={`promo-banner ${large ? "large" : ""} ${compact ? "compact" : ""} ${hasArtwork ? "has-image" : ""} ${artworkOnly ? "artwork-only" : ""}`}
+      aria-label={title || subtitle || content.cta_label || "Publicidad destacada"}
+      {...wrapperProps}
+    >
       {content.image_url ? <img src={content.image_url} alt="" /> : null}
-      <div>
-        <span className="eyebrow">{content.ends_at ? `Vigente hasta ${formatDate(content.ends_at)}` : "Destacado"}</span>
-        <h2>{content.title}</h2>
-        {content.subtitle ? <p>{content.subtitle}</p> : null}
+      {!artworkOnly ? <div>
+        <span className="eyebrow">Destacado</span>
+        {title ? <h2>{title}</h2> : null}
+        {subtitle ? <p>{subtitle}</p> : null}
         {content.cta_label && content.cta_url ? (
           <span className="secondary">
             {content.cta_label}
           </span>
         ) : null}
-      </div>
+      </div> : null}
     </Wrapper>
   );
+}
+
+function cleanBannerText(value) {
+  const text = String(value || "").trim();
+  return /[A-Za-z0-9\u00c0-\u024f]/.test(text) ? text : "";
 }
 
 function authErrorMessage(value) {
