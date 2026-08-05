@@ -215,11 +215,6 @@ export function CatalogHome({ section = "home" }) {
     return images;
   }, [data.listings]);
   const totalCategoryImage = [...categoryImages.values()][0];
-  const scopedCategoryImage = scopedCategories
-    .map((category) => categoryImages.get(category.id))
-    .find(Boolean);
-  const heroBackdrop = scopedCategoryImage || totalCategoryImage;
-
   function applyCategory(categoryId = "") {
     setFilters((current) => ({ ...current, category: categoryId }));
     setMobileFiltersOpen(false);
@@ -253,7 +248,10 @@ export function CatalogHome({ section = "home" }) {
       <main className="market-home">
         {heroBanners.length ? (
           <section className="home-band hero-banner-band" aria-label="Publicidad patrocinada">
-            <span className="sponsored-label">Publicidad</span>
+            <div className="sponsored-heading">
+              <span className="sponsored-label">Publicidad</span>
+              <a href="#contacto">Anuncia aqui</a>
+            </div>
             <div className="hero-carousel sponsored-carousel">
               <PromoBanner banner={activeHeroBanner} />
               {heroBanners.length > 1 ? (
@@ -274,15 +272,14 @@ export function CatalogHome({ section = "home" }) {
         ) : null}
 
         <section className="home-band search-hero-band">
-          <div className="search-hero">
-            {heroBackdrop ? <img className="search-hero-bg" src={heroBackdrop} alt="" /> : null}
+          <div className={`search-hero search-hero-${section}`}>
             <div className="hero-copy">
               <span className="eyebrow">{sectionCopy.eyebrow}</span>
               <h1>{sectionCopy.title}</h1>
               <p>{sectionCopy.description}</p>
               <div className="hero-actions">
-                <Link className="primary hero-publish" href="/publicar">Publicar gratis</Link>
-                <a className="hero-secondary" href="#anuncios">Ver anuncios</a>
+                <Link className="primary hero-publish" href="/publicar">{sectionCopy.primaryCta}</Link>
+                <a className="hero-secondary" href="#anuncios">{sectionCopy.secondaryCta}</a>
               </div>
             </div>
 
