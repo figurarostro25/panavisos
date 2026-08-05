@@ -751,6 +751,7 @@ button:disabled {
 
 .marketplace-topbar {
   min-height: 68px;
+  padding-inline: 0;
 }
 
 .topbar-inner {
@@ -758,10 +759,10 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  width: min(100%, 1280px);
+  width: min(100%, 1360px);
   min-height: inherit;
   margin: 0 auto;
-  padding: 10px 0;
+  padding: 10px clamp(14px, 3vw, 34px);
 }
 
 .main-menu {
@@ -776,21 +777,28 @@ button:disabled {
   font-weight: 600;
 }
 
-.main-menu button {
+.main-menu button,
+.main-menu a {
   position: relative;
+  display: inline-flex;
+  align-items: center;
   min-height: 40px;
   border: 0;
   padding: 0;
   color: inherit;
   background: transparent;
   font-weight: inherit;
+  text-decoration: none;
 }
 
-.main-menu button:hover {
+.main-menu button:hover,
+.main-menu a:hover,
+.main-menu a.active {
   color: var(--action);
 }
 
-.main-menu button::after {
+.main-menu button::after,
+.main-menu a::after {
   content: "";
   position: absolute;
   right: 0;
@@ -801,7 +809,9 @@ button:disabled {
   background: transparent;
 }
 
-.main-menu button:hover::after {
+.main-menu button:hover::after,
+.main-menu a:hover::after,
+.main-menu a.active::after {
   background: var(--action);
 }
 
@@ -846,6 +856,15 @@ button:disabled {
   padding-top: 22px;
 }
 
+.sponsored-label {
+  width: max-content;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
 .search-hero-band {
   padding-top: 22px;
   padding-bottom: 14px;
@@ -857,7 +876,7 @@ button:disabled {
   grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
   gap: clamp(24px, 4vw, 54px);
   align-items: center;
-  min-height: clamp(270px, 28vw, 370px);
+  min-height: clamp(240px, 24vw, 320px);
   overflow: hidden;
   padding: clamp(24px, 3.4vw, 44px);
   border: 1px solid rgba(23, 107, 115, 0.15);
@@ -898,7 +917,7 @@ button:disabled {
 
 .hero-copy h1 {
   margin: 0;
-  font-size: clamp(2.25rem, 4.6vw, 4.25rem);
+  font-size: clamp(2.1rem, 4vw, 3.55rem);
   line-height: 1;
   font-weight: 760;
 }
@@ -1182,7 +1201,7 @@ button:disabled {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, rgba(12, 36, 54, 0.82) 0%, rgba(12, 36, 54, 0.48) 42%, transparent 72%);
+  background: linear-gradient(90deg, rgba(12, 36, 54, 0.68) 0%, rgba(12, 36, 54, 0.28) 40%, transparent 66%);
   pointer-events: none;
 }
 
@@ -1286,7 +1305,7 @@ button:disabled {
 }
 
 .sponsored-carousel .promo-banner {
-  min-height: clamp(190px, 18vw, 260px);
+  min-height: clamp(160px, 16vw, 220px);
 }
 
 .sponsored-carousel .promo-banner img {
@@ -1333,6 +1352,28 @@ button:disabled {
   align-items: flex-start;
   padding-top: 12px;
   scroll-margin-top: 86px;
+}
+
+.marketplace-preview-band {
+  padding-top: 26px;
+  padding-bottom: 24px;
+}
+
+.marketplace-preview-band .section-head {
+  align-items: flex-end;
+}
+
+.marketplace-preview-band .section-head p {
+  margin-bottom: 0;
+}
+
+.dark-eyebrow {
+  margin-bottom: 5px;
+  color: var(--teal);
+}
+
+.marketplace-preview-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .market-filters {
@@ -2823,6 +2864,10 @@ button:disabled {
     max-width: 640px;
   }
 
+  .marketplace-preview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .filter-close,
   .mobile-filter-toggle {
     display: inline-grid;
@@ -2929,6 +2974,7 @@ button:disabled {
     align-items: center;
     gap: 8px;
     width: 100%;
+    padding: 0;
   }
 
   .marketplace-topbar .brand {
@@ -3053,6 +3099,10 @@ button:disabled {
     border-radius: 8px;
   }
 
+  .sponsored-carousel .promo-banner {
+    min-height: 132px;
+  }
+
   .promo-banner.large {
     min-height: 154px;
     padding: 16px;
@@ -3087,6 +3137,15 @@ button:disabled {
   .category-band {
     padding-top: 4px;
     padding-bottom: 8px;
+  }
+
+  .marketplace-preview-band {
+    padding-top: 16px;
+    padding-bottom: 14px;
+  }
+
+  .marketplace-preview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .section-head {
