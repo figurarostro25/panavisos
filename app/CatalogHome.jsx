@@ -243,7 +243,6 @@ export function CatalogHome({ section = "home" }) {
         categories={data.categories || []}
         section={section}
         onOpenAccount={() => setAccountOpen(true)}
-        onLogout={logoutProfile}
       />
       <main className="market-home">
         {heroBanners.length ? (
@@ -343,11 +342,6 @@ export function CatalogHome({ section = "home" }) {
             <div>
               <h2>{sectionCopy.categoriesTitle}</h2>
               <p>{sectionCopy.categoriesDescription}</p>
-            </div>
-            <div className="category-actions">
-              <Link className="nav-link category-publish-link" href="/publicar">
-                Publicar
-              </Link>
             </div>
           </div>
           <div className="category-strip">
@@ -568,12 +562,17 @@ export function CatalogHome({ section = "home" }) {
           onClose={() => setSelected(null)}
         />
       ) : null}
-      {accountOpen ? <AccountModal onClose={() => setAccountOpen(false)} /> : null}
+      {accountOpen ? (
+        <AccountModal
+          onClose={() => setAccountOpen(false)}
+          onLogout={logoutProfile}
+        />
+      ) : null}
     </>
   );
 }
 
-function Topbar({ profile, categories = [], section, onOpenAccount, onLogout }) {
+function Topbar({ profile, categories = [], section, onOpenAccount }) {
   const menuCategories = headerCategoryGroups
     .map((group) => {
       const category = categories.find((item) => {
@@ -606,7 +605,7 @@ function Topbar({ profile, categories = [], section, onOpenAccount, onLogout }) 
         <nav className="top-actions">
           <a className="desktop-top-link" href="#anuncios">Anuncios</a>
           <Link className="desktop-top-link" href="/cuenta">Mi cuenta</Link>
-          <AccountButton profile={profile} onOpen={onOpenAccount} onLogout={onLogout} />
+          <AccountButton profile={profile} onOpen={onOpenAccount} />
           <Link className="primary publish-cta" href="/publicar">
             Publicar
           </Link>
@@ -616,18 +615,18 @@ function Topbar({ profile, categories = [], section, onOpenAccount, onLogout }) 
   );
 }
 
-function AccountButton({ profile, onOpen, onLogout }) {
+function AccountButton({ profile, onOpen }) {
   if (profile) {
     return (
-      <div className="account-chip">
-        <button className="profile-button" type="button" onClick={onOpen}>
+      <button className="profile-button" type="button" onClick={onOpen} aria-label="Abrir menu de mi cuenta">
+        {profile.avatar ? (
+          <img className="profile-photo profile-chip-photo" src={profile.avatar} alt="" />
+        ) : (
           <span className="avatar">{initials(profile.name || profile.email)}</span>
-          <span>{profile.name}</span>
-        </button>
-        <button className="icon-link" type="button" onClick={onLogout} aria-label="Salir de cuenta">
-          Salir
-        </button>
-      </div>
+        )}
+        <span className="profile-button-name">{profile.name}</span>
+        <span className="menu-lines" aria-hidden="true"><span /><span /><span /></span>
+      </button>
     );
   }
 
@@ -639,7 +638,7 @@ function AccountButton({ profile, onOpen, onLogout }) {
   );
 }
 
-function AccountModal({ onClose }) {
+function AccountModal({ onClose, onLogout }) {
   const [sessionProfile, setSessionProfile] = useState(null);
   const [myListings, setMyListings] = useState([]);
   const [loadingAccount, setLoadingAccount] = useState(true);
@@ -731,7 +730,7 @@ function AccountModal({ onClose }) {
       }
 
       setMessage(authMode === "register" ? "Cuenta creada. Si se requiere confirmacion, revisa tu correo antes de entrar." : "Sesion iniciada.");
-      if (authMode === "login") window.location.href = "/cuenta";
+      if (authMode === "login") window.location.href = "/";
     } catch {
       setError("No pudimos completar el acceso ahora. Revisa tus datos e intenta nuevamente.");
     } finally {
@@ -776,7 +775,7 @@ function AccountModal({ onClose }) {
       const { error: googleError } = await getSupabaseBrowser().auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/cuenta`
+          redirectTo: window.location.origin
         }
       });
 
@@ -791,9 +790,9 @@ function AccountModal({ onClose }) {
   }
 
   return (
-    <div className="account-modal">
+    <div className={`account-modal ${sessionProfile ? "account-menu-modal" : ""}`}>
       <button className="modal-backdrop" type="button" onClick={onClose} aria-label="Cerrar" />
-      <section className="account-dialog">
+      <section className={`account-dialog ${sessionProfile ? "account-menu-dialog" : ""}`}>
         <button className="modal-close account-close" type="button" onClick={onClose} aria-label="Cerrar">
           X
         </button>
@@ -803,7 +802,7 @@ function AccountModal({ onClose }) {
             <h2>Cargando cuenta...</h2>
           </div>
         ) : sessionProfile ? (
-          <AccountQuickPanel profile={sessionProfile} listings={myListings} onClose={onClose} />
+          <AccountQuickPanel profile={sessionProfile} listings={myListings} onClose={onClose} onLogout={onLogout} />
         ) : (
           <>
             <div className="account-column account-primary-panel">
@@ -901,7 +900,7 @@ function AccountModal({ onClose }) {
   );
 }
 
-function AccountQuickPanel({ profile, listings, onClose }) {
+function AccountQuickPanel({ profile, listings, onClose, onLogout }) {
   const activeCount = listings.filter((listing) => listing.status === "active").length;
   const pendingCount = listings.filter((listing) => listing.status === "pending").length;
 
@@ -926,12 +925,19 @@ function AccountQuickPanel({ profile, listings, onClose }) {
           <span><strong>{pendingCount}</strong> pendientes</span>
         </div>
         <div className="account-actions">
-          <Link className="primary" href="/publicar" onClick={onClose}>
-            Publicar otro
-          </Link>
           <Link className="secondary" href="/cuenta" onClick={onClose}>
-            Ver mi panel
+            Mis anuncios y perfil
           </Link>
+          <button
+            className="text-button account-logout"
+            type="button"
+            onClick={async () => {
+              await onLogout();
+              onClose();
+            }}
+          >
+            Cerrar sesion
+          </button>
         </div>
       </div>
       <div className="account-column account-secondary-panel user-listings-panel">
@@ -1277,6 +1283,7 @@ function FeedbackForm({ profile, listing = null, compact = false }) {
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
+  const [expanded, setExpanded] = useState(Boolean(listing));
 
   useEffect(() => {
     setForm((current) => ({
@@ -1392,7 +1399,7 @@ function FeedbackForm({ profile, listing = null, compact = false }) {
   }
 
   return (
-    <section className={`feedback-panel ${compact ? "compact" : ""}`}>
+    <section className={`feedback-panel ${compact ? "compact" : ""} ${expanded ? "expanded" : "collapsed"}`}>
       <div>
         <span className="eyebrow">{listing ? "Reportar o consultar" : "Contacto"}</span>
         <h2>{listing ? "Enviar mensaje sobre este anuncio" : "Cuéntanos cómo va PanAvisos"}</h2>
@@ -1401,8 +1408,11 @@ function FeedbackForm({ profile, listing = null, compact = false }) {
             ? "Usa este espacio para reportar algo, pedir ayuda o dejar una observacion."
             : "Recibimos feedback, reportes y mensajes para mejorar la plataforma."}
         </p>
+        <button className={expanded ? "secondary" : "primary"} type="button" onClick={() => setExpanded((current) => !current)}>
+          {expanded ? "Cerrar formulario" : "Escribir mensaje"}
+        </button>
       </div>
-      <form onSubmit={submit}>
+      {expanded ? <form onSubmit={submit}>
         <div className="field-row">
           <label className="field">
             <span>Tipo</span>
@@ -1465,7 +1475,7 @@ function FeedbackForm({ profile, listing = null, compact = false }) {
         </button>
         {status ? <p className="notice inline-auth-message">{status}</p> : null}
         {error ? <p className="error inline-auth-message">{error}</p> : null}
-      </form>
+      </form> : null}
     </section>
   );
 }
