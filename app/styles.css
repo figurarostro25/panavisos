@@ -854,6 +854,7 @@ button:disabled {
   display: grid;
   gap: 10px;
   padding-top: 22px;
+  padding-bottom: 10px;
 }
 
 .sponsored-heading {
@@ -884,7 +885,7 @@ button:disabled {
 }
 
 .search-hero-band {
-  padding-top: 18px;
+  padding-top: 8px;
   padding-bottom: 12px;
 }
 
@@ -1309,12 +1310,18 @@ button:disabled {
 }
 
 .sponsored-carousel .promo-banner {
-  min-height: clamp(150px, 13vw, 190px);
+  height: clamp(255px, 19vw, 300px);
+  min-height: 0;
 }
 
 .sponsored-carousel .promo-banner img {
   object-position: center 30%;
   opacity: 0.72;
+}
+
+.sponsored-carousel .promo-banner.artwork-only img {
+  object-position: center top;
+  opacity: 1;
 }
 
 .sponsored-rail {
@@ -3104,7 +3111,13 @@ button:disabled {
   }
 
   .sponsored-carousel .promo-banner {
-    min-height: 132px;
+    height: 160px;
+    min-height: 0;
+  }
+
+  .sponsored-carousel .promo-banner.artwork-only img {
+    object-fit: contain;
+    object-position: center;
   }
 
   .promo-banner.large {
