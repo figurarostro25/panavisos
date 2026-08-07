@@ -39,16 +39,16 @@ const emptyFilters = {
 };
 
 const popularNeeds = [
-  { label: "Bienes raices", icon: "BR", terms: ["bienes", "propiedad", "inmueble"], query: "" },
-  { label: "Prestamos", icon: "PR", terms: ["prestamo", "finanza"], query: "prestamo" },
-  { label: "Empleos", icon: "EM", terms: ["empleo", "vacante"], query: "" },
-  { label: "Secretarias", icon: "SE", terms: ["empleo", "vacante"], query: "secretaria" },
-  { label: "Nineras", icon: "NI", terms: ["servicio", "empleo"], query: "ninera" },
-  { label: "Limpieza del hogar", icon: "LH", terms: ["servicio", "hogar"], query: "limpieza" },
-  { label: "Masajes y estetica", icon: "ME", terms: ["estetica", "belleza", "servicio"], query: "masaje" },
-  { label: "Hospedajes", icon: "HO", terms: ["hospedaje", "alquiler vacacional"], query: "hospedaje" },
-  { label: "Restaurantes", icon: "RE", terms: ["restaurante", "comida"], query: "restaurante" },
-  { label: "Servicios profesionales", icon: "SP", terms: ["servicio", "profesional"], query: "" }
+  { label: "Bienes raíces", terms: ["bienes", "propiedad", "inmueble"], query: "", visualIndex: 0 },
+  { label: "Empleos", terms: ["empleo", "vacante"], query: "", visualIndex: 1 },
+  { label: "Asistencia administrativa", terms: ["empleo", "vacante"], query: "secretaria", visualIndex: 2 },
+  { label: "Niñeras y cuidado infantil", terms: ["servicio", "empleo"], query: "ninera", visualIndex: 3 },
+  { label: "Limpieza del hogar", terms: ["servicio", "hogar"], query: "limpieza", visualIndex: 4 },
+  { label: "Cuidado de adultos mayores", terms: ["servicio", "empleo"], query: "adulto mayor", visualIndex: 5 },
+  { label: "Belleza y masajes", terms: ["estetica", "belleza", "servicio"], query: "masaje", visualIndex: 6 },
+  { label: "Hospedajes", terms: ["hospedaje", "alquiler vacacional"], query: "hospedaje", visualIndex: 7 },
+  { label: "Restaurantes", terms: ["restaurante", "comida"], query: "restaurante", visualIndex: 8 },
+  { label: "Servicios profesionales", terms: ["servicio", "profesional"], query: "", visualIndex: 9 }
 ];
 
 export function CatalogHome({ section = "home" }) {
@@ -294,71 +294,58 @@ export function CatalogHome({ section = "home" }) {
           </section>
         ) : null}
 
-        <section className="home-band search-hero-band">
-          <div className={`search-hero search-hero-${section}`}>
-            <div className="hero-copy">
-              <span className="eyebrow">{sectionCopy.eyebrow}</span>
+        <section className="home-band universal-search-band">
+          <form className="universal-search" onSubmit={submitHeroSearch}>
+            <div className="universal-search-intro">
+              <span className="eyebrow dark-eyebrow">{sectionCopy.eyebrow}</span>
               <h1>{sectionCopy.title}</h1>
-              <p>{sectionCopy.description}</p>
-              <div className="hero-actions">
-                <Link className="primary hero-publish" href="/publicar">{sectionCopy.primaryCta}</Link>
-                <a className="hero-secondary" href="#anuncios">{sectionCopy.secondaryCta}</a>
-              </div>
+              <p>{sectionCopy.searchHint}</p>
             </div>
-
-            <form className="hero-search-card" onSubmit={submitHeroSearch}>
-              <div className="hero-search-heading">
-                <strong>{sectionCopy.searchTitle}</strong>
-                <span>{sectionCopy.searchHint}</span>
-              </div>
-              <label className="field hero-keyword-field">
-                <span>Que buscas</span>
-                <input
-                  value={filters.q}
-                  onChange={(event) => setFilters({ ...filters, q: event.target.value })}
-                  placeholder={sectionCopy.placeholder}
-                />
-              </label>
-              <div className="hero-search-grid">
-                <label className="field">
-                  <span>Categoria</span>
-                  <select
-                    value={filters.category}
-                    onChange={(event) => setFilters({ ...filters, category: event.target.value })}
-                  >
-                    <option value="">Todas</option>
-                    {scopedCategories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="field">
-                  <span>Provincia</span>
-                  <select
-                    value={filters.province}
-                    onChange={(event) => setFilters({ ...filters, province: event.target.value })}
-                  >
-                    <option value="">Todo Panama</option>
-                    {provinces.map((province) => (
-                      <option key={province} value={province}>
-                        {province}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <div className="search-submit-row">
-                <button className="primary" type="submit">Buscar anuncios</button>
-                {activeFilterCount ? (
-                  <button className="secondary" type="button" onClick={() => setFilters(emptyFilters)}>
-                    Limpiar filtros
-                  </button>
-                ) : null}
-              </div>
-            </form>
-          </div>
+            <label className="field universal-keyword">
+              <span>Que buscas</span>
+              <input
+                value={filters.q}
+                onChange={(event) => setFilters({ ...filters, q: event.target.value })}
+                placeholder={sectionCopy.placeholder}
+              />
+            </label>
+            <label className="field">
+              <span>Categoria</span>
+              <select
+                value={filters.category}
+                onChange={(event) => setFilters({ ...filters, category: event.target.value })}
+              >
+                <option value="">Todas</option>
+                {scopedCategories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span>Provincia</span>
+              <select
+                value={filters.province}
+                onChange={(event) => setFilters({ ...filters, province: event.target.value })}
+              >
+                <option value="">Todo Panama</option>
+                {provinces.map((province) => (
+                  <option key={province} value={province}>
+                    {province}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="universal-search-actions">
+              <button className="primary" type="submit">Buscar</button>
+              {activeFilterCount ? (
+                <button className="universal-clear" type="button" onClick={() => setFilters(emptyFilters)}>
+                  Limpiar
+                </button>
+              ) : null}
+            </div>
+          </form>
         </section>
 
         {section === "home" ? (
@@ -606,8 +593,17 @@ function PopularNeeds({ needs, categories, filters, onSelect }) {
               key={need.label}
               onClick={() => onSelect(need)}
             >
-              <span className="need-icon" aria-hidden="true">{need.icon}</span>
-              <span>{need.label}</span>
+              <span
+                className="need-photo"
+                aria-hidden="true"
+                style={{
+                  backgroundPosition: `${(need.visualIndex % 5) * 25}% ${need.visualIndex < 5 ? "0%" : "100%"}`
+                }}
+              />
+              <span className="need-copy">
+                <strong>{need.label}</strong>
+                <small>Ver anuncios</small>
+              </span>
             </button>
           );
         })}
@@ -676,6 +672,7 @@ function CategoryDirectory({
 }
 
 function Topbar({ profile, categories = [], section, onOpenAccount }) {
+  const [menuOpen, setMenuOpen] = useState(false);
   const menuCategories = headerCategoryGroups
     .map((group) => {
       const category = categories.find((item) => {
@@ -712,8 +709,58 @@ function Topbar({ profile, categories = [], section, onOpenAccount }) {
           <Link className="primary publish-cta" href="/publicar">
             Publicar
           </Link>
+          <button
+            className="mobile-menu-button"
+            type="button"
+            aria-label="Abrir menu"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen(true)}
+          >
+            <span /><span /><span />
+          </button>
         </nav>
       </div>
+      <button
+        className={`mobile-menu-backdrop ${menuOpen ? "open" : ""}`}
+        type="button"
+        aria-label="Cerrar menu"
+        onClick={() => setMenuOpen(false)}
+      />
+      <aside className={`mobile-nav-drawer ${menuOpen ? "open" : ""}`} aria-hidden={!menuOpen}>
+        <div className="mobile-drawer-head">
+          <img src="/brand/panavisos-logo.svg" alt="PanAvisos" />
+          <button type="button" onClick={() => setMenuOpen(false)} aria-label="Cerrar menu">x</button>
+        </div>
+        <nav aria-label="Menu movil">
+          <Link href="/" onClick={() => setMenuOpen(false)}>Inicio</Link>
+          <Link href="/propiedades" onClick={() => setMenuOpen(false)}>Propiedades</Link>
+          {menuCategories.filter((item) => !isPropertyCategory(item.category)).map((item) => (
+            <Link
+              key={item.label}
+              href={`/marketplace?categoria=${item.category.slug}`}
+              onClick={() => setMenuOpen(false)}
+            >
+              {item.label}
+            </Link>
+          ))}
+          <Link href="/marketplace" onClick={() => setMenuOpen(false)}>Marketplace</Link>
+          <a href="#anuncios" onClick={() => setMenuOpen(false)}>Anuncios</a>
+          <Link href="/cuenta" onClick={() => setMenuOpen(false)}>Mi cuenta</Link>
+          <Link className="primary" href="/publicar" onClick={() => setMenuOpen(false)}>Publicar anuncio</Link>
+          {!profile ? (
+            <button
+              className="secondary"
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                onOpenAccount();
+              }}
+            >
+              Entrar o crear cuenta
+            </button>
+          ) : null}
+        </nav>
+      </aside>
     </header>
   );
 }
@@ -1148,15 +1195,33 @@ function authErrorMessage(value) {
 function SiteFooter() {
   return (
     <footer className="site-footer">
-      <div>
-        <strong>PanAvisos</strong>
-        <p>Publicaciones locales para comprar, vender y promocionar en Panama.</p>
+      <div className="site-footer-grid">
+        <div className="footer-brand">
+          <img src="/brand/panavisos-logo.svg" alt="PanAvisos" />
+          <p>Clasificados locales para encontrar, anunciar y conectar en Panama.</p>
+        </div>
+        <nav>
+          <strong>Explorar</strong>
+          <Link href="/propiedades">Propiedades</Link>
+          <Link href="/marketplace">Marketplace</Link>
+          <a href="/#anuncios">Ultimos anuncios</a>
+        </nav>
+        <nav>
+          <strong>Tu cuenta</strong>
+          <Link href="/publicar">Publicar anuncio</Link>
+          <Link href="/cuenta">Mis anuncios</Link>
+        </nav>
+        <nav>
+          <strong>Ayuda</strong>
+          <a href="/#contacto">Contacto y sugerencias</a>
+          <Link href="/terminos">Terminos</Link>
+          <Link href="/privacidad">Privacidad</Link>
+        </nav>
       </div>
-      <nav>
-        <Link href="/terminos">Terminos</Link>
-        <Link href="/privacidad">Privacidad</Link>
-        <Link href="/publicar">Publicar</Link>
-      </nav>
+      <div className="site-footer-bottom">
+        <span>© 2026 PanAvisos. Todos los derechos reservados.</span>
+        <span>Hecho para Panama</span>
+      </div>
     </footer>
   );
 }
@@ -1174,6 +1239,7 @@ function ListingCard({ listing, onSelect }) {
         ) : (
           <div className="card-image empty-image">PA</div>
         )}
+        {images.length > 1 ? <span className="image-count">{images.length} fotos</span> : null}
       </button>
       <div className="card-body">
         {listing.featured ? <span className="fresh-badge">Recien publicado</span> : null}
