@@ -38,6 +38,19 @@ const emptyFilters = {
   max: ""
 };
 
+const popularNeeds = [
+  { label: "Bienes raices", icon: "BR", terms: ["bienes", "propiedad", "inmueble"], query: "" },
+  { label: "Prestamos", icon: "PR", terms: ["prestamo", "finanza"], query: "prestamo" },
+  { label: "Empleos", icon: "EM", terms: ["empleo", "vacante"], query: "" },
+  { label: "Secretarias", icon: "SE", terms: ["empleo", "vacante"], query: "secretaria" },
+  { label: "Nineras", icon: "NI", terms: ["servicio", "empleo"], query: "ninera" },
+  { label: "Limpieza del hogar", icon: "LH", terms: ["servicio", "hogar"], query: "limpieza" },
+  { label: "Masajes y estetica", icon: "ME", terms: ["estetica", "belleza", "servicio"], query: "masaje" },
+  { label: "Hospedajes", icon: "HO", terms: ["hospedaje", "alquiler vacacional"], query: "hospedaje" },
+  { label: "Restaurantes", icon: "RE", terms: ["restaurante", "comida"], query: "restaurante" },
+  { label: "Servicios profesionales", icon: "SP", terms: ["servicio", "profesional"], query: "" }
+];
+
 export function CatalogHome({ section = "home" }) {
   const [data, setData] = useState({ categories: [], listings: [], banners: [] });
   const [selected, setSelected] = useState(null);
@@ -221,6 +234,17 @@ export function CatalogHome({ section = "home" }) {
     document.getElementById("anuncios")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  function applyNeed(need) {
+    const category = findCategoryByTerms(data.categories || [], need.terms);
+    setFilters({
+      ...emptyFilters,
+      category: category?.id || "",
+      q: need.query || ""
+    });
+    setMobileFiltersOpen(false);
+    document.getElementById("anuncios")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   function submitHeroSearch(event) {
     event.preventDefault();
     setMobileFiltersOpen(false);
@@ -337,50 +361,25 @@ export function CatalogHome({ section = "home" }) {
           </div>
         </section>
 
-        <section className="home-band category-band">
-          <div className="section-head">
-            <div>
-              <h2>{sectionCopy.categoriesTitle}</h2>
-              <p>{sectionCopy.categoriesDescription}</p>
-            </div>
-          </div>
-          <div className="category-strip">
-            <button
-              className={`category-tile ${!filters.category ? "active" : ""}`}
-              type="button"
-              onClick={() => applyCategory("")}
-            >
-              <span className="category-photo">
-                {totalCategoryImage ? <img src={totalCategoryImage} alt="" /> : <span>TO</span>}
-              </span>
-              <span>
-                <strong>Todo</strong>
-                <small>Ver anuncios</small>
-              </span>
-            </button>
-            {scopedCategories.map((category) => {
-              const look = categoryLooks[category.slug] || { icon: category.name.slice(0, 2) };
-              const image = categoryImages.get(category.id);
-              const listingCount = (data.listings || []).filter((listing) => listing.category_id === category.id).length;
-              return (
-                <button
-                  className={`category-tile ${filters.category === category.id ? "active" : ""}`}
-                  type="button"
-                  key={category.id}
-                  onClick={() => applyCategory(category.id)}
-                >
-                  <span className="category-photo">
-                    {image ? <img src={image} alt="" /> : <span>{look.icon}</span>}
-                  </span>
-                  <span>
-                    <strong>{category.name}</strong>
-                    <small>{category.description || look.label || `${listingCount} anuncios`}</small>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
+        {section === "home" ? (
+          <PopularNeeds
+            needs={popularNeeds}
+            categories={data.categories || []}
+            filters={filters}
+            onSelect={applyNeed}
+          />
+        ) : (
+          <CategoryDirectory
+            title={sectionCopy.categoriesTitle}
+            description={sectionCopy.categoriesDescription}
+            categories={scopedCategories}
+            listings={data.listings || []}
+            categoryImages={categoryImages}
+            totalCategoryImage={totalCategoryImage}
+            activeCategory={filters.category}
+            onSelect={applyCategory}
+          />
+        )}
 
         <section className="market-layout home-band" id="anuncios">
           <aside className={`market-filters ${mobileFiltersOpen ? "open" : ""}`}>
@@ -526,6 +525,20 @@ export function CatalogHome({ section = "home" }) {
           </section>
         ) : null}
 
+        {section === "home" ? (
+          <CategoryDirectory
+            title="Todas las categorias"
+            description="Explora el directorio completo de anuncios disponibles en Panama."
+            categories={scopedCategories}
+            listings={data.listings || []}
+            categoryImages={categoryImages}
+            totalCategoryImage={totalCategoryImage}
+            activeCategory={filters.category}
+            onSelect={applyCategory}
+            directory
+          />
+        ) : null}
+
         {overflowBanners.length ? (
           <section className="home-band sponsored-band" aria-labelledby="sponsored-title">
             <div className="section-head">
@@ -569,6 +582,96 @@ export function CatalogHome({ section = "home" }) {
         />
       ) : null}
     </>
+  );
+}
+
+function PopularNeeds({ needs, categories, filters, onSelect }) {
+  return (
+    <section className="home-band needs-band" aria-labelledby="popular-needs-title">
+      <div className="section-head needs-heading">
+        <div>
+          <span className="eyebrow dark-eyebrow">Lo mas buscado</span>
+          <h2 id="popular-needs-title">Explora por necesidad</h2>
+          <p>Atajos para encontrar oportunidades y servicios cotidianos.</p>
+        </div>
+      </div>
+      <div className="needs-strip">
+        {needs.map((need) => {
+          const category = findCategoryByTerms(categories, need.terms);
+          const active = filters.q === need.query && filters.category === (category?.id || "");
+          return (
+            <button
+              className={`need-tile ${active ? "active" : ""}`}
+              type="button"
+              key={need.label}
+              onClick={() => onSelect(need)}
+            >
+              <span className="need-icon" aria-hidden="true">{need.icon}</span>
+              <span>{need.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function CategoryDirectory({
+  title,
+  description,
+  categories,
+  listings,
+  categoryImages,
+  totalCategoryImage,
+  activeCategory,
+  onSelect,
+  directory = false
+}) {
+  return (
+    <section className={`home-band category-band ${directory ? "category-directory-band" : ""}`}>
+      <div className="section-head">
+        <div>
+          <h2>{title}</h2>
+          <p>{description}</p>
+        </div>
+      </div>
+      <div className="category-strip">
+        <button
+          className={`category-tile ${!activeCategory ? "active" : ""}`}
+          type="button"
+          onClick={() => onSelect("")}
+        >
+          <span className="category-photo">
+            {totalCategoryImage ? <img src={totalCategoryImage} alt="" /> : <span>TO</span>}
+          </span>
+          <span>
+            <strong>Todo</strong>
+            <small>Ver anuncios</small>
+          </span>
+        </button>
+        {categories.map((category) => {
+          const look = categoryLooks[category.slug] || { icon: category.name.slice(0, 2) };
+          const image = categoryImages.get(category.id);
+          const listingCount = listings.filter((listing) => listing.category_id === category.id).length;
+          return (
+            <button
+              className={`category-tile ${activeCategory === category.id ? "active" : ""}`}
+              type="button"
+              key={category.id}
+              onClick={() => onSelect(category.id)}
+            >
+              <span className="category-photo">
+                {image ? <img src={image} alt="" /> : <span>{look.icon}</span>}
+              </span>
+              <span>
+                <strong>{category.name}</strong>
+                <small>{category.description || look.label || `${listingCount} anuncios`}</small>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -1273,17 +1376,20 @@ function FeedbackForm({ profile, listing = null, compact = false }) {
     ? `Me interesa el anuncio "${listing.title}" que tienes publicado en PanAvisos.`
     : "";
   const [form, setForm] = useState({
-    kind: listing ? "inquiry" : "feedback",
+    kind: listing ? "inquiry" : "demand_suggestion",
     sender_name: profile?.name || "",
     sender_email: profile?.email || "",
     sender_phone: "",
     subject: listing ? `Mensaje sobre: ${listing.title}` : "",
-    message: initialMessage
+    message: initialMessage,
+    interest: "",
+    province: ""
   });
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
   const [expanded, setExpanded] = useState(Boolean(listing));
+  const isDemandSuggestion = !listing && form.kind === "demand_suggestion";
 
   useEffect(() => {
     setForm((current) => ({
@@ -1299,11 +1405,20 @@ function FeedbackForm({ profile, listing = null, compact = false }) {
     setError("");
     setSending(true);
 
+    const outboundMessage = isDemandSuggestion
+      ? [
+          `Me gustaria encontrar: ${form.interest.trim()}`,
+          form.province ? `Provincia: ${form.province}` : ""
+        ].filter(Boolean).join("\n")
+      : form.message;
+
     const response = await fetch("/api/messages", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...form,
+        subject: isDemandSuggestion ? `Demanda: ${form.interest.trim()}` : form.subject,
+        message: outboundMessage,
         listing_id: listing?.id || null,
         listing_title: listing?.title || null
       })
@@ -1317,8 +1432,20 @@ function FeedbackForm({ profile, listing = null, compact = false }) {
       return;
     }
 
-    setStatus(listing ? "Consulta enviada. El anunciante la recibira en PanAvisos." : "Mensaje enviado. Gracias, lo revisaremos pronto.");
-    setForm((current) => ({ ...current, subject: listing ? current.subject : "", message: listing ? initialMessage : "" }));
+    setStatus(
+      listing
+        ? "Consulta enviada. El anunciante la recibira en PanAvisos."
+        : isDemandSuggestion
+          ? "Respuesta guardada. Gracias por ayudarnos a priorizar."
+          : "Mensaje enviado. Gracias, lo revisaremos pronto."
+    );
+    setForm((current) => ({
+      ...current,
+      subject: listing ? current.subject : "",
+      message: listing ? initialMessage : "",
+      interest: listing ? current.interest : "",
+      province: listing ? current.province : ""
+    }));
   }
 
   if (listing) {
@@ -1401,81 +1528,54 @@ function FeedbackForm({ profile, listing = null, compact = false }) {
   return (
     <section className={`feedback-panel ${compact ? "compact" : ""} ${expanded ? "expanded" : "collapsed"}`}>
       <div>
-        <span className="eyebrow">{listing ? "Reportar o consultar" : "Contacto"}</span>
-        <h2>{listing ? "Enviar mensaje sobre este anuncio" : "Cuéntanos cómo va PanAvisos"}</h2>
-        <p className="muted">
-          {listing
-            ? "Usa este espacio para reportar algo, pedir ayuda o dejar una observacion."
-            : "Recibimos feedback, reportes y mensajes para mejorar la plataforma."}
-        </p>
+        <span className="eyebrow">Encuesta breve</span>
+        <h2>¿Qué te gustaría encontrar en PanAvisos?</h2>
+        <p className="muted">Tu respuesta nos ayuda a priorizar los anuncios, productos y servicios más buscados.</p>
         <button className={expanded ? "secondary" : "primary"} type="button" onClick={() => setExpanded((current) => !current)}>
-          {expanded ? "Cerrar formulario" : "Escribir mensaje"}
+          {expanded ? "Cerrar" : "Responder encuesta"}
         </button>
       </div>
-      {expanded ? <form onSubmit={submit}>
-        <div className="field-row">
-          <label className="field">
-            <span>Tipo</span>
-            <select value={form.kind} onChange={(event) => setForm({ ...form, kind: event.target.value })}>
-              <option value="feedback">Feedback</option>
-              <option value="report">Denuncia</option>
-              <option value="support">Ayuda</option>
-              <option value="lead">Quiero anunciarme</option>
-            </select>
-          </label>
-          <label className="field">
-            <span>Correo</span>
+      {expanded ? (
+        <form className="demand-survey-form" onSubmit={submit}>
+          <label className="field demand-main-field">
+            <span>¿Qué estás buscando?</span>
             <input
               required
-              type="email"
-              value={form.sender_email}
-              onChange={(event) => setForm({ ...form, sender_email: event.target.value })}
-              placeholder="correo@email.com"
+              value={form.interest}
+              onChange={(event) => setForm({ ...form, interest: event.target.value })}
+              placeholder="Ej. niñera, préstamo, hospedaje..."
             />
           </label>
-        </div>
-        <div className="field-row">
-          <label className="field">
-            <span>Nombre</span>
-            <input
-              value={form.sender_name}
-              onChange={(event) => setForm({ ...form, sender_name: event.target.value })}
-              placeholder="Tu nombre"
-            />
-          </label>
-          <label className="field">
-            <span>WhatsApp opcional</span>
-            <input
-              value={form.sender_phone}
-              onChange={(event) => setForm({ ...form, sender_phone: event.target.value })}
-              placeholder="6000-0000"
-            />
-          </label>
-        </div>
-        <label className="field">
-          <span>Asunto</span>
-          <input
-            value={form.subject}
-            onChange={(event) => setForm({ ...form, subject: event.target.value })}
-            placeholder="Resumen corto"
-          />
-        </label>
-        <label className="field">
-          <span>Mensaje</span>
-          <textarea
-            required
-            rows={compact ? 3 : 4}
-            value={form.message}
-            onChange={(event) => setForm({ ...form, message: event.target.value })}
-            placeholder="Escribe tu mensaje"
-          />
-        </label>
-        <button className="primary" type="submit" disabled={sending}>
-          {sending ? "Enviando..." : "Enviar mensaje"}
-        </button>
-        {status ? <p className="notice inline-auth-message">{status}</p> : null}
-        {error ? <p className="error inline-auth-message">{error}</p> : null}
-      </form> : null}
+          <div className="field-row demand-optional-fields">
+            <label className="field">
+              <span>Provincia opcional</span>
+              <select
+                value={form.province}
+                onChange={(event) => setForm({ ...form, province: event.target.value })}
+              >
+                <option value="">Todo Panamá</option>
+                {provinces.map((province) => (
+                  <option key={province} value={province}>{province}</option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span>Correo opcional</span>
+              <input
+                type="email"
+                value={form.sender_email}
+                onChange={(event) => setForm({ ...form, sender_email: event.target.value })}
+                placeholder="correo@email.com"
+              />
+            </label>
+          </div>
+          <button className="primary" type="submit" disabled={sending}>
+            {sending ? "Enviando..." : "Enviar sugerencia"}
+          </button>
+          {status ? <p className="notice inline-auth-message">{status}</p> : null}
+          {error ? <p className="error inline-auth-message">{error}</p> : null}
+        </form>
+      ) : null}
     </section>
   );
 }
@@ -1485,6 +1585,13 @@ function normalize(value) {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
+}
+
+function findCategoryByTerms(categories, terms = []) {
+  return categories.find((category) => {
+    const haystack = normalize(`${category.slug || ""} ${category.name || ""}`);
+    return terms.some((term) => haystack.includes(normalize(term)));
+  });
 }
 
 function formatDate(value) {
