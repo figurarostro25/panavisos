@@ -1477,6 +1477,7 @@ function SiteFooter({ categories = [] }) {
         <nav>
           <strong>Ayuda</strong>
           <a href="/#contacto">Contacto y sugerencias</a>
+          <Link href="/ayuda">Centro de ayuda</Link>
           <Link href="/terminos">Terminos</Link>
           <Link href="/privacidad">Privacidad</Link>
         </nav>

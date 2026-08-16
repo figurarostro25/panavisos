@@ -10,6 +10,7 @@ export default async function sitemap() {
     { url: siteUrl, priority: 1, changeFrequency: "daily" },
     { url: `${siteUrl}/propiedades`, priority: 0.9, changeFrequency: "daily" },
     { url: `${siteUrl}/marketplace`, priority: 0.8, changeFrequency: "daily" },
+    { url: `${siteUrl}/ayuda`, priority: 0.4, changeFrequency: "monthly" },
     { url: `${siteUrl}/terminos`, priority: 0.3, changeFrequency: "yearly" },
     { url: `${siteUrl}/privacidad`, priority: 0.3, changeFrequency: "yearly" }
   ];
