@@ -4282,4 +4282,79 @@ button:disabled {
     background: #ffffff;
   }
 }
+
+@media (max-width: 620px) {
+  html,
+  body,
+  .market-home {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .home-band,
+  .market-layout,
+  .market-results,
+  .market-results > .grid:not(.compact-grid),
+  .marketplace-preview-grid {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .market-results > .grid:not(.compact-grid),
+  .marketplace-preview-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    overflow: hidden;
+  }
+
+  .market-results > .grid:not(.compact-grid) > *,
+  .marketplace-preview-grid > *,
+  .marketplace-card {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .marketplace-card .card-body,
+  .listing-title-button,
+  .card-location {
+    min-width: 0;
+  }
+
+  .needs-strip {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-inline: 0;
+    padding: 0;
+    overflow: visible;
+    scroll-snap-type: none;
+  }
+
+  .need-tile {
+    grid-template-columns: 50px minmax(0, 1fr);
+    flex: initial;
+    min-width: 0;
+    width: 100%;
+    min-height: 64px;
+    padding: 7px;
+    scroll-snap-align: unset;
+  }
+
+  .need-photo {
+    width: 50px;
+    height: 50px;
+  }
+
+  .need-copy,
+  .need-copy strong,
+  .need-copy small {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .need-copy strong {
+    overflow-wrap: anywhere;
+  }
+}
 }
