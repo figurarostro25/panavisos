@@ -11,7 +11,7 @@ export default function AccountPage() {
   const [listings, setListings] = useState([]);
   const [loadingListings, setLoadingListings] = useState(false);
   const [authMode, setAuthMode] = useState("login");
-  const [form, setForm] = useState({ name: "", email: "", password: "", confirmPassword: "", phone: "", age: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", confirmPassword: "", phone: "", age: "", bio: "" });
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -71,6 +71,7 @@ export default function AccountPage() {
       email: nextSession.user.email,
       phone: data?.phone || "",
       age: data?.age || metadata.age || "",
+      bio: data?.bio || "",
       avatar: data?.avatar_url || metadata.avatar_url || metadata.picture || "",
       provider: nextSession.user.app_metadata?.provider || "email"
     };
@@ -82,7 +83,8 @@ export default function AccountPage() {
       password: "",
       confirmPassword: "",
       phone: nextProfile.phone || "",
-      age: nextProfile.age || ""
+      age: nextProfile.age || "",
+      bio: nextProfile.bio || ""
     });
   }
 
@@ -223,6 +225,7 @@ export default function AccountPage() {
           full_name: form.name,
           phone: form.phone || null,
           age: form.age ? Number(form.age) : null,
+          bio: form.bio.trim() || null,
           avatar_url: profile?.avatar || null,
           provider: profile?.provider || "email",
           updated_at: new Date().toISOString()
@@ -336,6 +339,16 @@ export default function AccountPage() {
                   <label className="field">
                     <span>WhatsApp</span>
                     <input placeholder="Ej: 6000-0000" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} />
+                  </label>
+                  <label className="field">
+                    <span>Presentacion para compradores</span>
+                    <textarea
+                      rows={3}
+                      maxLength={280}
+                      value={form.bio}
+                      onChange={(event) => setForm({ ...form, bio: event.target.value })}
+                      placeholder="Ej: Soy distribuidor y tengo mas productos disponibles."
+                    />
                   </label>
                   <button className="primary" type="submit">
                     Guardar datos

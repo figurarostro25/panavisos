@@ -698,6 +698,7 @@ export function CatalogHome({ section = "home" }) {
         <ListingDetail
           listing={selected}
           profile={profile}
+          sellerListingCount={(data.listings || []).filter((item) => item.user_id && item.user_id === selected.user_id).length}
           onRequireAccount={() => setAccountOpen(true)}
           onClose={() => setSelected(null)}
         />
@@ -1583,14 +1584,13 @@ function ListingCard({ listing, onSelect }) {
   );
 }
 
-function ListingDetail({ listing, profile, onRequireAccount, onClose }) {
+function ListingDetail({ listing, profile, sellerListingCount, onRequireAccount, onClose }) {
   const [activeImage, setActiveImage] = useState(0);
   const [copied, setCopied] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const [touchStartX, setTouchStartX] = useState(null);
   const images = [...(listing.images || [])].sort((a, b) => a.position - b.position);
   const image = images[activeImage]?.url;
-  const hasMap = listing.lat && listing.lng;
   const whatsapp = String(listing.whatsapp || "").replace(/\D/g, "");
   const whatsappMessage = encodeURIComponent(`Hola, vi este anuncio en PanAvisos: ${listing.title}. Sigue disponible?`);
   const showRealEstateFacts = listing.category?.slug === "bienes-raices";
@@ -1608,8 +1608,21 @@ function ListingDetail({ listing, profile, onRequireAccount, onClose }) {
     moveImage(distance < 0 ? 1 : -1);
   }
 
-  async function copyListingLink() {
+  async function shareListing() {
     const url = `${window.location.origin}/anuncio/${listing.slug}`;
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: listing.title,
+          text: `Mira este anuncio en PanAvisos: ${listing.title}`,
+          url
+        });
+        return;
+      } catch (shareError) {
+        if (shareError?.name === "AbortError") return;
+      }
+    }
+
     await navigator.clipboard.writeText(url);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1800);
@@ -1734,45 +1747,62 @@ function ListingDetail({ listing, profile, onRequireAccount, onClose }) {
             <h3>Descripcion</h3>
             <p className="detail-description">{listing.description}</p>
 
-            <h3>Ubicacion</h3>
-            <p className="muted">
-              {listing.address_reference || `${listing.district}, ${listing.province}`}
-            </p>
-            {hasMap ? (
-              <a
-                className="secondary location-link"
-                href={`https://www.google.com/maps?q=${listing.lat},${listing.lng}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Ver ubicacion aproximada
-              </a>
-            ) : null}
+            <section className="listing-detail-section location-details">
+              <h3>Ubicacion</h3>
+              <p className="muted">{listing.address_reference || `${listing.district}, ${listing.province}`}</p>
+            </section>
 
             {listing.user_id ? (
               <div className="seller-panel compact-seller-panel">
                 <span className="avatar-badge">{initials(listing.profile?.full_name || listing.advertiser_name || "PA")}</span>
-                <div>
+                <div className="seller-panel-content">
+                  <span className="eyebrow">Detalles del anunciante</span>
                   <h3>{listing.profile?.full_name || listing.advertiser_name || "Anunciante PanAvisos"}</h3>
-                  <Link className="secondary compact-link" href={`/vendedor/${listing.user_id}`}>
-                    Ver mas anuncios
-                  </Link>
+                  {listing.profile?.bio ? <p className="muted seller-bio">{listing.profile.bio}</p> : null}
+                  <div className={`seller-links ${sellerListingCount > 1 ? "" : "single"}`}>
+                    {sellerListingCount > 1 ? (
+                      <Link className="secondary compact-link" href={`/vendedor/${listing.user_id}`}>
+                        Ver mas anuncios
+                      </Link>
+                    ) : null}
+                    <Link className="secondary compact-link" href="/">
+                      Ver todos los anuncios
+                    </Link>
+                  </div>
                 </div>
               </div>
             ) : null}
 
             <footer className="listing-action-footer">
-              <span className="eyebrow">Acciones</span>
+              <span className="eyebrow">Compartir o contactar</span>
               <div className="share-actions">
                 <Link className="secondary" href={`/anuncio/${listing.slug}`}>
-                  Abrir anuncio
+                  Ver anuncio completo
                 </Link>
-                <button className="secondary" type="button" onClick={copyListingLink}>
-                  {copied ? "Link copiado" : "Copiar link"}
+                <button className="secondary share-trigger" type="button" onClick={shareListing}>
+                  <span aria-hidden="true">↗</span>
+                  <span>{copied ? "Link copiado" : "Compartir"}</span>
                 </button>
-                <button className="secondary" type="button" onClick={() => setContactOpen(true)}>
-                  Enviar consulta
-                </button>
+                {whatsapp ? (
+                  profile ? (
+                    <a
+                      className="primary contact-action"
+                      href={`https://wa.me/${whatsapp}?text=${whatsappMessage}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Enviar mensaje
+                    </a>
+                  ) : (
+                    <button className="primary contact-action" type="button" onClick={onRequireAccount}>
+                      Registrate para responder
+                    </button>
+                  )
+                ) : (
+                  <button className="primary contact-action" type="button" onClick={() => setContactOpen(true)}>
+                    Enviar consulta
+                  </button>
+                )}
               </div>
             </footer>
 

@@ -55,6 +55,7 @@ export default function SellerPage() {
               <div>
                 <span className="eyebrow">Vendedor</span>
                 <h1>{sellerName}</h1>
+                {payload.profile?.bio ? <p className="seller-public-bio">{payload.profile.bio}</p> : null}
                 <p className="muted">{payload.listings.length} anuncios activos en PanAvisos.</p>
               </div>
             </section>
