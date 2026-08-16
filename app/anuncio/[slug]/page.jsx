@@ -31,7 +31,7 @@ export default function PublicListingPage() {
         {error ? <p className="error">{error}</p> : null}
         {payload.listing ? (
           <>
-            <ListingMiniWeb listing={payload.listing} />
+            <ListingMiniWeb listing={payload.listing} sellerListings={payload.sellerListings} />
             <SellerMore listing={payload.listing} sellerListings={payload.sellerListings} />
           </>
         ) : null}
@@ -62,7 +62,7 @@ function PublicHeader() {
   );
 }
 
-function ListingMiniWeb({ listing }) {
+function ListingMiniWeb({ listing, sellerListings = [] }) {
   const [activeImage, setActiveImage] = useState(0);
   const [copied, setCopied] = useState(false);
   const images = useMemo(() => [...(listing.images || [])].sort((a, b) => a.position - b.position), [listing.images]);
@@ -72,8 +72,22 @@ function ListingMiniWeb({ listing }) {
   const sellerName = listing.profile?.full_name || listing.advertiser_name || "Anunciante PanAvisos";
   const showRealEstateFacts = listing.category?.slug === "bienes-raices";
 
-  async function copyLink() {
-    await navigator.clipboard.writeText(window.location.href);
+  async function shareListing() {
+    const url = window.location.href;
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: listing.title,
+          text: `Mira este anuncio en PanAvisos: ${listing.title}`,
+          url
+        });
+        return;
+      } catch (shareError) {
+        if (shareError?.name === "AbortError") return;
+      }
+    }
+
+    await navigator.clipboard.writeText(url);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1800);
   }
@@ -128,8 +142,9 @@ function ListingMiniWeb({ listing }) {
               Contactar por WhatsApp
             </a>
           ) : null}
-          <button className="secondary" type="button" onClick={copyLink}>
-            {copied ? "Link copiado" : "Copiar link"}
+          <button className="secondary share-trigger" type="button" onClick={shareListing}>
+            <span aria-hidden="true">↗</span>
+            <span>{copied ? "Link copiado" : "Compartir"}</span>
           </button>
           {listing.website_url ? (
             <a className="secondary" href={listing.website_url} target="_blank" rel="noreferrer">
@@ -174,14 +189,20 @@ function ListingMiniWeb({ listing }) {
 
         <div className="seller-panel">
           <span className="avatar-badge">{initials(sellerName)}</span>
-          <div>
+          <div className="seller-panel-content">
+            <span className="eyebrow">Detalles del anunciante</span>
             <h2>{sellerName}</h2>
-            <p className="muted">{listing.profile?.phone || listing.advertiser_phone || "Contacto disponible en el anuncio"}</p>
-            {listing.user_id ? (
-              <Link className="secondary compact-link" href={`/vendedor/${listing.user_id}`}>
-                Ver mas anuncios
+            {listing.profile?.bio ? <p className="muted seller-bio">{listing.profile.bio}</p> : null}
+            <div className={`seller-links ${sellerListings.length ? "" : "single"}`}>
+              {listing.user_id && sellerListings.length ? (
+                <Link className="secondary compact-link" href={`/vendedor/${listing.user_id}`}>
+                  Ver mas anuncios
+                </Link>
+              ) : null}
+              <Link className="secondary compact-link" href="/">
+                Ver todos los anuncios
               </Link>
-            ) : null}
+            </div>
           </div>
         </div>
 
