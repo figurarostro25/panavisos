@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { money, provinces } from "@/lib/format";
+import { distanceInKm, searchAreaOptions } from "@/lib/locations";
 import { getSupabaseBrowser, hasSupabaseBrowserConfig } from "@/lib/supabaseBrowser";
 import {
   catalogSectionCopy,
@@ -38,6 +39,9 @@ const emptyFilters = {
   max: ""
 };
 
+const searchRadiusOptions = [5, 10, 25, 50, 100];
+const searchAreaCacheKey = "panavisos-search-area-v1";
+
 const popularNeeds = [
   { label: "Bienes raíces", terms: ["bienes", "propiedad", "inmueble"], query: "", visualIndex: 0 },
   { label: "Empleos", terms: ["empleo", "vacante"], query: "", visualIndex: 1 },
@@ -71,6 +75,16 @@ const mobileQuickCategories = [
   { label: "Servicios", mark: "SV", terms: ["servicio", "profesional"], tone: "violet" }
 ];
 
+function listingMatchesSearchArea(listing, area) {
+  if (!area) return true;
+
+  const listingDistance = distanceInKm(area.lat, area.lng, listing.lat, listing.lng);
+  if (listingDistance != null) return listingDistance <= Number(area.radius || 25);
+  if (area.district) return normalize(listing.district) === normalize(area.district);
+  if (area.province) return normalize(listing.province) === normalize(area.province);
+  return true;
+}
+
 export function CatalogHome({ section = "home" }) {
   const [data, setData] = useState({ categories: [], listings: [], banners: [] });
   const [selected, setSelected] = useState(null);
@@ -79,9 +93,20 @@ export function CatalogHome({ section = "home" }) {
   const [activeBanner, setActiveBanner] = useState(0);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [filters, setFilters] = useState(emptyFilters);
+  const [searchArea, setSearchArea] = useState(null);
+  const [searchAreaOpen, setSearchAreaOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [catalogError, setCatalogError] = useState(false);
   const sectionCopy = catalogSectionCopy(section);
+
+  useEffect(() => {
+    try {
+      const savedArea = JSON.parse(window.localStorage.getItem(searchAreaCacheKey) || "null");
+      if (savedArea?.label && savedArea?.radius) setSearchArea(savedArea);
+    } catch {
+      window.localStorage.removeItem(searchAreaCacheKey);
+    }
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -196,7 +221,7 @@ export function CatalogHome({ section = "home" }) {
     const q = normalize(filters.q);
     const min = Number(filters.min || 0);
     const max = Number(filters.max || Number.MAX_SAFE_INTEGER);
-    const hasExplicitFilter = Object.values(filters).some(Boolean);
+    const hasExplicitFilter = Object.values(filters).some(Boolean) || Boolean(searchArea);
     const sourceListings =
       section === "properties"
         ? propertyListings
@@ -215,16 +240,17 @@ export function CatalogHome({ section = "home" }) {
         (!q || searchText.includes(q)) &&
         (!filters.category || listing.category_id === filters.category) &&
         (!filters.province || listing.province === filters.province) &&
+        listingMatchesSearchArea(listing, searchArea) &&
         Number(listing.price) >= min &&
         Number(listing.price) <= max
       );
     });
-  }, [data.listings, filters, marketplaceListings, propertyListings, section]);
+  }, [data.listings, filters, marketplaceListings, propertyListings, searchArea, section]);
 
   const featured = listings.filter((listing) => listing.featured).slice(0, 6);
   const featuredListingIds = new Set(featured.map((listing) => listing.id));
   const latestListings = listings.filter((listing) => !featuredListingIds.has(listing.id));
-  const activeFilterCount = Object.values(filters).filter(Boolean).length;
+  const activeFilterCount = Object.values(filters).filter(Boolean).length + (searchArea ? 1 : 0);
   const sortedBanners = useMemo(
     () =>
       [...(data.banners || [])].sort(
@@ -236,7 +262,8 @@ export function CatalogHome({ section = "home" }) {
   );
   const heroBanners = sortedBanners.slice(0, 5);
   const overflowBanners = sortedBanners.slice(5);
-  const activeHeroBanner = heroBanners[activeBanner % Math.max(heroBanners.length, 1)];
+  const carouselBanners = heroBanners.length ? heroBanners : [null];
+  const activeHeroBanner = carouselBanners[activeBanner % carouselBanners.length];
   const categoryImages = useMemo(() => {
     const images = new Map();
     (data.listings || []).forEach((listing) => {
@@ -248,6 +275,20 @@ export function CatalogHome({ section = "home" }) {
     return images;
   }, [data.listings]);
   const totalCategoryImage = [...categoryImages.values()][0];
+  function saveSearchArea(nextArea) {
+    setSearchArea(nextArea);
+    if (nextArea) {
+      window.localStorage.setItem(searchAreaCacheKey, JSON.stringify(nextArea));
+    } else {
+      window.localStorage.removeItem(searchAreaCacheKey);
+    }
+  }
+
+  function clearAllFilters() {
+    setFilters(emptyFilters);
+    saveSearchArea(null);
+  }
+
   function applyCategory(categoryId = "") {
     setFilters((current) => ({ ...current, category: categoryId }));
     setMobileFiltersOpen(false);
@@ -272,13 +313,13 @@ export function CatalogHome({ section = "home" }) {
   }
 
   useEffect(() => {
-    if (heroBanners.length <= 1) return;
+    if (carouselBanners.length <= 1) return;
     const timer = setInterval(() => {
-      setActiveBanner((current) => (current + 1) % heroBanners.length);
+      setActiveBanner((current) => (current + 1) % carouselBanners.length);
     }, 6000);
 
     return () => clearInterval(timer);
-  }, [heroBanners.length]);
+  }, [carouselBanners.length]);
 
   return (
     <>
@@ -289,6 +330,31 @@ export function CatalogHome({ section = "home" }) {
         onOpenAccount={() => setAccountOpen(true)}
       />
       <main className={`market-home market-home-${section}`}>
+        {section === "home" || heroBanners.length ? (
+          <section className="home-band hero-banner-band" aria-label="Publicidad patrocinada">
+            <div className="sponsored-heading">
+              <span className="sponsored-label">Publicidad</span>
+              <a href="#contacto">Anuncia aqui</a>
+            </div>
+            <div className="hero-carousel sponsored-carousel">
+              <PromoBanner banner={activeHeroBanner} />
+              {carouselBanners.length > 1 ? (
+                <div className="banner-dots" aria-label="Anuncios patrocinados">
+                  {carouselBanners.map((banner, index) => (
+                    <button
+                      className={index === activeBanner % carouselBanners.length ? "active" : ""}
+                      type="button"
+                      key={banner?.id || `fallback-${index}`}
+                      onClick={() => setActiveBanner(index)}
+                      aria-label={`Ver publicidad ${index + 1}`}
+                    />
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
+
         <section className="home-band universal-search-band" id="buscar">
           <form className="universal-search" onSubmit={submitHeroSearch}>
             <div className="universal-search-intro">
@@ -333,11 +399,25 @@ export function CatalogHome({ section = "home" }) {
                 ))}
               </select>
             </label>
+            <div className="field search-area-field">
+              <span>Distancia</span>
+              <button
+                className="search-area-button"
+                type="button"
+                onClick={() => setSearchAreaOpen(true)}
+                aria-label="Elegir zona y distancia"
+              >
+                <span className="search-area-pin" aria-hidden="true">●</span>
+                <span>
+                  <strong>{searchArea?.label || "Todo Panamá"}</strong>
+                  <small>{searchArea ? `Hasta ${searchArea.radius} km` : "Elegir zona y radio"}</small>
+                </span>
+              </button>
+            </div>
             <div className="universal-search-actions">
               <button className="primary" type="submit">Buscar</button>
-              <Link className="mobile-home-publish" href="/publicar">Publicar</Link>
               {activeFilterCount ? (
-                <button className="universal-clear" type="button" onClick={() => setFilters(emptyFilters)}>
+                <button className="universal-clear" type="button" onClick={clearAllFilters}>
                   Limpiar
                 </button>
               ) : null}
@@ -346,31 +426,6 @@ export function CatalogHome({ section = "home" }) {
         </section>
 
         {section === "home" ? <MobileQuickCategories onSelect={applyNeed} /> : null}
-
-        {heroBanners.length ? (
-          <section className="home-band hero-banner-band" aria-label="Publicidad patrocinada">
-            <div className="sponsored-heading">
-              <span className="sponsored-label">Publicidad</span>
-              <a href="#contacto">Anuncia aqui</a>
-            </div>
-            <div className="hero-carousel sponsored-carousel">
-              <PromoBanner banner={activeHeroBanner} />
-              {heroBanners.length > 1 ? (
-                <div className="banner-dots" aria-label="Anuncios patrocinados">
-                  {heroBanners.map((banner, index) => (
-                    <button
-                      className={index === activeBanner % heroBanners.length ? "active" : ""}
-                      type="button"
-                      key={banner.id}
-                      onClick={() => setActiveBanner(index)}
-                      aria-label={`Ver publicidad ${index + 1}`}
-                    />
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          </section>
-        ) : null}
 
         {section === "home" ? (
           <PopularNeeds
@@ -400,7 +455,7 @@ export function CatalogHome({ section = "home" }) {
                 <button
                   className="filter-reset"
                   type="button"
-                  onClick={() => setFilters(emptyFilters)}
+                  onClick={clearAllFilters}
                   disabled={!activeFilterCount}
                 >
                   Limpiar
@@ -487,6 +542,8 @@ export function CatalogHome({ section = "home" }) {
                 </div>
               </div>
             </div>
+
+            {loading ? <MobileCatalogSkeleton /> : null}
 
             {featured.length ? (
               <>
@@ -577,7 +634,22 @@ export function CatalogHome({ section = "home" }) {
         </section>
       </main>
 
-      <SiteFooter />
+      <SiteFooter categories={data.categories || []} />
+      {section === "home" ? (
+        <Link className="mobile-floating-publish" href="/publicar">
+          <span aria-hidden="true">＋</span> Publicar
+        </Link>
+      ) : null}
+      {searchAreaOpen ? (
+        <SearchAreaDialog
+          currentArea={searchArea}
+          onClose={() => setSearchAreaOpen(false)}
+          onSave={(nextArea) => {
+            saveSearchArea(nextArea);
+            setSearchAreaOpen(false);
+          }}
+        />
+      ) : null}
       {selected ? (
         <ListingDetail
           listing={selected}
@@ -673,6 +745,93 @@ function MobileQuickCategories({ onSelect }) {
   );
 }
 
+function MobileCatalogSkeleton() {
+  return (
+    <div className="mobile-catalog-skeleton" aria-label="Cargando anuncios">
+      <span className="skeleton-heading" />
+      {[0, 1, 2].map((item) => (
+        <span className="skeleton-listing" key={item}>
+          <span className="skeleton-image" />
+          <span className="skeleton-copy">
+            <span />
+            <span />
+            <span />
+          </span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function SearchAreaDialog({ currentArea, onClose, onSave }) {
+  const [query, setQuery] = useState("");
+  const [location, setLocation] = useState(currentArea);
+  const [radius, setRadius] = useState(Number(currentArea?.radius || 25));
+  const normalizedQuery = normalize(query);
+  const matches = searchAreaOptions
+    .filter((item) => !normalizedQuery || normalize(item.label).includes(normalizedQuery))
+    .slice(0, 8);
+
+  return (
+    <div className="search-area-modal">
+      <button className="modal-backdrop" type="button" onClick={onClose} aria-label="Cerrar selector de distancia" />
+      <section className="search-area-dialog" role="dialog" aria-modal="true" aria-labelledby="search-area-title">
+        <div className="search-area-dialog-head">
+          <div>
+            <span className="eyebrow dark-eyebrow">Anuncios cerca de ti</span>
+            <h2 id="search-area-title">Elige tu zona</h2>
+          </div>
+          <button className="modal-close" type="button" onClick={onClose} aria-label="Cerrar">×</button>
+        </div>
+        <p className="muted">Toca una zona y define hasta cuántos kilómetros quieres buscar.</p>
+        <label className="field search-area-query">
+          <span>Zona o ciudad</span>
+          <input
+            autoFocus
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Ej. San Francisco, Panamá"
+          />
+        </label>
+        <div className="search-area-options" aria-label="Zonas disponibles">
+          {matches.map((item) => (
+            <button
+              className={location?.key === item.key ? "selected" : ""}
+              type="button"
+              key={item.key}
+              onClick={() => setLocation(item)}
+            >
+              <span className="search-area-pin" aria-hidden="true">●</span>
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </div>
+        <div className="search-radius-group">
+          <span>Radio de búsqueda</span>
+          <div className="search-radius-options">
+            {searchRadiusOptions.map((option) => (
+              <button
+                className={radius === option ? "selected" : ""}
+                type="button"
+                key={option}
+                onClick={() => setRadius(option)}
+              >
+                {option} km
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="search-area-actions">
+          <button className="secondary" type="button" onClick={() => onSave(null)}>Todo Panamá</button>
+          <button className="primary" type="button" onClick={() => location && onSave({ ...location, radius })} disabled={!location}>
+            Aplicar zona
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function CategoryDirectory({
   title,
   description,
@@ -744,6 +903,23 @@ function Topbar({ profile, categories = [], section, onOpenAccount }) {
     })
     .filter(Boolean);
 
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [menuOpen]);
+
   return (
     <header className="topbar marketplace-topbar">
       <div className="topbar-inner">
@@ -791,7 +967,7 @@ function Topbar({ profile, categories = [], section, onOpenAccount }) {
       <aside className={`mobile-nav-drawer ${menuOpen ? "open" : ""}`} aria-hidden={!menuOpen}>
         <div className="mobile-drawer-head">
           <img src="/brand/panavisos-logo.svg" alt="PanAvisos" />
-          <button type="button" onClick={() => setMenuOpen(false)} aria-label="Cerrar menu">x</button>
+          <button type="button" onClick={() => setMenuOpen(false)} aria-label="Cerrar menu">×</button>
         </div>
         <nav aria-label="Menu movil">
           <Link href="/" onClick={() => setMenuOpen(false)}>Inicio</Link>
@@ -1194,10 +1370,10 @@ function statusLabel(status) {
 
 function PromoBanner({ banner, large = false, compact = false }) {
   const content = banner || {
-    title: "Promociona aqui",
-    subtitle: "Crea banners desde el panel admin y mostrarlos en portada.",
-    cta_label: "Publicar ahora",
-    cta_url: "/publicar"
+    title: "Tu anuncio puede estar aqui",
+    subtitle: "Destaca tu negocio, propiedad o servicio en PanAvisos.",
+    cta_label: "Anuncia aqui",
+    cta_url: "#contacto"
   };
   const Wrapper = content.cta_url ? "a" : "article";
   const wrapperProps = content.cta_url
@@ -1254,7 +1430,7 @@ function authErrorMessage(value) {
   return value || "No pudimos completar la accion.";
 }
 
-function SiteFooter() {
+function SiteFooter({ categories = [] }) {
   return (
     <footer className="site-footer">
       <div className="site-footer-grid">
@@ -1279,6 +1455,19 @@ function SiteFooter() {
           <Link href="/terminos">Terminos</Link>
           <Link href="/privacidad">Privacidad</Link>
         </nav>
+        {categories.length ? (
+          <nav className="footer-categories">
+            <strong>Mas categorias</strong>
+            {categories.map((category) => (
+              <Link
+                href={`${isPropertyCategory(category) ? "/propiedades" : "/marketplace"}?categoria=${category.slug}`}
+                key={category.id}
+              >
+                {category.name}
+              </Link>
+            ))}
+          </nav>
+        ) : null}
       </div>
       <div className="site-footer-bottom">
         <span>© 2026 PanAvisos. Todos los derechos reservados.</span>
