@@ -5213,6 +5213,10 @@ button:disabled {
     z-index: 100;
   }
 
+  .marketplace-topbar:has(.mobile-nav-drawer.open) {
+    overflow: visible;
+  }
+
   .mobile-nav-drawer {
     inset: 0;
     width: 100%;
