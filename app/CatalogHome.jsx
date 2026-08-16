@@ -65,6 +65,12 @@ const popularNeeds = [
   }
 ];
 
+const mobileQuickCategories = [
+  { label: "Propiedades", mark: "PR", terms: ["bienes", "propiedad", "inmueble"], tone: "orange" },
+  { label: "Vehículos", mark: "VH", terms: ["auto", "vehiculo", "carro", "moto"], tone: "coral" },
+  { label: "Servicios", mark: "SV", terms: ["servicio", "profesional"], tone: "violet" }
+];
+
 export function CatalogHome({ section = "home" }) {
   const [data, setData] = useState({ categories: [], listings: [], banners: [] });
   const [selected, setSelected] = useState(null);
@@ -282,8 +288,8 @@ export function CatalogHome({ section = "home" }) {
         section={section}
         onOpenAccount={() => setAccountOpen(true)}
       />
-      <main className="market-home">
-        <section className="home-band universal-search-band">
+      <main className={`market-home market-home-${section}`}>
+        <section className="home-band universal-search-band" id="buscar">
           <form className="universal-search" onSubmit={submitHeroSearch}>
             <div className="universal-search-intro">
               <span className="eyebrow dark-eyebrow">{sectionCopy.eyebrow}</span>
@@ -292,6 +298,7 @@ export function CatalogHome({ section = "home" }) {
             </div>
             <label className="field universal-keyword">
               <span>Que buscas</span>
+              <span className="mobile-search-glyph" aria-hidden="true">⌕</span>
               <input
                 value={filters.q}
                 onChange={(event) => setFilters({ ...filters, q: event.target.value })}
@@ -328,6 +335,7 @@ export function CatalogHome({ section = "home" }) {
             </label>
             <div className="universal-search-actions">
               <button className="primary" type="submit">Buscar</button>
+              <Link className="mobile-home-publish" href="/publicar">Publicar</Link>
               {activeFilterCount ? (
                 <button className="universal-clear" type="button" onClick={() => setFilters(emptyFilters)}>
                   Limpiar
@@ -336,6 +344,8 @@ export function CatalogHome({ section = "home" }) {
             </div>
           </form>
         </section>
+
+        {section === "home" ? <MobileQuickCategories onSelect={applyNeed} /> : null}
 
         {heroBanners.length ? (
           <section className="home-band hero-banner-band" aria-label="Publicidad patrocinada">
@@ -493,7 +503,7 @@ export function CatalogHome({ section = "home" }) {
               <div className="notice">No pudimos cargar los anuncios. Intenta nuevamente.</div>
             ) : latestListings.length || (!loading && listings.length === 0) ? (
               <>
-                <h2 className="block-title">{section === "properties" ? "Propiedades recientes" : "Ultimos anuncios"}</h2>
+                <h2 className="block-title">{section === "properties" ? "Propiedades recientes" : "Destacados"}</h2>
                 {!loading && listings.length === 0 ? (
                   <div className="notice">Todavia no hay anuncios con esos filtros.</div>
                 ) : (
@@ -645,6 +655,24 @@ function PopularNeeds({ needs, categories, filters, onSelect }) {
   );
 }
 
+function MobileQuickCategories({ onSelect }) {
+  return (
+    <section className="mobile-quick-categories" aria-label="Categorías principales">
+      {mobileQuickCategories.map((category) => (
+        <button
+          className={`mobile-quick-category ${category.tone}`}
+          type="button"
+          key={category.label}
+          onClick={() => onSelect({ terms: category.terms, query: "" })}
+        >
+          <span className="mobile-quick-icon" aria-hidden="true">{category.mark}</span>
+          <span>{category.label}</span>
+        </button>
+      ))}
+    </section>
+  );
+}
+
 function CategoryDirectory({
   title,
   description,
@@ -738,6 +766,7 @@ function Topbar({ profile, categories = [], section, onOpenAccount }) {
         <nav className="top-actions">
           <a className="desktop-top-link" href="#anuncios">Anuncios</a>
           <Link className="desktop-top-link" href="/cuenta">Mi cuenta</Link>
+          <a className="mobile-search-link" href="#buscar" aria-label="Buscar en PanAvisos">⌕</a>
           <AccountButton profile={profile} onOpen={onOpenAccount} />
           <Link className="primary publish-cta" href="/publicar">
             Publicar
