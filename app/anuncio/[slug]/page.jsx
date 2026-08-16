@@ -139,7 +139,7 @@ function ListingMiniWeb({ listing, sellerListings = [] }) {
         <div className="share-actions">
           {whatsapp ? (
             <a className="primary" href={`https://wa.me/${whatsapp}?text=${whatsappMessage}`} target="_blank" rel="noreferrer">
-              Contactar por WhatsApp
+              Mensaje por WhatsApp
             </a>
           ) : null}
           <button className="secondary share-trigger" type="button" onClick={shareListing}>
@@ -269,7 +269,7 @@ function ListingInquiryForm({ listing, sellerName }) {
     <section className="seller-contact-card">
       <div>
         <span className="eyebrow">{sellerName}</span>
-        <h2>Enviar consulta</h2>
+        <h2>Dejar mensaje interno</h2>
       </div>
       <form onSubmit={submit}>
         <label className="field">
@@ -298,7 +298,7 @@ function ListingInquiryForm({ listing, sellerName }) {
           <textarea required rows={5} value={form.message} onChange={(event) => setForm({ ...form, message: event.target.value })} />
         </label>
         <button className="primary inquiry-submit" type="submit" disabled={sending}>
-          {sending ? "Enviando..." : "Enviar consulta"}
+          {sending ? "Enviando..." : "Enviar mensaje interno"}
         </button>
         <div className="contact-shortcuts">
           {sellerPhone ? <a className="phone-action" href={`tel:+${sellerDial}`}>Llamar</a> : <span className="disabled-contact-action">Llamar</span>}

@@ -1685,7 +1685,7 @@ function ListingDetail({ listing, profile, sellerListingCount, onRequireAccount,
                     target="_blank"
                     rel="noreferrer"
                   >
-                    Enviar mensaje
+                    Mensaje por WhatsApp
                   </a>
                 ) : (
                   <button className="primary" type="button" onClick={onRequireAccount}>
@@ -1694,7 +1694,7 @@ function ListingDetail({ listing, profile, sellerListingCount, onRequireAccount,
                 )
               ) : (
                 <button className="primary" type="button" onClick={() => setContactOpen(true)}>
-                  Enviar consulta
+                  Dejar mensaje interno
                 </button>
               )}
               {listing.website_url ? (
@@ -1774,11 +1774,8 @@ function ListingDetail({ listing, profile, sellerListingCount, onRequireAccount,
             ) : null}
 
             <footer className="listing-action-footer">
-              <span className="eyebrow">Compartir o contactar</span>
+              <span className="eyebrow">Compartir o escribir</span>
               <div className="share-actions">
-                <Link className="secondary" href={`/anuncio/${listing.slug}`}>
-                  Ver anuncio completo
-                </Link>
                 <button className="secondary share-trigger" type="button" onClick={shareListing}>
                   <span aria-hidden="true">↗</span>
                   <span>{copied ? "Link copiado" : "Compartir"}</span>
@@ -1791,16 +1788,16 @@ function ListingDetail({ listing, profile, sellerListingCount, onRequireAccount,
                       target="_blank"
                       rel="noreferrer"
                     >
-                      Enviar mensaje
+                      Mensaje por WhatsApp
                     </a>
                   ) : (
                     <button className="primary contact-action" type="button" onClick={onRequireAccount}>
-                      Registrate para responder
+                      Registrate para escribir
                     </button>
                   )
                 ) : (
                   <button className="primary contact-action" type="button" onClick={() => setContactOpen(true)}>
-                    Enviar consulta
+                    Dejar mensaje interno
                   </button>
                 )}
               </div>
@@ -1898,8 +1895,8 @@ function FeedbackForm({ profile, listing = null, compact = false }) {
     return (
       <section className={`seller-contact-card ${compact ? "compact" : ""}`}>
         <div>
-          <span className="eyebrow">Consulta directa</span>
-          <h2>Enviar consulta</h2>
+          <span className="eyebrow">Mensaje interno</span>
+          <h2>Dejar mensaje interno</h2>
           <p className="muted">Deja tus datos y el mensaje llega a la bandeja de PanAvisos.</p>
         </div>
         <form onSubmit={submit}>
@@ -1944,7 +1941,7 @@ function FeedbackForm({ profile, listing = null, compact = false }) {
             />
           </label>
           <button className="primary inquiry-submit" type="submit" disabled={sending}>
-            {sending ? "Enviando..." : "Enviar consulta"}
+            {sending ? "Enviando..." : "Enviar mensaje interno"}
           </button>
           <div className="contact-shortcuts">
             {sellerPhone ? (
