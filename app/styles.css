@@ -153,6 +153,27 @@
   font-size: 0.69rem;
 }
 
+.partner-tile {
+  text-decoration: none;
+}
+
+.partner-photo {
+  display: grid;
+  place-items: center;
+  background-image: none;
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.partner-tramitamas .partner-photo {
+  background: linear-gradient(135deg, #0b8f87, #124f8a);
+}
+
+.partner-cevenpro .partner-photo {
+  background: linear-gradient(135deg, #10364f, #b38a3e);
+}
+
 .need-icon {
   display: none;
 }
@@ -4302,9 +4323,8 @@ button:disabled {
 
   .market-results > .grid:not(.compact-grid),
   .marketplace-preview-grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 14px;
-    overflow: hidden;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 10px;
   }
 
   .market-results > .grid:not(.compact-grid) > *,
@@ -4322,28 +4342,19 @@ button:disabled {
   }
 
   .needs-strip {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
     gap: 8px;
-    margin-inline: 0;
-    padding: 0;
-    overflow: visible;
-    scroll-snap-type: none;
+    margin-inline: -12px;
+    padding: 0 12px 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
   }
 
-  .need-tile {
-    grid-template-columns: 50px minmax(0, 1fr);
-    flex: initial;
-    min-width: 0;
-    width: 100%;
-    min-height: 64px;
-    padding: 7px;
-    scroll-snap-align: unset;
-  }
-
-  .need-photo {
-    width: 50px;
-    height: 50px;
+  .needs-strip::-webkit-scrollbar {
+    display: none;
   }
 
   .need-copy,

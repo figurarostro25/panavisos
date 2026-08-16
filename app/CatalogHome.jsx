@@ -48,7 +48,21 @@ const popularNeeds = [
   { label: "Belleza y masajes", terms: ["estetica", "belleza", "servicio"], query: "masaje", visualIndex: 6 },
   { label: "Hospedajes", terms: ["hospedaje", "alquiler vacacional"], query: "hospedaje", visualIndex: 7 },
   { label: "Restaurantes", terms: ["restaurante", "comida"], query: "restaurante", visualIndex: 8 },
-  { label: "Servicios profesionales", terms: ["servicio", "profesional"], query: "", visualIndex: 9 }
+  { label: "Servicios profesionales", terms: ["servicio", "profesional"], query: "", visualIndex: 9 },
+  {
+    label: "TramitaMás",
+    detail: "Finanzas y trámites",
+    href: "https://tramitamas.vercel.app/",
+    project: "tramitamas",
+    mark: "T+"
+  },
+  {
+    label: "Cevenpro",
+    detail: "Propiedades e inversión",
+    href: "https://cevenpro.vercel.app/",
+    project: "cevenpro",
+    mark: "CP"
+  }
 ];
 
 export function CatalogHome({ section = "home" }) {
@@ -584,6 +598,25 @@ function PopularNeeds({ needs, categories, filters, onSelect }) {
       </div>
       <div className="needs-strip">
         {needs.map((need) => {
+          if (need.href) {
+            return (
+              <a
+                className={`need-tile partner-tile partner-${need.project}`}
+                key={need.label}
+                href={need.href}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={`Abrir ${need.label} en una pestaña nueva`}
+              >
+                <span className="need-photo partner-photo" aria-hidden="true">{need.mark}</span>
+                <span className="need-copy">
+                  <strong>{need.label}</strong>
+                  <small>{need.detail}</small>
+                </span>
+              </a>
+            );
+          }
+
           const category = findCategoryByTerms(categories, need.terms);
           const active = filters.q === need.query && filters.category === (category?.id || "");
           return (
