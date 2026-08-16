@@ -69,6 +69,45 @@ const popularNeeds = [
   }
 ];
 
+const partnerPromotions = [
+  {
+    id: "tramitamas-auto",
+    eyebrow: "TramitaMás",
+    title: "Financiamiento para tu auto",
+    subtitle: "Conoce opciones para comprar o cambiar tu vehículo con orientación previa.",
+    cta_label: "Conocer servicio",
+    cta_url: "https://tramitamas.vercel.app/financiamiento-autos",
+    image_url: "https://tramitamas.vercel.app/media/auto-pickup-familia-v2.webp"
+  },
+  {
+    id: "tramitamas-legal",
+    eyebrow: "TramitaMás",
+    title: "Trámites legales y migratorios",
+    subtitle: "Residencias, visas, permisos y regularización con una ruta clara.",
+    cta_label: "Ver trámites",
+    cta_url: "https://tramitamas.vercel.app/tramites-legales-migratorios",
+    image_url: "https://tramitamas.vercel.app/media/legal-permiso-migratorio-rubia-v4.webp"
+  },
+  {
+    id: "cevenpro-playa",
+    eyebrow: "Cevenpro",
+    title: "Apartamento frente al mar",
+    subtitle: "Explora una oportunidad inmobiliaria con el respaldo de Cevenpro.",
+    cta_label: "Ver propiedad",
+    cta_url: "https://cevenpro.vercel.app/propiedades/apartamento-frente-al-mar",
+    image_url: "https://cevenpro.vercel.app/images/apartamento-playa.webp"
+  },
+  {
+    id: "cevenpro-local",
+    eyebrow: "Cevenpro",
+    title: "Local con alto flujo comercial",
+    subtitle: "Encuentra espacios para tu negocio y oportunidades de inversión.",
+    cta_label: "Ver propiedad",
+    cta_url: "https://cevenpro.vercel.app/propiedades/local-alto-flujo-comercial",
+    image_url: "https://cevenpro.vercel.app/images/local-comercial.webp"
+  }
+];
+
 const mobileQuickCategories = [
   { label: "Propiedades", mark: "PR", terms: ["bienes", "propiedad", "inmueble"], tone: "orange" },
   { label: "Vehículos", mark: "VH", terms: ["auto", "vehiculo", "carro", "moto"], tone: "coral" },
@@ -262,7 +301,11 @@ export function CatalogHome({ section = "home" }) {
   );
   const heroBanners = sortedBanners.slice(0, 5);
   const overflowBanners = sortedBanners.slice(5);
-  const carouselBanners = heroBanners.length ? heroBanners : [null];
+  const carouselBanners = section === "home"
+    ? [...partnerPromotions, ...heroBanners]
+    : heroBanners.length
+      ? heroBanners
+      : [null];
   const activeHeroBanner = carouselBanners[activeBanner % carouselBanners.length];
   const categoryImages = useMemo(() => {
     const images = new Map();
@@ -1406,6 +1449,7 @@ function PromoBanner({ banner, large = false, compact = false }) {
     : {};
   const title = cleanBannerText(content.title);
   const subtitle = cleanBannerText(content.subtitle);
+  const eyebrow = cleanBannerText(content.eyebrow) || "Destacado";
   const hasArtwork = Boolean(content.image_url);
   const artworkOnly = hasArtwork && !title && !subtitle;
 
@@ -1417,7 +1461,7 @@ function PromoBanner({ banner, large = false, compact = false }) {
     >
       {content.image_url ? <img src={content.image_url} alt="" /> : null}
       {!artworkOnly ? <div>
-        <span className="eyebrow">Destacado</span>
+        <span className="eyebrow">{eyebrow}</span>
         {title ? <h2>{title}</h2> : null}
         {subtitle ? <p>{subtitle}</p> : null}
         {content.cta_label && content.cta_url ? (
