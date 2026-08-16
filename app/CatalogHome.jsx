@@ -925,7 +925,8 @@ function Topbar({ profile, categories = [], section, onOpenAccount, onLogout }) 
     <header className="topbar marketplace-topbar">
       <div className="topbar-inner">
         <Link className="brand" href="/">
-          <img className="brand-logo" src="/brand/panavisos-logo.svg" alt="PanAvisos" />
+          <img className="brand-logo brand-logo-full" src="/brand/panavisos-logo.svg" alt="PanAvisos" />
+          <img className="brand-logo brand-logo-mobile" src="/brand/panavisos-mobile-logo.svg" alt="PanAvisos" />
         </Link>
         <nav className="main-menu" aria-label="Categorias principales">
           <Link className={section === "properties" ? "active" : ""} href="/propiedades">

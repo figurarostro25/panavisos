@@ -941,6 +941,10 @@ a {
   height: auto;
 }
 
+.brand-logo-mobile {
+  display: none;
+}
+
 .brand strong,
 .brand small {
   display: block;
@@ -5431,5 +5435,27 @@ button:disabled {
 
   .market-home-home .market-filters.open .filter-category span {
     font-size: 0.72rem;
+  }
+}
+
+@media (max-width: 620px) {
+  .marketplace-topbar .brand-logo-full {
+    display: none;
+  }
+
+  .marketplace-topbar .brand-logo-mobile {
+    display: block;
+    filter: none;
+  }
+
+  .market-home-home .universal-search > .field.search-area-field,
+  .market-home-home .search-area-modal {
+    display: none !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .marketplace-topbar .brand-logo-mobile {
+    width: 128px;
   }
 }
