@@ -328,6 +328,7 @@ export function CatalogHome({ section = "home" }) {
         categories={data.categories || []}
         section={section}
         onOpenAccount={() => setAccountOpen(true)}
+        onLogout={logoutProfile}
       />
       <main className={`market-home market-home-${section}`}>
         {section === "home" || heroBanners.length ? (
@@ -465,7 +466,7 @@ export function CatalogHome({ section = "home" }) {
                 </button>
               </div>
             </div>
-            <label className="field">
+            <label className="field filter-keyword">
               <span>Buscar</span>
               <input
                 value={filters.q}
@@ -473,7 +474,7 @@ export function CatalogHome({ section = "home" }) {
                 placeholder="Palabra clave"
               />
             </label>
-            <label className="field">
+            <label className="field filter-category">
               <span>Categoria</span>
               <select
                 value={filters.category}
@@ -487,7 +488,7 @@ export function CatalogHome({ section = "home" }) {
                 ))}
               </select>
             </label>
-            <label className="field">
+            <label className="field filter-province">
               <span>Provincia</span>
               <select
                 value={filters.province}
@@ -501,7 +502,7 @@ export function CatalogHome({ section = "home" }) {
                 ))}
               </select>
             </label>
-            <div className="field-row">
+            <div className="field-row filter-price-range">
               <label className="field">
                 <span>Minimo</span>
                 <input
@@ -560,7 +561,7 @@ export function CatalogHome({ section = "home" }) {
               <div className="notice">No pudimos cargar los anuncios. Intenta nuevamente.</div>
             ) : latestListings.length || (!loading && listings.length === 0) ? (
               <>
-                <h2 className="block-title">{section === "properties" ? "Propiedades recientes" : "Destacados"}</h2>
+                <h2 className="block-title">{section === "properties" ? "Propiedades recientes" : "Mas anuncios"}</h2>
                 {!loading && listings.length === 0 ? (
                   <div className="notice">Todavia no hay anuncios con esos filtros.</div>
                 ) : (
@@ -891,7 +892,7 @@ function CategoryDirectory({
   );
 }
 
-function Topbar({ profile, categories = [], section, onOpenAccount }) {
+function Topbar({ profile, categories = [], section, onOpenAccount, onLogout }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuCategories = headerCategoryGroups
     .map((group) => {
@@ -942,8 +943,8 @@ function Topbar({ profile, categories = [], section, onOpenAccount }) {
         <nav className="top-actions">
           <a className="desktop-top-link" href="#anuncios">Anuncios</a>
           <Link className="desktop-top-link" href="/cuenta">Mi cuenta</Link>
-          <a className="mobile-search-link" href="#buscar" aria-label="Buscar en PanAvisos">⌕</a>
           <AccountButton profile={profile} onOpen={onOpenAccount} />
+          <a className="mobile-search-link" href="#buscar" aria-label="Buscar en PanAvisos">⌕</a>
           <Link className="primary publish-cta" href="/publicar">
             Publicar
           </Link>
@@ -969,6 +970,19 @@ function Topbar({ profile, categories = [], section, onOpenAccount }) {
           <img src="/brand/panavisos-logo.svg" alt="PanAvisos" />
           <button type="button" onClick={() => setMenuOpen(false)} aria-label="Cerrar menu">×</button>
         </div>
+        {profile ? (
+          <div className="mobile-drawer-account">
+            {profile.avatar ? (
+              <img className="profile-photo mobile-drawer-avatar" src={profile.avatar} alt="" />
+            ) : (
+              <span className="avatar mobile-drawer-avatar">{initials(profile.name || profile.email)}</span>
+            )}
+            <span>
+              <strong>{profile.name || "Mi cuenta"}</strong>
+              <small>{profile.email}</small>
+            </span>
+          </div>
+        ) : null}
         <nav aria-label="Menu movil">
           <Link href="/" onClick={() => setMenuOpen(false)}>Inicio</Link>
           <Link href="/propiedades" onClick={() => setMenuOpen(false)}>Propiedades</Link>
@@ -982,10 +996,20 @@ function Topbar({ profile, categories = [], section, onOpenAccount }) {
             </Link>
           ))}
           <Link href="/marketplace" onClick={() => setMenuOpen(false)}>Marketplace</Link>
-          <a href="#anuncios" onClick={() => setMenuOpen(false)}>Anuncios</a>
           <Link href="/cuenta" onClick={() => setMenuOpen(false)}>Mi cuenta</Link>
           <Link className="primary" href="/publicar" onClick={() => setMenuOpen(false)}>Publicar anuncio</Link>
-          {!profile ? (
+          {profile ? (
+            <button
+              className="secondary mobile-menu-logout"
+              type="button"
+              onClick={async () => {
+                await onLogout();
+                setMenuOpen(false);
+              }}
+            >
+              Cerrar sesion
+            </button>
+          ) : (
             <button
               className="secondary"
               type="button"
@@ -996,7 +1020,7 @@ function Topbar({ profile, categories = [], section, onOpenAccount }) {
             >
               Entrar o crear cuenta
             </button>
-          ) : null}
+          )}
         </nav>
       </aside>
     </header>

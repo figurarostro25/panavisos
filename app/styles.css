@@ -598,8 +598,6 @@
     gap: 10px;
   }
 
-  .marketplace-topbar .account-icon-button,
-  .marketplace-topbar .profile-button,
   .marketplace-topbar .publish-cta {
     display: none;
   }
@@ -5243,5 +5241,195 @@ button:disabled {
     place-items: center;
     font-size: 1.25rem;
     line-height: 1;
+  }
+}
+
+@media (max-width: 620px) {
+  .marketplace-topbar .account-icon-button,
+  .marketplace-topbar .profile-button {
+    display: grid;
+    flex: 0 0 auto;
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+    min-height: 38px;
+    place-items: center;
+    gap: 0;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.66);
+    border-radius: 999px;
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.18);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24), 0 8px 18px rgba(62, 20, 98, 0.16);
+    backdrop-filter: blur(12px);
+  }
+
+  .marketplace-topbar .account-icon-button > span:not(.avatar),
+  .marketplace-topbar .profile-button-name,
+  .marketplace-topbar .profile-button .menu-lines {
+    display: none;
+  }
+
+  .marketplace-topbar .account-icon-button .avatar,
+  .marketplace-topbar .profile-button .avatar,
+  .marketplace-topbar .profile-button .profile-chip-photo {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    min-height: 28px;
+    place-items: center;
+    border: 2px solid rgba(255, 255, 255, 0.82);
+    border-radius: 999px;
+    object-fit: cover;
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .marketplace-topbar .brand-logo {
+    width: 128px;
+  }
+
+  .marketplace-topbar .top-actions {
+    gap: 6px;
+  }
+
+  .marketplace-topbar .account-icon-button,
+  .marketplace-topbar .profile-button {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    min-height: 34px;
+  }
+
+  .marketplace-topbar .account-icon-button .avatar,
+  .marketplace-topbar .profile-button .avatar,
+  .marketplace-topbar .profile-button .profile-chip-photo {
+    width: 25px;
+    height: 25px;
+    min-width: 25px;
+    min-height: 25px;
+  }
+
+  .marketplace-topbar .mobile-search-link {
+    width: 32px;
+  }
+
+  .marketplace-topbar .mobile-menu-button {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+@media (max-width: 620px) {
+  .marketplace-topbar .brand,
+  .marketplace-topbar .brand strong,
+  .marketplace-topbar .brand small {
+    color: #ffffff;
+  }
+
+  .mobile-drawer-account {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: min(100%, 520px);
+    margin: 12px auto 4px;
+    padding: 10px 2px 14px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .mobile-drawer-account > span:last-child {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+  }
+
+  .mobile-drawer-account strong,
+  .mobile-drawer-account small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-drawer-account strong {
+    color: var(--ink);
+    font-size: 0.9rem;
+  }
+
+  .mobile-drawer-account small {
+    color: var(--muted);
+    font-size: 0.74rem;
+  }
+
+  .mobile-drawer-avatar {
+    flex: 0 0 42px;
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    min-height: 42px;
+    border: 2px solid var(--teal);
+    border-radius: 999px;
+    object-fit: cover;
+  }
+
+  .mobile-menu-logout {
+    color: #b4234d;
+  }
+
+  .market-home-home .needs-band {
+    display: none;
+  }
+
+  .market-home-home .market-layout {
+    position: relative;
+  }
+
+  .market-home-home .market-filters.open {
+    position: absolute;
+    top: 42px;
+    right: 14px;
+    z-index: 25;
+    display: block;
+    width: min(248px, calc(100vw - 44px));
+    box-sizing: border-box;
+    padding: 12px;
+    border-radius: 10px;
+    box-shadow: 0 16px 34px rgba(37, 22, 68, 0.2);
+  }
+
+  .market-home-home .market-filters.open .filter-keyword,
+  .market-home-home .market-filters.open .filter-province,
+  .market-home-home .market-filters.open .filter-price-range {
+    display: none;
+  }
+
+  .market-home-home .market-filters.open .filter-head {
+    gap: 8px;
+    align-items: center;
+  }
+
+  .market-home-home .market-filters.open .filter-head h2 {
+    margin: 0;
+    font-size: 0.92rem;
+  }
+
+  .market-home-home .market-filters.open .filter-head-actions {
+    gap: 4px;
+  }
+
+  .market-home-home .market-filters.open .filter-reset,
+  .market-home-home .market-filters.open .filter-close {
+    min-height: 28px;
+    padding-inline: 7px;
+    font-size: 0.7rem;
+  }
+
+  .market-home-home .market-filters.open .filter-category {
+    margin-top: 9px;
+  }
+
+  .market-home-home .market-filters.open .filter-category span {
+    font-size: 0.72rem;
   }
 }
