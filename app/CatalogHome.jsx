@@ -269,31 +269,6 @@ export function CatalogHome({ section = "home" }) {
         onOpenAccount={() => setAccountOpen(true)}
       />
       <main className="market-home">
-        {heroBanners.length ? (
-          <section className="home-band hero-banner-band" aria-label="Publicidad patrocinada">
-            <div className="sponsored-heading">
-              <span className="sponsored-label">Publicidad</span>
-              <a href="#contacto">Anuncia aqui</a>
-            </div>
-            <div className="hero-carousel sponsored-carousel">
-              <PromoBanner banner={activeHeroBanner} />
-              {heroBanners.length > 1 ? (
-                <div className="banner-dots" aria-label="Anuncios patrocinados">
-                  {heroBanners.map((banner, index) => (
-                    <button
-                      className={index === activeBanner % heroBanners.length ? "active" : ""}
-                      type="button"
-                      key={banner.id}
-                      onClick={() => setActiveBanner(index)}
-                      aria-label={`Ver publicidad ${index + 1}`}
-                    />
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          </section>
-        ) : null}
-
         <section className="home-band universal-search-band">
           <form className="universal-search" onSubmit={submitHeroSearch}>
             <div className="universal-search-intro">
@@ -347,6 +322,31 @@ export function CatalogHome({ section = "home" }) {
             </div>
           </form>
         </section>
+
+        {heroBanners.length ? (
+          <section className="home-band hero-banner-band" aria-label="Publicidad patrocinada">
+            <div className="sponsored-heading">
+              <span className="sponsored-label">Publicidad</span>
+              <a href="#contacto">Anuncia aqui</a>
+            </div>
+            <div className="hero-carousel sponsored-carousel">
+              <PromoBanner banner={activeHeroBanner} />
+              {heroBanners.length > 1 ? (
+                <div className="banner-dots" aria-label="Anuncios patrocinados">
+                  {heroBanners.map((banner, index) => (
+                    <button
+                      className={index === activeBanner % heroBanners.length ? "active" : ""}
+                      type="button"
+                      key={banner.id}
+                      onClick={() => setActiveBanner(index)}
+                      aria-label={`Ver publicidad ${index + 1}`}
+                    />
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
 
         {section === "home" ? (
           <PopularNeeds
