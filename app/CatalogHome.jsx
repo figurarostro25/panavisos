@@ -1586,6 +1586,8 @@ function ListingCard({ listing, onSelect }) {
 function ListingDetail({ listing, profile, onRequireAccount, onClose }) {
   const [activeImage, setActiveImage] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [contactOpen, setContactOpen] = useState(false);
+  const [touchStartX, setTouchStartX] = useState(null);
   const images = [...(listing.images || [])].sort((a, b) => a.position - b.position);
   const image = images[activeImage]?.url;
   const hasMap = listing.lat && listing.lng;
@@ -1596,6 +1598,14 @@ function ListingDetail({ listing, profile, onRequireAccount, onClose }) {
   function moveImage(direction) {
     if (!images.length) return;
     setActiveImage((current) => (current + direction + images.length) % images.length);
+  }
+
+  function finishGallerySwipe(event) {
+    if (touchStartX == null) return;
+    const distance = event.changedTouches[0].clientX - touchStartX;
+    setTouchStartX(null);
+    if (Math.abs(distance) < 42) return;
+    moveImage(distance < 0 ? 1 : -1);
   }
 
   async function copyListingLink() {
@@ -1613,7 +1623,11 @@ function ListingDetail({ listing, profile, onRequireAccount, onClose }) {
           <button className="modal-close" type="button" onClick={onClose} aria-label="Cerrar">
             X
           </button>
-          <div className="gallery-stage">
+          <div
+            className="gallery-stage"
+            onTouchStart={(event) => setTouchStartX(event.touches[0].clientX)}
+            onTouchEnd={finishGallerySwipe}
+          >
             {image ? <img src={image} alt={listing.title} /> : <div className="empty-image gallery-empty">PA</div>}
             {images.length > 1 ? (
               <>
@@ -1650,12 +1664,6 @@ function ListingDetail({ listing, profile, onRequireAccount, onClose }) {
             <p className="muted">Publicado en {listing.district}, {listing.province}</p>
 
             <div className="detail-actions">
-              <Link className="secondary" href={`/anuncio/${listing.slug}`}>
-                Abrir anuncio
-              </Link>
-              <button className="secondary" type="button" onClick={copyListingLink}>
-                {copied ? "Link copiado" : "Copiar link"}
-              </button>
               {whatsapp ? (
                 profile ? (
                   <a
@@ -1671,7 +1679,11 @@ function ListingDetail({ listing, profile, onRequireAccount, onClose }) {
                     Registrate para responder
                   </button>
                 )
-              ) : null}
+              ) : (
+                <button className="primary" type="button" onClick={() => setContactOpen(true)}>
+                  Enviar consulta
+                </button>
+              )}
               {listing.website_url ? (
                 <a className="secondary" href={listing.website_url} target="_blank" rel="noreferrer">
                   Sitio web
@@ -1749,7 +1761,22 @@ function ListingDetail({ listing, profile, onRequireAccount, onClose }) {
               </div>
             ) : null}
 
-            <FeedbackForm profile={profile} listing={listing} compact />
+            <footer className="listing-action-footer">
+              <span className="eyebrow">Acciones</span>
+              <div className="share-actions">
+                <Link className="secondary" href={`/anuncio/${listing.slug}`}>
+                  Abrir anuncio
+                </Link>
+                <button className="secondary" type="button" onClick={copyListingLink}>
+                  {copied ? "Link copiado" : "Copiar link"}
+                </button>
+                <button className="secondary" type="button" onClick={() => setContactOpen(true)}>
+                  Enviar consulta
+                </button>
+              </div>
+            </footer>
+
+            {contactOpen ? <FeedbackForm profile={profile} listing={listing} compact /> : null}
           </div>
         </aside>
       </article>

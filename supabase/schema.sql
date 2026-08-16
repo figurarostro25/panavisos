@@ -163,8 +163,30 @@ create policy "Public can read active banners"
 insert into public.categories (name, slug, description, sort_order)
 values
   ('Bienes raices', 'bienes-raices', 'Casas, apartamentos, lotes, fincas y locales', 1),
-  ('Autos', 'autos', 'Carros, motos, repuestos y accesorios', 2),
-  ('Servicios', 'servicios', 'Profesionales, tecnicos, mantenimiento y asesorias', 3)
+  ('Vehiculos', 'autos', 'Autos, motos, repuestos y accesorios', 2),
+  ('Empleos', 'empleos', 'Vacantes, oportunidades y trabajos temporales', 3),
+  ('Servicios', 'servicios', 'Profesionales, tecnicos, mantenimiento y asesorias', 4),
+  ('Hojas de vida', 'hojas-de-vida', 'Perfiles laborales y talento disponible', 5),
+  ('Marketplace', 'marketplace', 'Productos nuevos, usados, ofertas y promociones', 6),
+  ('Electronica', 'electronica', 'Audio, video, consolas, camaras y tecnologia', 7),
+  ('Celulares y accesorios', 'celulares-y-accesorios', 'Telefonos, cargadores, repuestos y accesorios', 8),
+  ('Computadoras y tablets', 'computadoras-y-tablets', 'Laptops, tablets, partes y accesorios', 9),
+  ('Hogar y muebles', 'hogar-y-muebles', 'Muebles, decoracion, electrodomesticos y hogar', 10),
+  ('Moda y accesorios', 'moda-y-accesorios', 'Ropa, calzado, relojes, carteras y accesorios', 11),
+  ('Bebes y ninos', 'bebes-y-ninos', 'Coches, juguetes, ropa y articulos infantiles', 12),
+  ('Mascotas', 'mascotas', 'Mascotas, alimentos, accesorios y servicios', 13),
+  ('Deportes', 'deportes', 'Articulos deportivos, bicicletas y equipos', 14),
+  ('Salud y belleza', 'salud-y-belleza', 'Cuidado personal, bienestar y productos de belleza', 15),
+  ('Estetica integral', 'estetica-integral', 'Belleza, cuidado facial, corporal y bienestar', 16),
+  ('Educacion y cursos', 'educacion-y-cursos', 'Cursos, clases, capacitaciones y tutores', 17),
+  ('Herramientas y construccion', 'herramientas-y-construccion', 'Herramientas, materiales, obra y remodelacion', 18),
+  ('Negocios e industria', 'negocios-e-industria', 'Equipos, inventario, maquinaria y oportunidades', 19),
+  ('Eventos y entretenimiento', 'eventos-y-entretenimiento', 'Musica, fiestas, eventos, arte y entretenimiento', 20),
+  ('Gratis y donaciones', 'gratis-y-donaciones', 'Articulos gratis, cambios y donaciones', 21),
+  ('Nineras y cuidado', 'nineras-y-cuidado', 'Cuidado infantil, adultos mayores y asistencia en casa', 22),
+  ('Limpieza del hogar', 'limpieza-del-hogar', 'Limpieza de casas, apartamentos y oficinas', 23),
+  ('Prestamos personales', 'prestamos-personales', 'Prestamos, financiamiento y consolidacion', 24),
+  ('Hospedajes', 'hospedajes', 'Alquileres temporales, habitaciones y estadias', 25)
 on conflict (slug) do nothing;
 
 insert into public.banners (title, subtitle, cta_label, cta_url, placement, status, sort_order)

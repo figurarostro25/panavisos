@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { locationSuggestions } from "@/lib/locations";
 import { money, provinces } from "@/lib/format";
+import { getPublishCategoryGroups } from "@/lib/publishCategories";
 import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
 
 const DEFAULT_MAX_IMAGES = 5;
@@ -42,6 +43,8 @@ export default function PublicarPage() {
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [step, setStep] = useState(1);
+  const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
+  const [categoryGroupKey, setCategoryGroupKey] = useState("");
   const [editingId, setEditingId] = useState("");
   const [locationOpen, setLocationOpen] = useState(false);
   const [selectedLocationKey, setSelectedLocationKey] = useState("");
@@ -59,7 +62,6 @@ export default function PublicarPage() {
       .then((payload) => {
         const nextCategories = payload.categories || [];
         setCategories(nextCategories);
-        setForm((current) => ({ ...current, category_id: current.category_id || nextCategories[0]?.id || "" }));
       });
 
     fetch("/api/config")
@@ -141,6 +143,7 @@ export default function PublicarPage() {
   }
 
   const selectedCategory = categories.find((category) => category.id === form.category_id);
+  const publishCategoryGroups = useMemo(() => getPublishCategoryGroups(categories), [categories]);
   const isRealEstate = selectedCategory?.slug === "bienes-raices";
 
   const locationMatches = useMemo(() => {
@@ -175,6 +178,12 @@ export default function PublicarPage() {
       bathrooms: nextCategory?.slug === "bienes-raices" ? form.bathrooms : "",
       area_m2: nextCategory?.slug === "bienes-raices" ? form.area_m2 : ""
     });
+  }
+
+  function selectCategory(categoryId) {
+    setCategory(categoryId);
+    setCategoryPickerOpen(false);
+    setCategoryGroupKey("");
   }
 
   function chooseLocation(location) {
@@ -326,7 +335,7 @@ export default function PublicarPage() {
 
   return (
     <>
-      <header className="topbar marketplace-topbar">
+      <header className="topbar marketplace-topbar publish-topbar">
         <Link className="brand" href="/">
           <span className="brand-mark">PA</span>
           <span>
@@ -344,8 +353,9 @@ export default function PublicarPage() {
         <form className="publish-form" onSubmit={submitListing}>
           <div className="publish-head">
             <div>
-              <span className="eyebrow">Marketplace</span>
-              <h1>Articulo en venta</h1>
+              <span className="eyebrow">Publicar en PanAvisos</span>
+              <h1>{editingId ? "Editar anuncio" : "Crear anuncio"}</h1>
+              {!editingId ? <p className="muted publish-head-copy">Elige una categoria y agrega los detalles de tu anuncio.</p> : null}
               {editingId ? <p className="muted">Editando publicacion existente</p> : null}
             </div>
           </div>
@@ -367,6 +377,21 @@ export default function PublicarPage() {
 
           {currentStep === 1 ? (
             <div className="step-pane">
+              <div className="field publish-category-field">
+                <span>Categoria</span>
+                <button
+                  className={`category-picker-trigger ${selectedCategory ? "selected" : ""}`}
+                  type="button"
+                  onClick={() => {
+                    setCategoryGroupKey("");
+                    setCategoryPickerOpen(true);
+                  }}
+                >
+                  <span>{selectedCategory?.name || "Selecciona una categoria"}</span>
+                  <small>{selectedCategory ? "Cambiar" : "Elegir"}</small>
+                </button>
+              </div>
+
               <PhotoUploader
                 images={form.images}
                 maxImages={maxImages}
@@ -385,17 +410,7 @@ export default function PublicarPage() {
                 <input required type="number" value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} />
               </label>
 
-              <div className="field-row">
-                <label className="field">
-                  <span>Categoria</span>
-                  <select required value={form.category_id} onChange={(event) => setCategory(event.target.value)}>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+              <div className="field-row publish-operation-row">
                 <label className="field">
                   <span>Tipo</span>
                   <select value={form.operation} onChange={(event) => setForm({ ...form, operation: event.target.value })}>
@@ -589,7 +604,75 @@ export default function PublicarPage() {
           </div>
         </section>
       </main>
+      {categoryPickerOpen ? (
+        <CategoryPicker
+          groups={publishCategoryGroups}
+          activeGroupKey={categoryGroupKey}
+          selectedCategoryId={form.category_id}
+          onClose={() => {
+            setCategoryPickerOpen(false);
+            setCategoryGroupKey("");
+          }}
+          onOpenGroup={setCategoryGroupKey}
+          onBack={() => setCategoryGroupKey("")}
+          onSelect={selectCategory}
+        />
+      ) : null}
     </>
+  );
+}
+
+function CategoryPicker({ groups, activeGroupKey, selectedCategoryId, onClose, onOpenGroup, onBack, onSelect }) {
+  const activeGroup = groups.find((group) => group.key === activeGroupKey);
+
+  return (
+    <div className="category-picker-modal" role="dialog" aria-modal="true" aria-labelledby="category-picker-title">
+      <button className="category-picker-backdrop" type="button" onClick={onClose} aria-label="Cerrar selector de categoria" />
+      <section className="category-picker-sheet">
+        <div className="category-picker-handle" aria-hidden="true" />
+        <header className="category-picker-header">
+          {activeGroup ? <button className="category-picker-back" type="button" onClick={onBack} aria-label="Volver a categorias">&lt;</button> : null}
+          <div>
+            <span className="eyebrow">{activeGroup ? "Categoria principal" : "Nueva publicacion"}</span>
+            <h2 id="category-picker-title">{activeGroup ? activeGroup.label : "Seleccionar categoria"}</h2>
+          </div>
+          <button className="category-picker-close" type="button" onClick={onClose} aria-label="Cerrar">X</button>
+        </header>
+
+        {activeGroup ? (
+          <div className="category-picker-sections">
+            {activeGroup.sections.map((section) => (
+              <section key={section.label} className="category-picker-section">
+                <h3>{section.label}</h3>
+                <div className="category-picker-options">
+                  {section.categories.map((category) => (
+                    <button
+                      className={category.id === selectedCategoryId ? "selected" : ""}
+                      type="button"
+                      key={category.id}
+                      onClick={() => onSelect(category.id)}
+                    >
+                      <span>{category.name}</span>
+                      <small>{category.description}</small>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        ) : (
+          <div className="category-group-grid">
+            {groups.map((group) => (
+              <button type="button" key={group.key} onClick={() => onOpenGroup(group.key)}>
+                <strong>{group.label}</strong>
+                <span>{group.description}</span>
+                <small>Ver categorias &gt;</small>
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
   );
 }
 
