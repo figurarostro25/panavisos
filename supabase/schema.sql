@@ -189,6 +189,29 @@ values
   ('Hospedajes', 'hospedajes', 'Alquileres temporales, habitaciones y estadias', 25)
 on conflict (slug) do nothing;
 
+-- Categorias especificas para Marketplace y servicios que se agregan sin alterar las existentes.
+insert into public.categories (name, slug, description, sort_order)
+values
+  ('Cuidado de adultos mayores', 'cuidado-adultos-mayores', 'Acompanamiento y cuidado de adultos mayores', 26),
+  ('Electronica y audio', 'electronica-y-audio', 'Audio, video, fotografia y electronica', 27),
+  ('Jardineria', 'jardineria', 'Plantas, jardineria y equipos para exteriores', 28),
+  ('Electrodomesticos', 'electrodomesticos', 'Electrodomesticos y equipos para el hogar', 29),
+  ('Deportes y aire libre', 'deportes-aire-libre', 'Articulos deportivos y actividades al aire libre', 30),
+  ('Instrumentos musicales', 'instrumentos-musicales', 'Instrumentos, equipos y accesorios musicales', 31),
+  ('Arte y manualidades', 'arte-manualidades', 'Arte, materiales y proyectos creativos', 32),
+  ('Antiguedades y coleccion', 'antiguedades-coleccion', 'Antiguedades, coleccionables y articulos especiales', 33),
+  ('Autopartes', 'autopartes', 'Repuestos, piezas y accesorios para vehiculos', 34),
+  ('Bicicletas', 'bicicletas', 'Bicicletas, repuestos y accesorios', 35),
+  ('Libros, peliculas y musica', 'libros-peliculas-musica', 'Libros, peliculas, musica y medios', 36),
+  ('Videojuegos', 'videojuegos', 'Consolas, juegos y accesorios', 37),
+  ('Joyas y accesorios', 'joyas-accesorios', 'Joyas, relojes y accesorios personales', 38),
+  ('Bolsos y equipaje', 'bolsos-equipaje', 'Bolsos, maletas y equipaje', 39),
+  ('Ropa y calzado de hombre', 'ropa-calzado-hombre', 'Ropa, zapatos y accesorios para hombre', 40),
+  ('Ropa y calzado de mujer', 'ropa-calzado-mujer', 'Ropa, zapatos y accesorios para mujer', 41),
+  ('Juguetes y juegos', 'juguetes-juegos', 'Juguetes, juegos de mesa y entretenimiento familiar', 42),
+  ('Venta de garaje', 'venta-de-garaje', 'Articulos variados de venta de garaje', 43)
+on conflict (slug) do nothing;
+
 insert into public.banners (title, subtitle, cta_label, cta_url, placement, status, sort_order)
 select *
 from (
