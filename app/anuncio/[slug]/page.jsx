@@ -204,7 +204,7 @@ function ListingMiniWeb({ listing, sellerListings = [] }) {
                   Ver mas anuncios
                 </Link>
               ) : null}
-              <Link className="secondary compact-link" href="/">
+              <Link className="secondary compact-link" href="/?ver_todos=1">
                 Ver todos los anuncios
               </Link>
             </div>

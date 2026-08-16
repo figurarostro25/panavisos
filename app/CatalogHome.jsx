@@ -132,6 +132,7 @@ export function CatalogHome({ section = "home" }) {
   const [activeBanner, setActiveBanner] = useState(0);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [filters, setFilters] = useState(emptyFilters);
+  const [showAllListings, setShowAllListings] = useState(false);
   const [searchArea, setSearchArea] = useState(null);
   const [searchAreaOpen, setSearchAreaOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -144,6 +145,12 @@ export function CatalogHome({ section = "home" }) {
       if (savedArea?.label && savedArea?.radius) setSearchArea(savedArea);
     } catch {
       window.localStorage.removeItem(searchAreaCacheKey);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("ver_todos") === "1") {
+      setShowAllListings(true);
     }
   }, []);
 
@@ -260,7 +267,7 @@ export function CatalogHome({ section = "home" }) {
     const q = normalize(filters.q);
     const min = Number(filters.min || 0);
     const max = Number(filters.max || Number.MAX_SAFE_INTEGER);
-    const hasExplicitFilter = Object.values(filters).some(Boolean) || Boolean(searchArea);
+    const hasExplicitFilter = Object.values(filters).some(Boolean) || Boolean(searchArea) || showAllListings;
     const sourceListings =
       section === "properties"
         ? propertyListings
@@ -284,7 +291,7 @@ export function CatalogHome({ section = "home" }) {
         Number(listing.price) <= max
       );
     });
-  }, [data.listings, filters, marketplaceListings, propertyListings, searchArea, section]);
+  }, [data.listings, filters, marketplaceListings, propertyListings, searchArea, section, showAllListings]);
 
   const featured = listings.filter((listing) => listing.featured).slice(0, 6);
   const featuredListingIds = new Set(featured.map((listing) => listing.id));
@@ -329,11 +336,24 @@ export function CatalogHome({ section = "home" }) {
 
   function clearAllFilters() {
     setFilters(emptyFilters);
+    setShowAllListings(false);
     saveSearchArea(null);
+  }
+
+  function showAllCatalog() {
+    setFilters(emptyFilters);
+    setShowAllListings(true);
+    saveSearchArea(null);
+    setMobileFiltersOpen(false);
+    setSelected(null);
+    window.requestAnimationFrame(() => {
+      document.getElementById("anuncios")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   }
 
   function applyCategory(categoryId = "") {
     setFilters((current) => ({ ...current, category: categoryId }));
+    setShowAllListings(false);
     setMobileFiltersOpen(false);
     document.getElementById("anuncios")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -346,6 +366,7 @@ export function CatalogHome({ section = "home" }) {
       q: need.query || ""
     });
     setMobileFiltersOpen(false);
+    setShowAllListings(false);
     document.getElementById("anuncios")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -699,6 +720,7 @@ export function CatalogHome({ section = "home" }) {
           listing={selected}
           profile={profile}
           sellerListingCount={(data.listings || []).filter((item) => item.user_id && item.user_id === selected.user_id).length}
+          onShowAllListings={showAllCatalog}
           onRequireAccount={() => setAccountOpen(true)}
           onClose={() => setSelected(null)}
         />
@@ -1584,7 +1606,7 @@ function ListingCard({ listing, onSelect }) {
   );
 }
 
-function ListingDetail({ listing, profile, sellerListingCount, onRequireAccount, onClose }) {
+function ListingDetail({ listing, profile, sellerListingCount, onShowAllListings, onRequireAccount, onClose }) {
   const [activeImage, setActiveImage] = useState(0);
   const [copied, setCopied] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
@@ -1765,9 +1787,9 @@ function ListingDetail({ listing, profile, sellerListingCount, onRequireAccount,
                         Ver mas anuncios
                       </Link>
                     ) : null}
-                    <Link className="secondary compact-link" href="/">
+                    <button className="secondary compact-link" type="button" onClick={onShowAllListings}>
                       Ver todos los anuncios
-                    </Link>
+                    </button>
                   </div>
                 </div>
               </div>
