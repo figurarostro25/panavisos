@@ -5627,3 +5627,8 @@ button:disabled {
     height: 208px;
   }
 }
+
+/* Keep the home focused until popular searches are backed by real demand data. */
+.market-home-home .needs-band {
+  display: none;
+}
