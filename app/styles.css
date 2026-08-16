@@ -3645,6 +3645,7 @@ button:disabled {
 }
 
 .listing-detail-section h3,
+.listing-detail-section h2,
 .listing-detail-section p {
   margin: 0;
 }

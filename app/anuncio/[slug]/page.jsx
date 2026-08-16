@@ -187,6 +187,11 @@ function ListingMiniWeb({ listing, sellerListings = [] }) {
         <h2>Descripcion</h2>
         <p>{listing.description}</p>
 
+        <section className="listing-detail-section location-details">
+          <h2>Ubicacion</h2>
+          <p className="muted">{listing.address_reference || `${listing.district}, ${listing.province}`}</p>
+        </section>
+
         <div className="seller-panel">
           <span className="avatar-badge">{initials(sellerName)}</span>
           <div className="seller-panel-content">
