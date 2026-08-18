@@ -20,6 +20,7 @@ const emptyForm = {
   title: "",
   category_id: "",
   operation: "Venta",
+  item_condition: "",
   price: "",
   original_price: "",
   discount_percent: "",
@@ -43,8 +44,7 @@ export default function PublicarPage() {
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [step, setStep] = useState(1);
-  const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
-  const [categoryGroupKey, setCategoryGroupKey] = useState("");
+  const [publishGroupKey, setPublishGroupKey] = useState("");
   const [editingId, setEditingId] = useState("");
   const [locationOpen, setLocationOpen] = useState(false);
   const [selectedLocationKey, setSelectedLocationKey] = useState("");
@@ -144,7 +144,13 @@ export default function PublicarPage() {
 
   const selectedCategory = categories.find((category) => category.id === form.category_id);
   const publishCategoryGroups = useMemo(() => getPublishCategoryGroups(categories), [categories]);
+  const selectedPublishGroup = useMemo(
+    () => publishCategoryGroups.find((group) => categoryBelongsToGroup(form.category_id, group)),
+    [form.category_id, publishCategoryGroups]
+  );
+  const activePublishGroup = publishCategoryGroups.find((group) => group.key === publishGroupKey) || selectedPublishGroup || null;
   const isRealEstate = selectedCategory?.slug === "bienes-raices";
+  const hasItemCondition = selectedPublishGroup ? ["article", "vehicle"].includes(selectedPublishGroup.key) : false;
 
   const locationMatches = useMemo(() => {
     const query = normalize(form.district);
@@ -180,10 +186,17 @@ export default function PublicarPage() {
     });
   }
 
-  function selectCategory(categoryId) {
-    setCategory(categoryId);
-    setCategoryPickerOpen(false);
-    setCategoryGroupKey("");
+  function choosePublishGroup(group) {
+    setPublishGroupKey(group.key);
+    setForm((current) => ({
+      ...current,
+      category_id: categoryBelongsToGroup(current.category_id, group) ? current.category_id : "",
+      operation: group.operation || current.operation,
+      item_condition: ["article", "vehicle"].includes(group.key) ? current.item_condition : "",
+      bedrooms: group.key === "property" ? current.bedrooms : "",
+      bathrooms: group.key === "property" ? current.bathrooms : "",
+      area_m2: group.key === "property" ? current.area_m2 : ""
+    }));
   }
 
   function chooseLocation(location) {
@@ -199,8 +212,8 @@ export default function PublicarPage() {
 
   function goNext() {
     setError("");
-    if (currentStep === 1 && (!form.title || !form.price || !form.category_id || !form.description)) {
-      setError("Completa titulo, precio, categoria y descripcion.");
+    if (currentStep === 1 && (!form.title || !form.price || !form.category_id || !form.description || (hasItemCondition && !form.item_condition))) {
+      setError(hasItemCondition ? "Completa titulo, precio, categoria, estado y descripcion." : "Completa titulo, precio, categoria y descripcion.");
       return;
     }
 
@@ -307,6 +320,7 @@ export default function PublicarPage() {
       bedrooms: isRealEstate ? form.bedrooms : "",
       bathrooms: isRealEstate ? form.bathrooms : "",
       area_m2: isRealEstate ? form.area_m2 : "",
+      item_condition: hasItemCondition ? form.item_condition : "",
       advertiser_name: profile?.name || session.user.email,
       advertiser_email: session.user.email,
       advertiser_phone: form.whatsapp || "",
@@ -377,20 +391,13 @@ export default function PublicarPage() {
 
           {currentStep === 1 ? (
             <div className="step-pane">
-              <div className="field publish-category-field">
-                <span>Categoria</span>
-                <button
-                  className={`category-picker-trigger ${selectedCategory ? "selected" : ""}`}
-                  type="button"
-                  onClick={() => {
-                    setCategoryGroupKey("");
-                    setCategoryPickerOpen(true);
-                  }}
-                >
-                  <span>{selectedCategory?.name || "Selecciona una categoria"}</span>
-                  <small>{selectedCategory ? "Cambiar" : "Elegir"}</small>
-                </button>
-              </div>
+              <PublishCategoryChooser
+                groups={publishCategoryGroups}
+                activeGroupKey={activePublishGroup?.key || ""}
+                selectedCategoryId={form.category_id}
+                onGroupSelect={choosePublishGroup}
+                onCategorySelect={setCategory}
+              />
 
               <PhotoUploader
                 images={form.images}
@@ -421,6 +428,19 @@ export default function PublicarPage() {
                   </select>
                 </label>
               </div>
+
+              {hasItemCondition ? (
+                <label className="field">
+                  <span>Estado</span>
+                  <select required value={form.item_condition} onChange={(event) => setForm({ ...form, item_condition: event.target.value })}>
+                    <option value="">Selecciona estado</option>
+                    <option>Nuevo</option>
+                    <option>Usado - Como nuevo</option>
+                    <option>Usado - Buen estado</option>
+                    <option>Usado - Aceptable</option>
+                  </select>
+                </label>
+              ) : null}
 
               {form.operation === "Oferta" ? (
                 <label className="field">
@@ -604,74 +624,54 @@ export default function PublicarPage() {
           </div>
         </section>
       </main>
-      {categoryPickerOpen ? (
-        <CategoryPicker
-          groups={publishCategoryGroups}
-          activeGroupKey={categoryGroupKey}
-          selectedCategoryId={form.category_id}
-          onClose={() => {
-            setCategoryPickerOpen(false);
-            setCategoryGroupKey("");
-          }}
-          onOpenGroup={setCategoryGroupKey}
-          onBack={() => setCategoryGroupKey("")}
-          onSelect={selectCategory}
-        />
-      ) : null}
     </>
   );
 }
 
-function CategoryPicker({ groups, activeGroupKey, selectedCategoryId, onClose, onOpenGroup, onBack, onSelect }) {
+function PublishCategoryChooser({ groups, activeGroupKey, selectedCategoryId, onGroupSelect, onCategorySelect }) {
   const activeGroup = groups.find((group) => group.key === activeGroupKey);
 
   return (
-    <div className="category-picker-modal" role="dialog" aria-modal="true" aria-labelledby="category-picker-title">
-      <button className="category-picker-backdrop" type="button" onClick={onClose} aria-label="Cerrar selector de categoria" />
-      <section className="category-picker-sheet">
-        <div className="category-picker-handle" aria-hidden="true" />
-        <header className="category-picker-header">
-          {activeGroup ? <button className="category-picker-back" type="button" onClick={onBack} aria-label="Volver a categorias">&lt;</button> : null}
-          <div>
-            <span className="eyebrow">{activeGroup ? "Categoria principal" : "Nueva publicacion"}</span>
-            <h2 id="category-picker-title">{activeGroup ? activeGroup.label : "Seleccionar categoria"}</h2>
-          </div>
-          <button className="category-picker-close" type="button" onClick={onClose} aria-label="Cerrar">X</button>
-        </header>
+    <div className="publish-category-chooser">
+      <div className="publish-section-heading">
+        <span>Tipo de publicacion</span>
+      </div>
+      <div className="publish-type-grid">
+        {groups.map((group) => (
+          <button
+            className={group.key === activeGroupKey ? "selected" : ""}
+            type="button"
+            key={group.key}
+            onClick={() => onGroupSelect(group)}
+          >
+            <strong>{group.label}</strong>
+            <span>{group.description}</span>
+          </button>
+        ))}
+      </div>
 
-        {activeGroup ? (
-          <div className="category-picker-sections">
-            {activeGroup.sections.map((section) => (
-              <section key={section.label} className="category-picker-section">
-                <h3>{section.label}</h3>
-                <div className="category-picker-options">
-                  {section.categories.map((category) => (
-                    <button
-                      className={category.id === selectedCategoryId ? "selected" : ""}
-                      type="button"
-                      key={category.id}
-                      onClick={() => onSelect(category.id)}
-                    >
-                      <span>{category.name}</span>
-                      <small>{category.description}</small>
-                    </button>
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
-        ) : (
-          <div className="category-group-grid">
-            {groups.map((group) => (
-              <button type="button" key={group.key} onClick={() => onOpenGroup(group.key)}>
-                <strong>{group.label}</strong>
-                <span>{group.description}</span>
-                <small>Ver categorias &gt;</small>
-              </button>
-            ))}
-          </div>
-        )}
-      </section>
+      {activeGroup ? (
+        <div className="publish-subcategory-panel">
+          {activeGroup.sections.map((section) => (
+            <section key={section.label} className="publish-subcategory-section">
+              <h3>{section.label}</h3>
+              <div className="publish-subcategory-list">
+                {section.categories.map((category) => (
+                  <button
+                    className={category.id === selectedCategoryId ? "selected" : ""}
+                    type="button"
+                    key={category.id}
+                    onClick={() => onCategorySelect(category.id)}
+                  >
+                    <span>{category.name}</span>
+                    <small>{category.description}</small>
+                  </button>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -734,6 +734,11 @@ function normalize(value) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
+function categoryBelongsToGroup(categoryId, group) {
+  if (!categoryId || !group) return false;
+  return group.sections.some((section) => section.categories.some((category) => category.id === categoryId));
+}
+
 function listingToForm(listing) {
   const images = [...(listing.images || [])]
     .sort((a, b) => a.position - b.position)
@@ -747,6 +752,7 @@ function listingToForm(listing) {
     price: listing.price ?? "",
     original_price: listing.original_price ?? "",
     discount_percent: listing.discount_percent ?? "",
+    item_condition: listing.item_condition || "",
     province: listing.province || "Panama",
     district: listing.district || "",
     address_reference: listing.address_reference || "",
