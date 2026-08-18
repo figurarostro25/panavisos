@@ -957,7 +957,9 @@ function PublishCategoryChooser({
           }}
         >
           <option value="">Selecciona una categoría</option>
-          {groups.flatMap((group) => group.sections.map((section) => (
+          {[...groups]
+            .sort((a, b) => desktopCategoryOrder[a.key] - desktopCategoryOrder[b.key])
+            .flatMap((group) => group.sections.map((section) => (
             <optgroup key={`${group.key}-${section.label}`} label={`${group.label}: ${section.label}`}>
               {section.categories.map((category) => (
                 <option key={category.id} value={category.id}>{category.name}</option>
@@ -1078,6 +1080,14 @@ function getMissingPublishFields(form) {
     { key: "description", label: "descripción", missing: !form.description.trim() }
   ].filter((field) => field.missing);
 }
+
+const desktopCategoryOrder = {
+  property: 0,
+  work: 1,
+  services: 2,
+  article: 3,
+  vehicle: 4
+};
 
 function formatMissingPublishFields(fields) {
   if (fields.length === 1) {
