@@ -479,11 +479,6 @@ export function CatalogHome({ section = "home" }) {
     () => catalogListings.filter((listing) => isServiceCategory(listing.category)),
     [catalogListings]
   );
-  const nearbyMarketplaceListings = useMemo(
-    () => marketplaceListings.filter((listing) => listingMatchesSearchArea(listing, searchArea)),
-    [marketplaceListings, searchArea]
-  );
-
   useEffect(() => {
     if (!data.categories?.length) return;
     const categorySlug = new URLSearchParams(window.location.search).get("categoria");
@@ -612,7 +607,7 @@ export function CatalogHome({ section = "home" }) {
         onOpenAccount={() => setAccountOpen((current) => !current)}
         onLogout={logoutProfile}
       />
-      <main className="market-home">
+      <main className={`market-home ${section === "home" ? "home-market-home" : ""}`}>
         {heroBanners.length ? (
           <section className="home-band hero-banner-band" aria-label="Publicidad patrocinada">
             <div className="sponsored-heading">
@@ -638,6 +633,12 @@ export function CatalogHome({ section = "home" }) {
           </section>
         ) : null}
 
+        {section === "home" ? (
+          <section className="home-band mobile-home-intro">
+            <h1>Encuentra y anuncia en Panamá</h1>
+          </section>
+        ) : null}
+
         {section === "home" ? <HomeQuickCategories /> : null}
 
         <section className="home-band universal-search-band">
@@ -654,6 +655,7 @@ export function CatalogHome({ section = "home" }) {
                 onChange={(event) => setFilters({ ...filters, q: event.target.value })}
                 placeholder={sectionCopy.placeholder}
               />
+              <span className="mobile-search-symbol" aria-hidden="true">⌕</span>
             </label>
             <label className="field">
               <span>Categoría</span>
@@ -802,12 +804,12 @@ export function CatalogHome({ section = "home" }) {
           <section className="market-results">
             <div className="toolbar">
               <div>
-                <strong>{sectionCopy.resultsTitle}</strong>
+                <strong>{section === "home" ? "Destacados de hoy" : sectionCopy.resultsTitle}</strong>
                 {!loading && !catalogError ? <span className="muted"> - {listings.length} anuncios</span> : null}
               </div>
               <div className="listing-tools">
                 <button className="mobile-location-toggle" type="button" onClick={() => setSearchAreaOpen(true)}>
-                  {searchArea ? `${searchArea.label} · ${searchArea.radius} km` : "Elegir zona"}
+                  {searchArea ? `${searchArea.label} · ${searchArea.radius} km` : "Todo Panamá"}
                 </button>
                 <button
                   className="mobile-filter-toggle"
@@ -840,15 +842,15 @@ export function CatalogHome({ section = "home" }) {
               </div>
             ) : orderedListings.length || (!loading && listings.length === 0) ? (
               <>
-                <h2 className="block-title listing-feed-title">
-                  {section === "properties"
-                    ? "Propiedades disponibles"
-                    : section === "marketplace" && listingGroup === "servicios"
-                      ? "Servicios y empleos"
-                      : section === "marketplace"
-                        ? "Anuncios de Marketplace"
-                        : "Destacados y anuncios recientes"}
-                </h2>
+                {section !== "home" ? (
+                  <h2 className="block-title listing-feed-title">
+                    {section === "properties"
+                      ? "Propiedades disponibles"
+                      : section === "marketplace" && listingGroup === "servicios"
+                        ? "Servicios y empleos"
+                        : "Anuncios de Marketplace"}
+                  </h2>
+                ) : null}
                 {!loading && listings.length === 0 ? (
                   <div className="notice">Todavía no hay anuncios con esos filtros.</div>
                 ) : (
@@ -862,24 +864,6 @@ export function CatalogHome({ section = "home" }) {
             ) : null}
           </section>
         </section>
-
-        {section === "home" && nearbyMarketplaceListings.length ? (
-          <section className="home-band marketplace-preview-band" aria-labelledby="marketplace-preview-title">
-            <div className="section-head">
-              <div>
-                <span className="eyebrow dark-eyebrow">Marketplace</span>
-                <h2 id="marketplace-preview-title">Más oportunidades cerca de ti</h2>
-                <p>Vehículos, empleos, servicios y productos publicados recientemente.</p>
-              </div>
-              <Link className="secondary" href="/marketplace">Ver Marketplace</Link>
-            </div>
-            <div className="grid marketplace-preview-grid">
-              {nearbyMarketplaceListings.slice(0, 4).map((listing) => (
-                <ListingCard key={listing.id} listing={listing} onSelect={setSelected} />
-              ))}
-            </div>
-          </section>
-        ) : null}
 
         {section === "home" ? (
           <div className="desktop-home-category-directory">
@@ -1421,10 +1405,14 @@ function Topbar({ profile, categories = [], section, accountOpen, inquiryCount =
   }
 
   return (
-    <header className={`topbar marketplace-topbar ${menuOpen ? "menu-open" : ""} ${accountOpen ? "account-open" : ""} ${scrolled ? "is-scrolled" : ""}`}>
+    <header className={`topbar marketplace-topbar ${section === "home" ? "home-topbar" : ""} ${menuOpen ? "menu-open" : ""} ${accountOpen ? "account-open" : ""} ${scrolled ? "is-scrolled" : ""}`}>
       <div className="topbar-inner">
         <Link className="brand" href="/">
           <img className="brand-logo" src="/brand/panavisos-logo.svg" alt="PanAvisos" />
+          <span className="mobile-brand" aria-hidden="true">
+            <img src="/brand/panavisos-mark.svg" alt="" />
+            <strong>PanAvisos</strong>
+          </span>
         </Link>
         <nav className="main-menu" aria-label="Categorías principales">
           <Link className={section === "properties" ? "active" : ""} href="/propiedades">
