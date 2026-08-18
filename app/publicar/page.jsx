@@ -9,6 +9,13 @@ import { getPublishCategoryGroups } from "@/lib/publishCategories";
 import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
 
 const DEFAULT_MAX_IMAGES = 5;
+const POPULAR_CATEGORY_SLUGS = [
+  "bienes-raices",
+  "tramites-financieros",
+  "tramites-legales",
+  "servicios-profesionales",
+  "empleos"
+];
 
 function defaultExpiresAt() {
   const date = new Date();
@@ -144,6 +151,10 @@ export default function PublicarPage() {
   }
 
   const selectedCategory = categories.find((category) => category.id === form.category_id);
+  const popularCategories = useMemo(
+    () => POPULAR_CATEGORY_SLUGS.map((slug) => categories.find((category) => category.slug === slug)).filter(Boolean),
+    [categories]
+  );
   const publishCategoryGroups = useMemo(() => getPublishCategoryGroups(categories), [categories]);
   const selectedPublishGroup = useMemo(
     () => publishCategoryGroups.find((group) => categoryBelongsToGroup(form.category_id, group)),
@@ -443,6 +454,15 @@ export default function PublicarPage() {
                   <span>Categoria</span>
                   <select required value={form.category_id} onChange={(event) => setCategory(event.target.value)}>
                     <option value="">Selecciona una categoria</option>
+                    {popularCategories.length ? (
+                      <optgroup label="Mas populares">
+                        {popularCategories.map((category) => (
+                          <option key={`popular-${category.id}`} value={category.id}>
+                            {category.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ) : null}
                     {publishCategoryGroups.map((group) => (
                       <optgroup key={group.key} label={group.label}>
                         {group.sections.flatMap((section) => section.categories).map((category) => (
