@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+﻿import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
@@ -33,7 +33,7 @@ export async function generateMetadata({ params }) {
       }
     };
   } catch {
-    return { title: "Anuncio en Panama | PanAvisos" };
+    return { title: "Anuncio en Panamá | PanAvisos" };
   }
 }
 

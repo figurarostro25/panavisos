@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -29,15 +29,11 @@ export default function SellerPage() {
     <>
       <header className="topbar">
         <Link className="brand" href="/">
-          <span className="brand-mark">PA</span>
-          <span>
-            <strong>PanAvisos</strong>
-            <small>Anuncios de Panama</small>
-          </span>
+          <img className="brand-logo" src="/brand/panavisos-logo.svg" alt="PanAvisos" />
         </Link>
         <nav className="admin-actions">
           <Link className="nav-link" href="/">
-            Catalogo
+            Catálogo
           </Link>
           <Link className="primary small-action" href="/publicar">
             Publicar
@@ -51,20 +47,33 @@ export default function SellerPage() {
         {!loading && !error ? (
           <>
             <section className="seller-hero">
-              <span className="avatar-badge large">{initials(sellerName)}</span>
+              {payload.profile?.avatar_url ? (
+                <img className="profile-photo seller-profile-photo" src={payload.profile.avatar_url} alt="" />
+              ) : (
+                <span className="avatar-badge large">{initials(sellerName)}</span>
+              )}
               <div>
                 <span className="eyebrow">Vendedor</span>
                 <h1>{sellerName}</h1>
-                {payload.profile?.bio ? <p className="seller-public-bio">{payload.profile.bio}</p> : null}
-                <p className="muted">{payload.listings.length} anuncios activos en PanAvisos.</p>
+                {payload.profile?.profession ? <p className="profile-profession">{payload.profile.profession}</p> : null}
+                <p className="muted">{payload.listings.length} anuncios visibles en PanAvisos.</p>
+                {payload.profile?.bio ? <p className="profile-bio seller-profile-bio">{payload.profile.bio}</p> : null}
+                <div className="seller-profile-links">
+                  {payload.profile?.website_url ? (
+                    <a className="secondary compact-link" href={payload.profile.website_url} target="_blank" rel="noreferrer">
+                      Sitio web
+                    </a>
+                  ) : null}
+                  {payload.profile?.interests ? <span className="fact">{payload.profile.interests}</span> : null}
+                </div>
               </div>
             </section>
 
             <section className="seller-more">
               <div className="section-heading">
-                <h2>Anuncios activos</h2>
+                <h2>Anuncios visibles</h2>
                 <Link className="secondary compact-link" href="/">
-                  Ver catalogo
+                  Ver catálogo
                 </Link>
               </div>
               <div className="public-card-grid">
@@ -72,7 +81,7 @@ export default function SellerPage() {
                   <PublicListingCard listing={listing} key={listing.id} />
                 ))}
               </div>
-              {!payload.listings.length ? <p className="muted">Este vendedor no tiene anuncios activos por ahora.</p> : null}
+              {!payload.listings.length ? <p className="muted">Este vendedor no tiene anuncios visibles por ahora.</p> : null}
             </section>
           </>
         ) : null}
@@ -83,10 +92,14 @@ export default function SellerPage() {
 
 function PublicListingCard({ listing }) {
   const image = [...(listing.images || [])].sort((a, b) => a.position - b.position)[0]?.url;
+  const closed = closedStatus(listing.status);
 
   return (
     <Link className="public-listing-card" href={`/anuncio/${listing.slug}`}>
-      {image ? <img src={image} alt="" /> : <span className="mini-image-placeholder">PA</span>}
+      <span className="public-card-media">
+        {image ? <img src={image} alt="" /> : <span className="mini-image-placeholder">A</span>}
+        {closed ? <span className={`small-status-ribbon ${listing.status}`}>{closed}</span> : null}
+      </span>
       <strong>{money(listing.price)}</strong>
       <span>{listing.title}</span>
       <small>{listing.district}, {listing.province}</small>
@@ -94,8 +107,14 @@ function PublicListingCard({ listing }) {
   );
 }
 
+function closedStatus(status) {
+  if (status === "sold") return "Vendido";
+  if (status === "rented") return "Alquilado";
+  return "";
+}
+
 function initials(value) {
-  return String(value || "PA")
+  return String(value || "A")
     .trim()
     .split(/\s+/)
     .slice(0, 2)

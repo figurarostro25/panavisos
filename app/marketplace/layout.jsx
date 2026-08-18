@@ -1,11 +1,11 @@
-export const metadata = {
-  title: "Marketplace de Panama | Vehiculos, empleos y servicios | PanAvisos",
+﻿export const metadata = {
+  title: "Marketplace de Panamá | Vehiculos, empleos y servicios | PanAvisos",
   description:
-    "Compra, vende y encuentra vehiculos, empleos, servicios, productos y oportunidades locales en Panama.",
+    "Compra, vende y encuentra vehículos, empleos, servicios, productos y oportunidades locales en Panamá.",
   alternates: { canonical: "/marketplace" },
   openGraph: {
-    title: "Marketplace de Panama | PanAvisos",
-    description: "Clasificados de vehiculos, empleos, servicios y productos en Panama.",
+    title: "Marketplace de Panamá | PanAvisos",
+    description: "Clasificados de vehículos, empleos, servicios y productos en Panamá.",
     type: "website"
   }
 };

@@ -26,7 +26,7 @@ insert into public.banners (title, subtitle, cta_label, cta_url, placement, stat
 select *
 from (
   values
-    ('Publica y encuentra oportunidades en Panama', 'Propiedades, autos, servicios y ofertas locales en un solo lugar.', 'Ver anuncios', '/', 'home', 'active', 1),
+    ('Publica y encuentra oportunidades en Panamá', 'Propiedades, autos, servicios y ofertas locales en un solo lugar.', 'Ver anuncios', '/', 'home', 'active', 1),
     ('Espacio destacado para promociones', 'Usa este banner para resaltar negocios, inmuebles, paquetes o anuncios importantes.', 'Panel admin', '/admin', 'home', 'active', 2)
 ) as seed(title, subtitle, cta_label, cta_url, placement, status, sort_order)
 where not exists (select 1 from public.banners);

@@ -3,19 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { locationSuggestions, nearestLocationFromCoordinates } from "@/lib/locations";
+import { locationCoordinates, locationSuggestions, nearestKnownLocation } from "@/lib/locations";
 import { money, provinces } from "@/lib/format";
-import { getPublishCategoryGroups } from "@/lib/publishCategories";
 import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
+import { fetchCategoriesWithRetry, readCachedCategories } from "@/lib/categoryCache";
+import { findPublishCategoryGroup, getPublishCategoryGroups } from "@/lib/publishCategories";
 
 const DEFAULT_MAX_IMAGES = 5;
-const POPULAR_CATEGORY_SLUGS = [
-  "bienes-raices",
-  "tramites-financieros",
-  "tramites-legales",
-  "servicios-profesionales",
-  "empleos"
-];
 
 function defaultExpiresAt() {
   const date = new Date();
@@ -27,36 +21,48 @@ const emptyForm = {
   title: "",
   category_id: "",
   operation: "Venta",
-  item_condition: "",
   price: "",
   original_price: "",
   discount_percent: "",
   province: "Panama",
   district: "",
   address_reference: "",
+  lat: "",
+  lng: "",
+  property_type: "",
   bedrooms: "",
   bathrooms: "",
   area_m2: "",
+  land_area_ha: "",
+  item_condition: "",
+  requested_category: "",
   description: "",
   whatsapp: "",
   email: "",
   website_url: "",
   video_url: "",
   expires_at: defaultExpiresAt(),
+  featured: true,
+  responsibility_accepted: false,
   images: []
 };
 
 export default function PublicarPage() {
   const router = useRouter();
   const [categories, setCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState("");
+  const [categoriesReloadKey, setCategoriesReloadKey] = useState(0);
   const [form, setForm] = useState(emptyForm);
   const [step, setStep] = useState(1);
+  const [publishType, setPublishType] = useState("");
   const [editingId, setEditingId] = useState("");
   const [locationOpen, setLocationOpen] = useState(false);
   const [selectedLocationKey, setSelectedLocationKey] = useState("");
+  const [locating, setLocating] = useState(false);
   const [locationStatus, setLocationStatus] = useState("");
-  const [locationAttempted, setLocationAttempted] = useState(false);
   const [session, setSession] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
   const [profile, setProfile] = useState(null);
   const [saving, setSaving] = useState(false);
   const [uploadingPhotos, setUploadingPhotos] = useState(0);
@@ -65,13 +71,52 @@ export default function PublicarPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("/api/catalog")
-      .then((response) => response.json())
-      .then((payload) => {
-        const nextCategories = payload.categories || [];
+    let mounted = true;
+    const cachedCategories = readCachedCategories();
+
+    function applyCategories(nextCategories) {
+      if (!mounted || !Array.isArray(nextCategories)) return;
+      setCategories(nextCategories);
+      if (nextCategories.length) {
+        const query = new URLSearchParams(window.location.search);
+        const requestedSlug = query.get("categoria");
+        const requestedTitle = String(query.get("titulo") || "").trim();
+        const requestedOperation = String(query.get("operacion") || "").trim();
+        const requestedCategory = nextCategories.find((category) => category.slug === requestedSlug);
         setCategories(nextCategories);
+        setForm((current) => ({
+          ...current,
+          title: current.title || requestedTitle,
+          operation: current.operation === "Venta" && requestedOperation ? requestedOperation : current.operation,
+          category_id: current.category_id || requestedCategory?.id || ""
+        }));
+      }
+    }
+
+    if (cachedCategories.length) applyCategories(cachedCategories);
+
+    setCategoriesLoading(true);
+    setCategoriesError("");
+    fetchCategoriesWithRetry()
+      .then((nextCategories) => {
+        applyCategories(nextCategories);
+        setCategoriesError(nextCategories.length ? "" : "Aún no hay categorías disponibles.");
+      })
+      .catch(() => {
+        if (!cachedCategories.length) {
+          setCategoriesError("No pudimos cargar las categorías. Reintenta sin perder lo que ya escribiste.");
+        }
+      })
+      .finally(() => {
+        if (mounted) setCategoriesLoading(false);
       });
 
+    return () => {
+      mounted = false;
+    };
+  }, [categoriesReloadKey]);
+
+  useEffect(() => {
     fetch("/api/config")
       .then((response) => response.json())
       .then((payload) => {
@@ -91,11 +136,13 @@ export default function PublicarPage() {
       setSession(data.session);
       await hydrateProfile(data.session);
       await loadEditableListing(data.session);
+      setAuthReady(true);
     }
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
       hydrateProfile(nextSession);
+      setAuthReady(true);
     });
 
     loadSession();
@@ -108,7 +155,7 @@ export default function PublicarPage() {
 
     setEditingId(editId);
     if (!nextSession?.access_token) {
-      setError("Inicia sesion para editar este anuncio.");
+      setError("Inicia sesión para editar este anuncio.");
       return;
     }
 
@@ -151,17 +198,17 @@ export default function PublicarPage() {
   }
 
   const selectedCategory = categories.find((category) => category.id === form.category_id);
-  const popularCategories = useMemo(
-    () => POPULAR_CATEGORY_SLUGS.map((slug) => categories.find((category) => category.slug === slug)).filter(Boolean),
-    [categories]
-  );
   const publishCategoryGroups = useMemo(() => getPublishCategoryGroups(categories), [categories]);
-  const selectedPublishGroup = useMemo(
-    () => publishCategoryGroups.find((group) => categoryBelongsToGroup(form.category_id, group)),
-    [form.category_id, publishCategoryGroups]
-  );
+  const selectedPublishGroup = findPublishCategoryGroup(publishCategoryGroups, form.category_id);
+  const activePublishGroup =
+    publishCategoryGroups.find((group) => group.key === publishType) ||
+    selectedPublishGroup ||
+    null;
   const isRealEstate = selectedCategory?.slug === "bienes-raices";
-  const hasItemCondition = selectedPublishGroup ? ["article", "vehicle"].includes(selectedPublishGroup.key) : false;
+  const categorySlug = selectedCategory?.slug || "";
+  const isOtherCategory = categorySlug === "otros";
+  const isServiceCategory = /servicio|empleo|ninera|limpieza|asesoria|hospedaje|restaurante|belleza|secretaria|salonera|mesero|azafata|evento|masaje|cuidado/.test(categorySlug);
+  const isLandOrCommercial = /terreno|lote|finca|local|oficina|bodega/i.test(form.property_type);
 
   const locationMatches = useMemo(() => {
     const query = normalize(form.district);
@@ -188,72 +235,84 @@ export default function PublicarPage() {
 
   function setCategory(categoryId) {
     const nextCategory = categories.find((category) => category.id === categoryId);
-    const nextGroup = publishCategoryGroups.find((group) => categoryBelongsToGroup(categoryId, group));
+    const nextSlug = nextCategory?.slug || "";
+    const nextGroup = findPublishCategoryGroup(publishCategoryGroups, categoryId);
+    const nextIsService = /servicio|empleo|ninera|limpieza|asesoria|hospedaje|restaurante|belleza|secretaria|salonera|mesero|azafata|evento|masaje|cuidado/.test(nextSlug);
+    if (nextGroup) setPublishType(nextGroup.key);
     setForm({
       ...form,
       category_id: categoryId,
       operation: nextGroup?.operation || form.operation,
+      property_type: nextCategory?.slug === "bienes-raices" ? form.property_type : "",
       bedrooms: nextCategory?.slug === "bienes-raices" ? form.bedrooms : "",
       bathrooms: nextCategory?.slug === "bienes-raices" ? form.bathrooms : "",
-      area_m2: nextCategory?.slug === "bienes-raices" ? form.area_m2 : ""
+      area_m2: nextCategory?.slug === "bienes-raices" ? form.area_m2 : "",
+      land_area_ha: nextCategory?.slug === "bienes-raices" ? form.land_area_ha : "",
+      item_condition: nextCategory?.slug === "bienes-raices" || nextIsService ? "" : form.item_condition,
+      requested_category: nextCategory?.slug === "otros" ? form.requested_category : ""
     });
   }
 
+  function choosePublishType(group) {
+    setPublishType(group.key);
+    setForm((current) => ({
+      ...current,
+      operation: group.operation || current.operation,
+      category_id: selectedPublishGroup?.key === group.key ? current.category_id : "",
+      item_condition: group.key === "article" || group.key === "vehicle" ? current.item_condition : ""
+    }));
+  }
+
   function chooseLocation(location) {
+    const coordinates = locationCoordinates(location);
     setForm({
       ...form,
       province: location.province,
       district: location.district,
-      address_reference: location.label
+      address_reference: location.label,
+      lat: coordinates.lat ?? "",
+      lng: coordinates.lng ?? ""
     });
     setSelectedLocationKey(normalize(location.district));
+    setLocationStatus("Zona seleccionada. Puedes cambiarla antes de publicar.");
     setLocationOpen(false);
-    setLocationStatus("manual");
   }
 
-  function requestCurrentLocation() {
-    setLocationAttempted(true);
-
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      setLocationStatus("unsupported");
+  function detectListingLocation() {
+    if (!navigator.geolocation) {
+      setLocationStatus("Tu navegador no permite detectar la ubicación. Escríbela manualmente.");
       return;
     }
 
-    setLocationStatus("loading");
+    setLocating(true);
+    setLocationStatus("");
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
-        const nearest = nearestLocationFromCoordinates(coords.latitude, coords.longitude);
-        if (!nearest) {
-          setLocationStatus("manual");
-          return;
-        }
-
+        const nearest = nearestKnownLocation(coords.latitude, coords.longitude);
         setForm((current) => ({
           ...current,
-          province: nearest.province,
-          district: nearest.district,
-          address_reference: nearest.label
+          province: nearest?.province || current.province,
+          district: nearest?.district || current.district || "Ubicación actual",
+          address_reference: nearest?.label || current.address_reference || "Ubicación aproximada",
+          lat: Number(coords.latitude.toFixed(3)),
+          lng: Number(coords.longitude.toFixed(3))
         }));
-        setSelectedLocationKey(normalize(nearest.district));
-        setLocationOpen(false);
-        setLocationStatus("detected");
+        if (nearest?.district) setSelectedLocationKey(normalize(nearest.district));
+        setLocationStatus("Ubicación aproximada detectada. Edítala si el anuncio está en otro lugar.");
+        setLocating(false);
       },
-      (geolocationError) => {
-        setLocationStatus(geolocationError.code === 1 ? "denied" : "manual");
+      () => {
+        setLocationStatus("No pudimos detectar tu ubicación. Puedes escribirla manualmente.");
+        setLocating(false);
       },
-      { enableHighAccuracy: false, maximumAge: 300000, timeout: 10000 }
+      { enableHighAccuracy: false, timeout: 9000, maximumAge: 600000 }
     );
   }
 
-  useEffect(() => {
-    if (currentStep !== 2 || form.district || locationAttempted) return;
-    requestCurrentLocation();
-  }, [currentStep, form.district, locationAttempted]);
-
   function goNext() {
     setError("");
-    if (currentStep === 1 && (!form.title || !form.price || !form.category_id || !form.description || (hasItemCondition && !form.item_condition))) {
-      setError(hasItemCondition ? "Completa titulo, precio, categoria, estado y descripcion." : "Completa titulo, precio, categoria y descripcion.");
+    if (currentStep === 1 && (!form.title || !form.price || !form.category_id || !form.description)) {
+      setError("Completa título, precio, categoría y descripción.");
       return;
     }
 
@@ -262,23 +321,29 @@ export default function PublicarPage() {
       return;
     }
 
+    if (currentStep === 1 && isOtherCategory && !form.requested_category.trim()) {
+      setError("Escribe qué categoría necesitas para revisarla y crearla después.");
+      return;
+    }
+
     if (currentStep === 2 && !form.district) {
-      setError("Completa la ubicacion para continuar.");
+      setError("Completa la ubicación para continuar.");
       return;
     }
 
     if (currentStep === 2 && !session?.access_token) {
-      setError("Inicia sesion con Google, Facebook o correo para publicar.");
+      setError("Inicia sesión con Google o correo para publicar.");
       return;
     }
 
+    if (currentStep === 1 && !form.district) detectListingLocation();
     setStep((value) => Math.min(3, value + 1));
   }
 
   async function uploadImages(files) {
     setError("");
     if (!session?.access_token) {
-      setError("Inicia sesion antes de subir fotos.");
+      setError("Inicia sesión antes de subir fotos.");
       return;
     }
 
@@ -293,7 +358,7 @@ export default function PublicarPage() {
 
     const filesToUpload = selectedFiles.slice(0, availableSlots);
     if (selectedFiles.length > availableSlots) {
-      setError(`Solo se agregaron ${availableSlots} foto(s). El limite actual es ${maxImages}.`);
+      setError(`Solo se agregaron ${availableSlots} foto(s). El límite actual es ${maxImages}.`);
     }
 
     setSaving(true);
@@ -329,7 +394,7 @@ export default function PublicarPage() {
 
       setForm((current) => ({ ...current, images: [...current.images, ...nextImages] }));
     } catch (uploadError) {
-      setError(uploadError.message || "No se pudieron subir las imagenes.");
+      setError(uploadError.message || "No se pudieron subir las imágenes.");
     } finally {
       setUploadingPhotos(0);
       setSaving(false);
@@ -351,16 +416,23 @@ export default function PublicarPage() {
 
     if (!session?.access_token) {
       setSaving(false);
-      setError("Inicia sesion para publicar.");
+      setError("Inicia sesión para publicar.");
+      return;
+    }
+
+    if (!form.responsibility_accepted) {
+      setSaving(false);
+      setError("Acepta la responsabilidad del anuncio antes de publicar.");
       return;
     }
 
     const payload = {
       ...form,
-      bedrooms: isRealEstate ? form.bedrooms : "",
-      bathrooms: isRealEstate ? form.bathrooms : "",
+      bedrooms: isRealEstate && !isLandOrCommercial ? form.bedrooms : "",
+      bathrooms: isRealEstate && !isLandOrCommercial ? form.bathrooms : "",
       area_m2: isRealEstate ? form.area_m2 : "",
-      item_condition: hasItemCondition ? form.item_condition : "",
+      land_area_ha: isRealEstate ? form.land_area_ha : "",
+      item_condition: !isRealEstate && !isServiceCategory ? form.item_condition : "",
       advertiser_name: profile?.name || session.user.email,
       advertiser_email: session.user.email,
       advertiser_phone: form.whatsapp || "",
@@ -380,7 +452,7 @@ export default function PublicarPage() {
     const result = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      setError(result.error || "No se pudo enviar la publicacion.");
+      setError(result.error || "No se pudo enviar la publicación.");
       return;
     }
 
@@ -389,28 +461,55 @@ export default function PublicarPage() {
 
   return (
     <>
-      <header className="topbar marketplace-topbar publish-topbar">
+      <header className="topbar marketplace-topbar">
         <Link className="brand" href="/">
-          <span className="brand-mark">PA</span>
-          <span>
-            <strong>PanAvisos</strong>
-            <small>Crear publicacion</small>
-          </span>
+          <img className="brand-logo" src="/brand/panavisos-logo.svg" alt="PanAvisos" />
         </Link>
         <nav className="top-actions">
-          <Link href="/">Catalogo</Link>
+          <Link href="/">Catálogo</Link>
           <Link href="/cuenta">Cuenta</Link>
         </nav>
       </header>
 
       <main className="publish-workspace">
+        {!authReady ? (
+          <section className="publish-gate">
+            <div className="publish-gate-card">
+              <span className="eyebrow dark-eyebrow">Publicar anuncio</span>
+              <h1>Preparando tu cuenta...</h1>
+              <p className="muted">Estamos revisando tu sesión antes de abrir el formulario.</p>
+            </div>
+          </section>
+        ) : !session?.access_token ? (
+          <section className="publish-gate">
+            <div className="publish-gate-card">
+              <span className="eyebrow dark-eyebrow">Publicar anuncio</span>
+              <h1>Primero entra o crea tu cuenta</h1>
+              <p className="muted">
+                Para que no llenes fotos y datos por gusto, PanAvisos te pide identificarte antes de crear o editar un anuncio.
+              </p>
+              <div className="publish-gate-actions">
+                <Link className="primary" href="/cuenta?next=/publicar">
+                  Iniciar sesión
+                </Link>
+                <Link className="secondary" href="/cuenta?next=/publicar&mode=register">
+                  Crear cuenta
+                </Link>
+              </div>
+              <ul className="publish-gate-list">
+                <li>Tus fotos quedan asociadas a tu usuario.</li>
+                <li>Luego puedes editar, pausar o renovar tus anuncios.</li>
+                <li>Los interesados saben que hay una cuenta real detrás.</li>
+              </ul>
+            </div>
+          </section>
+        ) : (
         <form className="publish-form" onSubmit={submitListing}>
           <div className="publish-head">
             <div>
-              <span className="eyebrow">Publicar en PanAvisos</span>
-              <h1>{editingId ? "Editar anuncio" : "Crear anuncio"}</h1>
-              {!editingId ? <p className="muted publish-head-copy">Elige una categoria y agrega los detalles de tu anuncio.</p> : null}
-              {editingId ? <p className="muted">Editando publicacion existente</p> : null}
+              <span className="eyebrow">Marketplace</span>
+              <h1>Crear anuncio</h1>
+              {editingId ? <p className="muted">Editando publicación existente</p> : null}
             </div>
           </div>
 
@@ -422,7 +521,7 @@ export default function PublicarPage() {
 
           <p className="muted step-copy">
             {currentStep === 1 ? "Fotos y contenido del anuncio." : null}
-            {currentStep === 2 ? "Ubicacion del anuncio." : null}
+            {currentStep === 2 ? "Ubicación del anuncio." : null}
             {currentStep === 3 ? "Revisa la vista previa y publica." : null}
           </p>
 
@@ -440,7 +539,7 @@ export default function PublicarPage() {
               />
 
               <label className="field">
-                <span>Titulo</span>
+                <span>Título</span>
                 <input required value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
               </label>
 
@@ -449,52 +548,37 @@ export default function PublicarPage() {
                 <input required type="number" value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} />
               </label>
 
-              <div className="field-row">
-                <label className="field">
-                  <span>Categoria</span>
-                  <select required value={form.category_id} onChange={(event) => setCategory(event.target.value)}>
-                    <option value="">Selecciona una categoria</option>
-                    {popularCategories.length ? (
-                      <optgroup label="Mas populares">
-                        {popularCategories.map((category) => (
-                          <option key={`popular-${category.id}`} value={category.id}>
-                            {category.name}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ) : null}
-                    {publishCategoryGroups.map((group) => (
-                      <optgroup key={group.key} label={group.label}>
-                        {group.sections.flatMap((section) => section.categories).map((category) => (
-                          <option key={category.id} value={category.id}>
-                            {category.name}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
-                </label>
-                <label className="field">
-                  <span>Tipo</span>
-                  <select value={form.operation} onChange={(event) => setForm({ ...form, operation: event.target.value })}>
-                    <option>Venta</option>
-                    <option>Alquiler</option>
-                    <option>Servicio</option>
-                    <option>Oferta</option>
-                  </select>
-                </label>
-              </div>
+              <PublishCategoryChooser
+                groups={publishCategoryGroups}
+                activeGroup={activePublishGroup}
+                selectedCategoryId={form.category_id}
+                loading={categoriesLoading && !categories.length}
+                error={categoriesError}
+                onRetry={() => setCategoriesReloadKey((current) => current + 1)}
+                onChooseType={choosePublishType}
+                onChooseCategory={setCategory}
+              />
 
-              {hasItemCondition ? (
+              <label className="field">
+                <span>Tipo</span>
+                <select value={form.operation} onChange={(event) => setForm({ ...form, operation: event.target.value })}>
+                  <option>Venta</option>
+                  <option>Alquiler</option>
+                  <option>Servicio</option>
+                  <option>Oferta</option>
+                </select>
+              </label>
+
+              {isOtherCategory ? (
                 <label className="field">
-                  <span>Estado</span>
-                  <select required value={form.item_condition} onChange={(event) => setForm({ ...form, item_condition: event.target.value })}>
-                    <option value="">Selecciona estado</option>
-                    <option>Nuevo</option>
-                    <option>Usado - Como nuevo</option>
-                    <option>Usado - Buen estado</option>
-                    <option>Usado - Aceptable</option>
-                  </select>
+                  <span>Categoría que necesitas</span>
+                  <input
+                    required
+                    value={form.requested_category}
+                    onChange={(event) => setForm({ ...form, requested_category: event.target.value })}
+                    placeholder="Ej. mascotas, maquinaria, clases, eventos..."
+                  />
+                  <small>La guardaré como sugerencia para crear nuevas categorías según lo que pidan los usuarios.</small>
                 </label>
               ) : null}
 
@@ -511,24 +595,63 @@ export default function PublicarPage() {
               ) : null}
 
               {isRealEstate ? (
-                <div className="field-row">
+                <>
                   <label className="field">
-                    <span>Recamaras</span>
-                    <input type="number" value={form.bedrooms} onChange={(event) => setForm({ ...form, bedrooms: event.target.value })} />
+                    <span>Tipo de propiedad</span>
+                    <select value={form.property_type} onChange={(event) => setForm({ ...form, property_type: event.target.value })}>
+                      <option value="">Selecciona una opción</option>
+                      <option>Casa</option>
+                      <option>Apartamento</option>
+                      <option>Local comercial</option>
+                      <option>Oficina</option>
+                      <option>Bodega</option>
+                      <option>Terreno o lote</option>
+                      <option>Finca</option>
+                      <option>Otro</option>
+                    </select>
                   </label>
-                  <label className="field">
-                    <span>Banos</span>
-                    <input type="number" value={form.bathrooms} onChange={(event) => setForm({ ...form, bathrooms: event.target.value })} />
-                  </label>
-                  <label className="field">
-                    <span>Area m2</span>
-                    <input type="number" value={form.area_m2} onChange={(event) => setForm({ ...form, area_m2: event.target.value })} />
-                  </label>
-                </div>
+                  <div className="field-row">
+                    {!isLandOrCommercial ? (
+                      <>
+                        <label className="field">
+                          <span>Recámaras</span>
+                          <input type="number" value={form.bedrooms} onChange={(event) => setForm({ ...form, bedrooms: event.target.value })} />
+                        </label>
+                        <label className="field">
+                          <span>Baños</span>
+                          <input type="number" value={form.bathrooms} onChange={(event) => setForm({ ...form, bathrooms: event.target.value })} />
+                        </label>
+                      </>
+                    ) : null}
+                    <label className="field">
+                      <span>Área m2</span>
+                      <input type="number" value={form.area_m2} onChange={(event) => setForm({ ...form, area_m2: event.target.value })} />
+                    </label>
+                    {isLandOrCommercial ? (
+                      <label className="field">
+                        <span>Hectáreas</span>
+                        <input type="number" step="0.0001" value={form.land_area_ha} onChange={(event) => setForm({ ...form, land_area_ha: event.target.value })} />
+                      </label>
+                    ) : null}
+                  </div>
+                </>
+              ) : null}
+
+              {selectedCategory && !isRealEstate && !isServiceCategory ? (
+                <label className="field">
+                  <span>Estado</span>
+                  <select value={form.item_condition} onChange={(event) => setForm({ ...form, item_condition: event.target.value })}>
+                    <option value="">Selecciona una opción</option>
+                    <option>Nuevo</option>
+                    <option>Usado - Como nuevo</option>
+                    <option>Usado - Buen estado</option>
+                    <option>Usado - Aceptable</option>
+                  </select>
+                </label>
               ) : null}
 
               <label className="field">
-                <span>Descripcion</span>
+                <span>Descripción</span>
                 <textarea required rows={5} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
               </label>
 
@@ -556,61 +679,63 @@ export default function PublicarPage() {
 
           {currentStep === 2 ? (
             <div className="step-pane">
-              <div className="location-field">
-                <label className="field location-input-wrap">
-                  <span>Ubicacion</span>
-                  <input
-                    required
-                    value={form.district}
-                    onChange={(event) => {
-                      setForm({ ...form, district: event.target.value });
-                      setSelectedLocationKey("");
-                      setLocationStatus("manual");
-                      setLocationOpen(true);
-                    }}
-                    onFocus={() => {
-                      if (selectedLocationKey !== normalize(form.district)) setLocationOpen(true);
-                    }}
-                    onBlur={() => window.setTimeout(() => setLocationOpen(false), 120)}
-                    autoComplete="off"
-                    aria-expanded={locationOpen && locationMatches.length > 0}
-                    placeholder="Ej: Parque Lefevre, Coronado..."
-                  />
-                  {locationOpen && locationMatches.length ? (
-                    <div className="suggestion-list">
-                      {locationMatches.map((location) => (
-                        <button
-                          type="button"
-                          key={location.label}
-                          onPointerDown={(event) => {
-                            event.preventDefault();
-                            chooseLocation(location);
-                          }}
-                          onClick={() => chooseLocation(location)}
-                        >
-                          {location.label}
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
-                </label>
-                <div className="location-detect-row">
-                  <span className="location-status" aria-live="polite">
-                    {locationStatus === "loading" ? "Detectando tu ubicacion..." : null}
-                    {locationStatus === "detected" ? "Ubicacion aproximada detectada. Puedes corregirla." : null}
-                    {locationStatus === "denied" ? "Permiso no concedido. Escribela manualmente." : null}
-                    {locationStatus === "unsupported" ? "Tu navegador no permite detectar ubicacion." : null}
-                    {locationStatus === "manual" && form.district ? "Ubicacion editable." : null}
-                  </span>
-                  <button className="secondary location-detect-button" type="button" onClick={requestCurrentLocation} disabled={locationStatus === "loading"}>
-                    {locationStatus === "loading" ? "Detectando..." : "Usar mi ubicacion"}
-                  </button>
+              <div className="publish-location-assist">
+                <div>
+                  <strong>¿El anuncio está cerca de ti?</strong>
+                  <small>Podemos sugerir la zona y luego tú decides si conservarla o cambiarla.</small>
                 </div>
+                <button className="secondary" type="button" onClick={detectListingLocation} disabled={locating}>
+                  {locating ? "Detectando..." : "Usar mi ubicación"}
+                </button>
               </div>
+              {locationStatus ? <p className="location-status" role="status">{locationStatus}</p> : null}
+              <label className="field location-field">
+                <span>Ubicación</span>
+                <input
+                  required
+                  value={form.district}
+                  onChange={(event) => {
+                    setForm({ ...form, district: event.target.value, lat: "", lng: "" });
+                    setSelectedLocationKey("");
+                    setLocationStatus("");
+                    setLocationOpen(true);
+                  }}
+                  onFocus={() => {
+                    if (selectedLocationKey !== normalize(form.district)) setLocationOpen(true);
+                  }}
+                  onBlur={() => window.setTimeout(() => setLocationOpen(false), 120)}
+                  autoComplete="off"
+                  aria-expanded={locationOpen && locationMatches.length > 0}
+                  placeholder="Ej: Parque Lefevre, Coronado..."
+                />
+                {locationOpen && locationMatches.length ? (
+                  <div className="suggestion-list">
+                    {locationMatches.map((location) => (
+                      <button
+                        type="button"
+                        key={location.label}
+                        onPointerDown={(event) => {
+                          event.preventDefault();
+                          chooseLocation(location);
+                        }}
+                        onClick={() => chooseLocation(location)}
+                      >
+                        {location.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </label>
 
               <label className="field">
                 <span>Provincia</span>
-                <select value={form.province} onChange={(event) => setForm({ ...form, province: event.target.value })}>
+                <select
+                  value={form.province}
+                  onChange={(event) => {
+                    setForm({ ...form, province: event.target.value, lat: "", lng: "" });
+                    setLocationStatus("");
+                  }}
+                >
                   {provinces.map((province) => (
                     <option key={province} value={province}>
                       {province}
@@ -625,18 +750,43 @@ export default function PublicarPage() {
             <div className="step-pane">
               <div className="review-card">
               <h2>{editingId ? "Enviar cambios" : "Publicar en PanAvisos"}</h2>
-              <p className="muted">Tu anuncio se publicara de inmediato. No se borra lo que llenaste si vuelves atras.</p>
+              <p className="muted">Tu anuncio se publicará de inmediato. No se borra lo que llenaste si vuelves atrás.</p>
+                {!editingId ? (
+                  <label className="founder-feature-check">
+                    <input
+                      type="checkbox"
+                      checked={form.featured}
+                      onChange={(event) => setForm({ ...form, featured: event.target.checked })}
+                    />
+                    <span>
+                      <strong>Destacado fundador gratis</strong>
+                      <small>
+                        Solicita resaltado de cortesía para esta fase inicial. Aplica para las primeras 100 cuentas y puede ajustarse si el equipo detecta abuso o contenido duplicado.
+                      </small>
+                    </span>
+                  </label>
+                ) : null}
+                <label className="responsibility-check">
+                  <input
+                    type="checkbox"
+                    checked={form.responsibility_accepted}
+                    onChange={(event) => setForm({ ...form, responsibility_accepted: event.target.checked })}
+                  />
+                  <span>
+                    Confirmo que soy responsable por la información, fotos, precio y condiciones de este anuncio. Entiendo que PanAvisos solo facilita la publicación y el contacto.
+                  </span>
+                </label>
                 <div className="review-row">
-                  <span>Titulo</span>
-                  <strong>{form.title || "Sin titulo"}</strong>
+                  <span>Título</span>
+                  <strong>{form.title || "Sin título"}</strong>
                 </div>
                 <div className="review-row">
                   <span>Precio</span>
                   <strong>{money(form.price)}</strong>
                 </div>
                 <div className="review-row">
-                  <span>Ubicacion</span>
-                  <strong>{form.district || "Sin ubicacion"}</strong>
+                  <span>Ubicación</span>
+                  <strong>{form.district || "Sin ubicación"}</strong>
                 </div>
                 <div className="review-row">
                   <span>Anunciante</span>
@@ -668,25 +818,27 @@ export default function PublicarPage() {
           </div>
 
         </form>
+        )}
 
+        {authReady && session?.access_token ? (
         <section className="publish-preview">
           <h2>Vista previa</h2>
           <div className="preview-shell">
             <div className="preview-media">
-              {form.images[0]?.url ? <img src={form.images[0].url} alt="" /> : <span>Vista previa de la publicacion</span>}
+              {form.images[0]?.url ? <img src={form.images[0].url} alt="" /> : <span>Vista previa de la publicación</span>}
             </div>
             <aside className="preview-info">
-              <h3>{form.title || "Titulo"}</h3>
+              <h3>{form.title || "Título"}</h3>
               <PriceBlock listing={form} />
-              <p className="muted">Publicado hace unos segundos en {form.district || "Ciudad de Panama"}</p>
+              <p className="muted">Publicado hace unos segundos en {form.district || "Ciudad de Panamá"}</p>
               <h4>Detalles</h4>
-              <p>{form.description || "La descripcion aparecera aqui."}</p>
+              <p>{form.description || "La descripción aparecerá aquí."}</p>
               {form.video_url ? (
                 <a className="secondary preview-link" href={form.video_url} target="_blank" rel="noreferrer">
                   Ver video
                 </a>
               ) : null}
-              <h4>Informacion del vendedor</h4>
+              <h4>Información del vendedor</h4>
               <p>{profile?.name || "Tu cuenta"}</p>
               <button className="primary" type="button" disabled>
                 Enviar mensaje
@@ -694,8 +846,80 @@ export default function PublicarPage() {
             </aside>
           </div>
         </section>
+        ) : null}
       </main>
     </>
+  );
+}
+
+function PublishCategoryChooser({
+  groups,
+  activeGroup,
+  selectedCategoryId,
+  loading,
+  error,
+  onRetry,
+  onChooseType,
+  onChooseCategory
+}) {
+  const categoryCount = activeGroup?.sections.reduce((total, section) => total + section.categories.length, 0) || 0;
+
+  return (
+    <section className="publish-category-chooser" aria-labelledby="publish-category-title">
+      <div className="publish-category-heading">
+        <div>
+          <span className="field-label">Tipo de publicación</span>
+          <h2 id="publish-category-title">Elige qué vas a publicar</h2>
+        </div>
+        {selectedCategoryId ? <small>Categoría seleccionada</small> : null}
+      </div>
+
+      <div className="publish-type-grid">
+        {groups.map((group) => (
+          <button
+            className={`publish-type-card ${activeGroup?.key === group.key ? "active" : ""}`}
+            type="button"
+            key={group.key}
+            onClick={() => onChooseType(group)}
+          >
+            <strong>{group.label}</strong>
+            <span>{group.description}</span>
+          </button>
+        ))}
+      </div>
+
+      {loading ? <p className="muted">Cargando categorías...</p> : null}
+      {error ? (
+        <span className="category-load-error" role="status">
+          {error}
+          <button type="button" onClick={onRetry}>Reintentar</button>
+        </span>
+      ) : null}
+
+      {activeGroup && categoryCount ? (
+        <div className="publish-subcategory-panel">
+          <span className="field-label">Categoría</span>
+          {activeGroup.sections.map((section) => (
+            <div className="publish-subcategory-section" key={section.label}>
+              <strong>{section.label}</strong>
+              <div className="publish-subcategory-list">
+                {section.categories.map((category) => (
+                  <button
+                    className={selectedCategoryId === category.id ? "active" : ""}
+                    type="button"
+                    key={category.id}
+                    onClick={() => onChooseCategory(category.id)}
+                  >
+                    <span>{category.name}</span>
+                    {category.description ? <small>{category.description}</small> : null}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </section>
   );
 }
 
@@ -730,11 +954,11 @@ function PhotoUploader({ images, maxImages, uploadingPhotos, onUpload, onRemove 
           <label className="photo-tile add-photo">
             <input type="file" accept="image/*" multiple onChange={(event) => onUpload(event.target.files)} />
             <strong>+</strong>
-            <span>Anadir foto</span>
+            <span>Añadir foto</span>
           </label>
         ) : null}
       </div>
-      <p className="muted photo-help">Puedes subir hasta {maxImages} fotos. La primera sera la imagen principal.</p>
+      <p className="muted photo-help">Puedes subir hasta {maxImages} fotos. La primera será la imagen principal.</p>
     </div>
   );
 }
@@ -757,11 +981,6 @@ function normalize(value) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-function categoryBelongsToGroup(categoryId, group) {
-  if (!categoryId || !group) return false;
-  return group.sections.some((section) => section.categories.some((category) => category.id === categoryId));
-}
-
 function listingToForm(listing) {
   const images = [...(listing.images || [])]
     .sort((a, b) => a.position - b.position)
@@ -775,19 +994,26 @@ function listingToForm(listing) {
     price: listing.price ?? "",
     original_price: listing.original_price ?? "",
     discount_percent: listing.discount_percent ?? "",
-    item_condition: listing.item_condition || "",
     province: listing.province || "Panama",
     district: listing.district || "",
     address_reference: listing.address_reference || "",
+    lat: listing.lat ?? "",
+    lng: listing.lng ?? "",
+    property_type: listing.property_type || "",
     bedrooms: listing.bedrooms || "",
     bathrooms: listing.bathrooms || "",
     area_m2: listing.area_m2 || "",
+    land_area_ha: listing.land_area_ha || "",
+    item_condition: listing.item_condition || "",
+    requested_category: listing.requested_category || "",
     description: listing.description || "",
     whatsapp: listing.whatsapp || "",
     email: listing.email || "",
     website_url: listing.website_url || "",
     video_url: listing.video_url || "",
     expires_at: listing.expires_at ? String(listing.expires_at).slice(0, 10) : defaultExpiresAt(),
+    featured: Boolean(listing.featured),
+    responsibility_accepted: listing.responsibility_accepted ?? true,
     images
   };
 }

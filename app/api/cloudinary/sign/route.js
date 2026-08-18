@@ -32,7 +32,7 @@ export async function POST(request) {
   const folder = process.env.CLOUDINARY_UPLOAD_FOLDER || "panavisos/listings";
 
   if (!cloudName || !apiKey || !apiSecret) {
-    return NextResponse.json({ error: "Cloudinary no esta configurado." }, { status: 500 });
+    return NextResponse.json({ error: "Cloudinary no está configurado." }, { status: 500 });
   }
 
   const timestamp = Math.round(Date.now() / 1000);

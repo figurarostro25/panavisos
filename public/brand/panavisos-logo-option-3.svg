@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 190" role="img" aria-labelledby="title description">
+  <title id="title">PanAvisos opción 3</title>
+  <desc id="description">Logo de PanAvisos con burbuja de anuncio PA</desc>
+  <g transform="translate(10 22)">
+    <rect x="0" y="0" width="158" height="122" rx="25" fill="#0B222D"/>
+    <path fill="#0B222D" d="M58 116h42l-28 30c-5 6-14 2-14-6v-24Z"/>
+    <path fill="#FFFFFF" d="M30 88V30h35c18 0 30 10 30 26 0 17-12 27-31 27H50v5H30Zm20-40v19h13c8 0 12-4 12-10s-4-9-12-9H50Z"/>
+    <path fill="#FFFFFF" d="M82 88 108 30h20l25 58h-23l-4-10h-18l-4 10H82Zm31-25h8l-4-13-4 13Z"/>
+    <path fill="#D7B45A" d="M27 103h100c7 0 12 5 12 12v2H39c-7 0-12-5-12-12v-2Z"/>
+    <circle cx="130" cy="31" r="9" fill="#1F6F78"/>
+  </g>
+  <text x="190" y="108" font-family="Arial, Helvetica, sans-serif" font-size="76" font-weight="900" letter-spacing="0">
+    <tspan fill="#0B222D">Pan</tspan><tspan fill="#1F6F78">Avisos</tspan>
+  </text>
+  <text x="194" y="140" fill="#667085" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700">avisos locales, negocios reales</text>
+</svg>

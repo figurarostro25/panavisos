@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -50,7 +50,12 @@ const emptyBanner = {
 export default function AdminPage() {
   const [ready, setReady] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
+  const [adminRole, setAdminRole] = useState(null);
+  const [adminEmail, setAdminEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [recoveryEmail, setRecoveryEmail] = useState("cevenpro@gmail.com");
+  const [showRecovery, setShowRecovery] = useState(false);
+  const [recoveryMessage, setRecoveryMessage] = useState("");
   const [error, setError] = useState("");
   const [categories, setCategories] = useState([]);
   const [listings, setListings] = useState([]);
@@ -70,7 +75,8 @@ export default function AdminPage() {
   }, []);
 
   async function loadAdmin() {
-    const [catResponse, listingResponse, bannerResponse, messageResponse, settingsResponse] = await Promise.all([
+    const [sessionResponse, catResponse, listingResponse, bannerResponse, messageResponse, settingsResponse] = await Promise.all([
+      fetch("/api/auth/session"),
       fetch("/api/admin/categories"),
       fetch("/api/admin/listings"),
       fetch("/api/admin/banners"),
@@ -100,6 +106,8 @@ export default function AdminPage() {
     setMessages(messageData.messages || []);
     setSettings(settingsData.settings || { maxListingImages: 5 });
     setSelectedMessageId((current) => current || messageData.messages?.[0]?.id || "");
+    const sessionData = await sessionResponse.json().catch(() => ({}));
+    setAdminRole(sessionData.role || "owner");
     setLoggedIn(true);
   }
 
@@ -109,7 +117,7 @@ export default function AdminPage() {
     const response = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password })
+      body: JSON.stringify({ email: adminEmail, password })
     });
 
     if (!response.ok) {
@@ -118,12 +126,15 @@ export default function AdminPage() {
     }
 
     setPassword("");
+    const loginData = await response.json().catch(() => ({}));
+    setAdminRole(loginData.role || "owner");
     await loadAdmin();
   }
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
     setLoggedIn(false);
+    setAdminRole(null);
   }
 
   async function saveCategory(event) {
@@ -139,7 +150,7 @@ export default function AdminPage() {
     setSaving(false);
 
     if (!response.ok) {
-      setError("No se pudo guardar la categoria.");
+      setError("No se pudo guardar la categoría.");
       return;
     }
 
@@ -148,7 +159,8 @@ export default function AdminPage() {
   }
 
   async function deleteCategory(id) {
-    if (!confirm("Eliminar esta categoria?")) return;
+    if (adminRole !== "owner") return;
+    if (!confirm("¿Eliminar esta categoría?")) return;
     await fetch(`/api/admin/categories/${id}`, { method: "DELETE" });
     await loadAdmin();
   }
@@ -157,7 +169,7 @@ export default function AdminPage() {
     event.preventDefault();
     setError("");
     if (!String(bannerForm.image_url || "").trim() && !String(bannerForm.title || "").trim()) {
-      setError("Agrega una imagen o un titulo para guardar el banner.");
+      setError("Agrega una imagen o un título para guardar el banner.");
       return;
     }
     setSaving(true);
@@ -181,6 +193,7 @@ export default function AdminPage() {
   }
 
   async function deleteBanner(id) {
+    if (adminRole !== "owner") return;
     if (!confirm("Eliminar este banner?")) return;
     await fetch(`/api/admin/banners/${id}`, { method: "DELETE" });
     await loadAdmin();
@@ -230,7 +243,7 @@ export default function AdminPage() {
 
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}));
-      setError(payload.error || "No se pudo guardar la configuracion.");
+      setError(payload.error || "No se pudo guardar la configuración.");
       return;
     }
 
@@ -238,10 +251,33 @@ export default function AdminPage() {
     setSettings(payload.settings || settings);
   }
 
-  async function deleteListing(id) {
-    if (!confirm("Eliminar este anuncio?")) return;
-    await fetch(`/api/admin/listings/${id}`, { method: "DELETE" });
+  async function archiveListing(listing) {
+    if (!confirm("¿Archivar este anuncio? No se borrará del historial.")) return;
+    await quickUpdateListing(listing, { status: "archived" });
     await loadAdmin();
+  }
+
+  async function requestRecovery() {
+    setError("");
+    setRecoveryMessage("");
+    const response = await fetch("/api/admin/recovery/request", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: recoveryEmail })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setError(payload.error || "No se pudo enviar el correo de recuperación.");
+      return;
+    }
+    setRecoveryMessage("Si el correo está autorizado, recibirás un enlace de recuperación en unos minutos.");
+  }
+
+  function toggleRecovery() {
+    setError("");
+    setRecoveryMessage("");
+    setPassword("");
+    setShowRecovery((current) => !current);
   }
 
   async function quickUpdateListing(listing, changes) {
@@ -333,7 +369,7 @@ export default function AdminPage() {
       const availableSlots = Number(settings.maxListingImages || 5) - listingForm.images.length;
 
       if (availableSlots <= 0) {
-        setError(`Este anuncio ya tiene el limite de ${settings.maxListingImages || 5} fotos.`);
+        setError(`Este anuncio ya tiene el límite de ${settings.maxListingImages || 5} fotos.`);
         return;
       }
 
@@ -366,10 +402,10 @@ export default function AdminPage() {
 
       setListingForm((current) => ({ ...current, images: [...current.images, ...nextImages] }));
       if (selectedFiles.length > availableSlots) {
-        setError(`Solo se agregaron ${availableSlots} foto(s). El limite actual es ${settings.maxListingImages || 5}.`);
+        setError(`Solo se agregaron ${availableSlots} foto(s). El límite actual es ${settings.maxListingImages || 5}.`);
       }
     } catch (uploadError) {
-      setError(uploadError.message || "No se pudieron subir las imagenes.");
+      setError(uploadError.message || "No se pudieron subir las imágenes.");
     } finally {
       setSaving(false);
     }
@@ -431,6 +467,9 @@ export default function AdminPage() {
     active: listings.filter((listing) => listing.status === "active").length,
     pending: listings.filter((listing) => listing.status === "pending").length,
     paused: listings.filter((listing) => listing.status === "paused").length,
+    sold: listings.filter((listing) => listing.status === "sold").length,
+    rented: listings.filter((listing) => listing.status === "rented").length,
+    archived: listings.filter((listing) => listing.status === "archived").length,
     featured: listings.filter((listing) => listing.featured).length,
     new24h: listings.filter((listing) => new Date(listing.created_at).getTime() >= recentCutoff).length
   };
@@ -457,15 +496,11 @@ export default function AdminPage() {
     <>
       <header className="topbar">
         <Link className="brand" href="/">
-          <span className="brand-mark">PA</span>
-          <span>
-            <strong>PanAvisos</strong>
-            <small>Admin real</small>
-          </span>
+          <img className="brand-logo" src="/brand/panavisos-logo.svg" alt="PanAvisos" />
         </Link>
         <div className="admin-actions">
           <Link className="nav-link" href="/">
-            Catalogo
+            Catálogo
           </Link>
           {loggedIn ? (
             <button className="secondary" type="button" onClick={logout}>
@@ -479,8 +514,9 @@ export default function AdminPage() {
         <div className="admin-title">
           <div>
             <h1>Panel admin</h1>
-            <p className="muted">Dashboard para aprobar, pausar, destacar y revisar publicaciones.</p>
+            <p className="muted">Dashboard para aprobar, cerrar, archivar, destacar y revisar publicaciones.</p>
           </div>
+          {loggedIn ? <span className="admin-role-badge">{adminRole === "owner" ? "Propietario" : "Editor"}</span> : null}
         </div>
 
         {!ready ? <div className="notice">Cargando...</div> : null}
@@ -488,11 +524,17 @@ export default function AdminPage() {
         {ready && !loggedIn ? (
           <form className="login" onSubmit={login}>
             <h2>Entrar</h2>
-            <p className="muted">Usa la clave definida en Vercel como PANAVISOS_ADMIN_PASSWORD.</p>
+            <p className="muted">Usa la clave administrativa configurada en Vercel.</p>
+            <label className="field">
+              <span>Correo del propietario (opcional para editor)</span>
+              <input autoComplete="off" name="admin-owner-email" type="email" value={adminEmail} onChange={(event) => setAdminEmail(event.target.value)} placeholder="cevenpro@gmail.com" />
+            </label>
             <label className="field">
               <span>Clave admin</span>
               <input
                 type="password"
+                autoComplete="new-password"
+                name="admin-access-key"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
               />
@@ -501,6 +543,21 @@ export default function AdminPage() {
             <button className="primary" type="submit">
               Entrar
             </button>
+            <button className="text-button" type="button" onClick={toggleRecovery}>
+              Olvidé mi clave
+            </button>
+            {showRecovery ? (
+              <div className="admin-recovery-box">
+                <label className="field">
+                  <span>Correo de recuperación</span>
+                  <input autoComplete="email" name="admin-recovery-email" type="email" value={recoveryEmail} onChange={(event) => setRecoveryEmail(event.target.value)} />
+                </label>
+                <button className="secondary" type="button" onClick={requestRecovery}>
+                  Enviarme enlace de recuperación
+                </button>
+                {recoveryMessage ? <p className="success">{recoveryMessage}</p> : null}
+              </div>
+            ) : null}
           </form>
         ) : null}
 
@@ -522,15 +579,17 @@ export default function AdminPage() {
                   Banners
                 </button>
                 <button className={activeAdminSection === "categories" ? "active" : ""} type="button" onClick={() => setActiveAdminSection("categories")}>
-                  Categorias
+                  Categorías
                 </button>
                 <button className={activeAdminSection === "messages" ? "active" : ""} type="button" onClick={() => setActiveAdminSection("messages")}>
                   <span>Mensajes</span>
                   {unreadMessages ? <strong>{unreadMessages}</strong> : null}
                 </button>
-                <button className={activeAdminSection === "settings" ? "active" : ""} type="button" onClick={() => setActiveAdminSection("settings")}>
-                  Configuracion
-                </button>
+                {adminRole === "owner" ? (
+                  <button className={activeAdminSection === "settings" ? "active" : ""} type="button" onClick={() => setActiveAdminSection("settings")}>
+                    Configuración
+                  </button>
+                ) : null}
               </aside>
 
               <div className="admin-board-main">
@@ -559,6 +618,18 @@ export default function AdminPage() {
                 <span>Pausados</span>
                 <strong>{listingStats.paused}</strong>
               </button>
+              <button className={`stat ${listingFilter === "sold" ? "selected" : ""}`} type="button" onClick={() => setListingFilter("sold")}>
+                <span>Vendidos</span>
+                <strong>{listingStats.sold}</strong>
+              </button>
+              <button className={`stat ${listingFilter === "rented" ? "selected" : ""}`} type="button" onClick={() => setListingFilter("rented")}>
+                <span>Alquilados</span>
+                <strong>{listingStats.rented}</strong>
+              </button>
+              <button className={`stat ${listingFilter === "archived" ? "selected" : ""}`} type="button" onClick={() => setListingFilter("archived")}>
+                <span>Archivados</span>
+                <strong>{listingStats.archived}</strong>
+              </button>
             </section>
 
             <div className="admin-grid">
@@ -573,7 +644,7 @@ export default function AdminPage() {
               <form onSubmit={saveListing}>
                 <div className="field-row">
                   <label className="field">
-                    <span>Titulo</span>
+                    <span>Título</span>
                     <input
                       required
                       value={listingForm.title}
@@ -581,7 +652,7 @@ export default function AdminPage() {
                     />
                   </label>
                   <label className="field">
-                    <span>Categoria</span>
+                    <span>Categoría</span>
                     <select
                       required
                       value={listingForm.category_id}
@@ -692,7 +763,7 @@ export default function AdminPage() {
                 {isRealEstate ? (
                   <div className="field-row">
                     <label className="field">
-                      <span>Recamaras</span>
+                      <span>Recámaras</span>
                       <input
                         type="number"
                         value={listingForm.bedrooms}
@@ -702,7 +773,7 @@ export default function AdminPage() {
                       />
                     </label>
                     <label className="field">
-                      <span>Banos</span>
+                      <span>Baños</span>
                       <input
                         type="number"
                         value={listingForm.bathrooms}
@@ -712,7 +783,7 @@ export default function AdminPage() {
                       />
                     </label>
                     <label className="field">
-                      <span>Area m2</span>
+                      <span>Área m2</span>
                       <input
                         type="number"
                         value={listingForm.area_m2}
@@ -725,7 +796,7 @@ export default function AdminPage() {
                 ) : null}
 
                 <label className="field">
-                  <span>Descripcion</span>
+                  <span>Descripción</span>
                   <textarea
                     required
                     rows={5}
@@ -787,7 +858,7 @@ export default function AdminPage() {
                     />
                   </label>
                   <label className="field">
-                    <span>Telefono anunciante</span>
+                    <span>Teléfono anunciante</span>
                     <input
                       value={listingForm.advertiser_phone}
                       onChange={(event) =>
@@ -822,7 +893,7 @@ export default function AdminPage() {
                 </div>
 
                 <label className="field">
-                  <span>Referencia de ubicacion</span>
+                  <span>Referencia de ubicación</span>
                   <input
                     value={listingForm.address_reference}
                     onChange={(event) =>
@@ -850,7 +921,7 @@ export default function AdminPage() {
                 </div>
 
                 <label className="field">
-                  <span>Imagenes</span>
+                  <span>Imágenes</span>
                   <input type="file" accept="image/*" multiple onChange={(event) => uploadImages(event.target.files)} />
                 </label>
                 <div className="image-preview">
@@ -881,6 +952,9 @@ export default function AdminPage() {
                       <option value="active">Activo</option>
                       <option value="paused">Pausado</option>
                       <option value="pending">Pendiente</option>
+                      <option value="sold">Vendido</option>
+                      <option value="rented">Alquilado</option>
+                      <option value="archived">Archivado</option>
                     </select>
                   </label>
                   <label className="field">
@@ -916,7 +990,7 @@ export default function AdminPage() {
                       <span className={`status-badge ${listing.status}`}>{statusLabel(listing.status)}</span>
                     </div>
                     <p className="muted">
-                      {money(listing.price)} - {listing.category?.name || "Sin categoria"} - {listing.province}
+                      {money(listing.price)} - {listing.category?.name || "Sin categoría"} - {listing.province}
                     </p>
                     <p className="muted">
                       {listing.profile?.full_name || listing.advertiser_name || "Admin"}
@@ -935,14 +1009,20 @@ export default function AdminPage() {
                       <button className="secondary" type="button" disabled={saving} onClick={() => quickUpdateListing(listing, { status: "pending" })}>
                         Pendiente
                       </button>
+                      <button className="secondary" type="button" disabled={saving} onClick={() => quickUpdateListing(listing, { status: "sold" })}>
+                        Vendido
+                      </button>
+                      <button className="secondary" type="button" disabled={saving} onClick={() => quickUpdateListing(listing, { status: "rented" })}>
+                        Alquilado
+                      </button>
                       <button className="secondary" type="button" disabled={saving} onClick={() => quickUpdateListing(listing, { featured: !listing.featured })}>
                         {listing.featured ? "Quitar destacado" : "Destacar"}
                       </button>
                       <button className="secondary" type="button" onClick={() => editListing(listing)}>
                         Editar
                       </button>
-                      <button className="danger" type="button" onClick={() => deleteListing(listing.id)}>
-                        Eliminar
+                      <button className="danger" type="button" onClick={() => archiveListing(listing)}>
+                        Archivar
                       </button>
                     </div>
                   </article>
@@ -964,7 +1044,7 @@ export default function AdminPage() {
                       <h3>{advertiser.name || "Sin nombre"}</h3>
                       <p className="muted">{advertiser.email || "Sin correo"}</p>
                       <p className="muted">
-                        {advertiser.phone || "Sin telefono"}
+                        {advertiser.phone || "Sin teléfono"}
                         {advertiser.age ? ` - ${advertiser.age} anos` : ""}
                       </p>
                       <div className="facts">
@@ -977,7 +1057,7 @@ export default function AdminPage() {
                     </div>
                   </article>
                 ))}
-                {!advertisers.length ? <p className="muted">Todavia no hay anunciantes registrados.</p> : null}
+                {!advertisers.length ? <p className="muted">Todavía no hay anunciantes registrados.</p> : null}
               </div>
             </aside>
 
@@ -990,7 +1070,7 @@ export default function AdminPage() {
               </div>
               <form onSubmit={saveBanner}>
                 <label className="field">
-                  <span>Titulo opcional</span>
+                  <span>Título opcional</span>
                   <input
                     value={bannerForm.title}
                     onChange={(event) => setBannerForm({ ...bannerForm, title: event.target.value })}
@@ -1051,6 +1131,20 @@ export default function AdminPage() {
                     />
                   </label>
                   <label className="field">
+                    <span>Ubicación</span>
+                    <select
+                      value={bannerForm.placement}
+                      onChange={(event) => setBannerForm({ ...bannerForm, placement: event.target.value })}
+                    >
+                      <option value="home">Slider principal</option>
+                      <option value="feed">Entre buscados y anuncios</option>
+                      <option value="rail">Promociones secundarias</option>
+                      <option value="popup">Popup de captación</option>
+                    </select>
+                  </label>
+                </div>
+                <div className="field-row">
+                  <label className="field">
                     <span>Estado</span>
                     <select
                       value={bannerForm.status}
@@ -1090,18 +1184,20 @@ export default function AdminPage() {
               <div className="list">
                 {banners.map((banner) => (
                   <article className="list-item" key={banner.id}>
-                    <h3>{banner.title || "Banner sin titulo"}</h3>
+                    <h3>{banner.title || "Banner sin título"}</h3>
                     <p className="muted">
-                      {banner.status} - orden {banner.sort_order}
+                      {banner.status} - {bannerPlacementLabel(banner.placement)} - orden {banner.sort_order}
                       {banner.ends_at ? ` - hasta ${toDateInput(banner.ends_at)}` : ""}
                     </p>
                     <div className="admin-actions">
                       <button className="secondary" type="button" onClick={() => setBannerForm(banner)}>
                         Editar
                       </button>
-                      <button className="danger" type="button" onClick={() => deleteBanner(banner.id)}>
-                        Eliminar
-                      </button>
+                      {adminRole === "owner" ? (
+                        <button className="danger" type="button" onClick={() => deleteBanner(banner.id)}>
+                          Eliminar
+                        </button>
+                      ) : null}
                     </div>
                   </article>
                 ))}
@@ -1110,7 +1206,7 @@ export default function AdminPage() {
 
             <section className={`panel ${!["dashboard", "categories"].includes(activeAdminSection) ? "admin-section-hidden" : ""}`}>
               <div className="form-head">
-                <h2>{categoryForm.id ? "Editar categoria" : "Nueva categoria"}</h2>
+                <h2>{categoryForm.id ? "Editar categoría" : "Nueva categoría"}</h2>
                 <button
                   className="secondary"
                   type="button"
@@ -1129,7 +1225,7 @@ export default function AdminPage() {
                   />
                 </label>
                 <label className="field">
-                  <span>Descripcion</span>
+                  <span>Descripción</span>
                   <input
                     value={categoryForm.description}
                     onChange={(event) =>
@@ -1138,13 +1234,13 @@ export default function AdminPage() {
                   />
                 </label>
                 <button className="primary" type="submit" disabled={saving}>
-                  Guardar categoria
+                  Guardar categoría
                 </button>
               </form>
             </section>
 
             <aside className={`panel ${!["dashboard", "categories"].includes(activeAdminSection) ? "admin-section-hidden" : ""}`}>
-              <h2>Categorias</h2>
+              <h2>Categorías</h2>
               <div className="list">
                 {categories.map((category) => (
                   <article className="list-item" key={category.id}>
@@ -1154,9 +1250,11 @@ export default function AdminPage() {
                       <button className="secondary" type="button" onClick={() => setCategoryForm(category)}>
                         Editar
                       </button>
-                      <button className="danger" type="button" onClick={() => deleteCategory(category.id)}>
-                        Eliminar
-                      </button>
+                      {adminRole === "owner" ? (
+                        <button className="danger" type="button" onClick={() => deleteCategory(category.id)}>
+                          Eliminar
+                        </button>
+                      ) : null}
                     </div>
                   </article>
                 ))}
@@ -1182,7 +1280,7 @@ export default function AdminPage() {
                       <small>{formatDateTime(message.created_at)}</small>
                     </button>
                   ))}
-                  {!messages.length ? <p className="muted">Todavia no hay mensajes.</p> : null}
+                  {!messages.length ? <p className="muted">Todavía no hay mensajes.</p> : null}
                 </div>
                 <article className="message-detail">
                   {selectedMessage ? (
@@ -1225,13 +1323,13 @@ export default function AdminPage() {
             <section className={`panel admin-full-row ${activeAdminSection !== "settings" ? "admin-section-hidden" : ""}`}>
               <div className="form-head">
                 <div>
-                  <h2>Configuracion</h2>
-                  <p className="muted">Ajustes generales para el flujo de publicacion.</p>
+                  <h2>Configuración</h2>
+                  <p className="muted">Ajustes generales para el flujo de publicación.</p>
                 </div>
               </div>
               <form className="settings-form" onSubmit={saveSettings}>
                 <label className="field">
-                  <span>Fotos maximas por anuncio</span>
+                  <span>Fotos máximas por anuncio</span>
                   <input
                     type="number"
                     min="1"
@@ -1241,7 +1339,7 @@ export default function AdminPage() {
                   />
                 </label>
                 <button className="primary" type="submit" disabled={saving}>
-                  {saving ? "Guardando..." : "Guardar configuracion"}
+                  {saving ? "Guardando..." : "Guardar configuración"}
                 </button>
               </form>
             </section>
@@ -1264,13 +1362,26 @@ function statusLabel(status) {
   if (status === "active") return "Activo";
   if (status === "pending") return "Pendiente";
   if (status === "paused") return "Pausado";
+  if (status === "sold") return "Vendido";
+  if (status === "rented") return "Alquilado";
+  if (status === "archived") return "Archivado";
   return status || "Sin estado";
+}
+
+function bannerPlacementLabel(placement) {
+  if (placement === "feed") return "Entre buscados y anuncios";
+  if (placement === "rail") return "Promociones secundarias";
+  if (placement === "popup") return "Popup de captación";
+  return "Slider principal";
 }
 
 function messageKindLabel(kind) {
   if (kind === "report") return "Denuncia";
   if (kind === "support") return "Ayuda";
   if (kind === "lead") return "Quiero anunciarme";
+  if (kind === "loan_request") return "Préstamo y refinanciamiento";
+  if (String(kind || "").startsWith("search_request_")) return "Yo busco";
+  if (kind === "inquiry") return "Consulta de anuncio";
   return "Feedback";
 }
 
@@ -1315,7 +1426,7 @@ function groupAdvertisers(listings) {
 }
 
 function initials(value) {
-  const text = String(value || "PA").trim();
+  const text = String(value || "A").trim();
   return text
     .split(/\s+/)
     .slice(0, 2)

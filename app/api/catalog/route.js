@@ -15,8 +15,8 @@ export async function GET() {
       supabase.from("categories").select("*").order("sort_order").order("name"),
       supabase
         .from("listings")
-        .select("*, category:categories(*), images:listing_images(*)")
-        .eq("status", "active")
+        .select("*, category:categories(*), images:listing_images(*), profile:profiles(*)")
+        .in("status", ["active", "sold", "rented"])
         .or(`expires_at.is.null,expires_at.gte.${now}`)
         .order("featured", { ascending: false })
         .order("created_at", { ascending: false }),
@@ -30,12 +30,35 @@ export async function GET() {
         .order("created_at", { ascending: false })
     ]);
 
-  if (categoryError || listingError || bannerError) {
+  if (categoryError && listingError && bannerError) {
     return NextResponse.json(
       { error: categoryError?.message || listingError?.message || bannerError?.message },
-      { status: 500 }
+      {
+        status: 503,
+        headers: { "Cache-Control": "public, s-maxage=10, stale-while-revalidate=600" }
+      }
     );
   }
 
-  return NextResponse.json({ categories, listings, banners });
+  if (categoryError || listingError || bannerError) {
+    console.error("Catalogo cargado parcialmente", {
+      categories: categoryError?.message || null,
+      listings: listingError?.message || null,
+      banners: bannerError?.message || null
+    });
+  }
+
+  return NextResponse.json(
+    {
+      ...(categoryError ? {} : { categories: categories || [] }),
+      ...(listingError ? {} : { listings: listings || [] }),
+      ...(bannerError ? {} : { banners: banners || [] }),
+      partial: Boolean(categoryError || listingError || bannerError)
+    },
+    {
+      headers: {
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=600"
+      }
+    }
+  );
 }

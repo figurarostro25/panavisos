@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 190" role="img" aria-labelledby="title description">
+  <title id="title">PanAvisos opción 2</title>
+  <desc id="description">Logo de PanAvisos con etiqueta de clasificado PA</desc>
+  <g transform="translate(10 28)">
+    <path fill="#12313F" d="M24 0h105c14 0 25 11 25 25v79c0 14-11 25-25 25H24C11 129 0 118 0 104V25C0 11 11 0 24 0Z"/>
+    <path fill="#D7B45A" d="M111 0h18c14 0 25 11 25 25v18h-20c-13 0-23-10-23-23V0Z"/>
+    <circle cx="130" cy="24" r="7" fill="#FFFFFF"/>
+    <path fill="#FFFFFF" d="M28 93V35h36c18 0 29 10 29 26 0 17-12 27-30 27H48v5H28Zm20-40v19h14c7 0 11-4 11-10s-4-9-11-9H48Z"/>
+    <path fill="#FFFFFF" d="M82 93 107 35h20l25 58h-23l-4-10h-18l-4 10H82Zm31-25h8l-4-13-4 13Z"/>
+  </g>
+  <text x="190" y="113" font-family="Arial, Helvetica, sans-serif" font-size="76" font-weight="900" letter-spacing="0">
+    <tspan fill="#12313F">Pan</tspan><tspan fill="#9F7329">Avisos</tspan>
+  </text>
+  <path fill="none" stroke="#D7B45A" stroke-width="7" stroke-linecap="round" d="M190 134h268"/>
+  <text x="476" y="141" fill="#667085" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700">publica y encuentra en Panamá</text>
+</svg>

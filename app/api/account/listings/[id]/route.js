@@ -40,11 +40,30 @@ export async function PATCH(request, { params }) {
 
   if (existingError) return NextResponse.json({ error: "No encontramos ese anuncio en tu cuenta." }, { status: 404 });
 
+  if (body.action === "status") {
+    const allowedStatuses = new Set(["active", "sold", "rented", "archived", "paused"]);
+    const nextStatus = String(body.status || "").trim();
+    if (!allowedStatuses.has(nextStatus)) {
+      return NextResponse.json({ error: "Estado no permitido." }, { status: 400 });
+    }
+
+    const { error } = await supabase
+      .from("listings")
+      .update({ status: nextStatus, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("user_id", user.id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    const { data: listing } = await getOwnedListing(supabase, id, user.id);
+    return NextResponse.json({ listing, status: listing?.status || nextStatus });
+  }
+
   const payload = listingPayload(
     {
       ...body,
       user_id: user.id,
-      status: existing.status === "inactive" || existing.status === "paused" ? existing.status : "active",
+      responsibility_accepted: body.responsibility_accepted !== false,
+      status: ["archived", "paused", "sold", "rented"].includes(existing.status) ? existing.status : "active",
       featured: existing.featured
     },
     existing.slug
@@ -71,7 +90,7 @@ export async function DELETE(request, { params }) {
   const { error: existingError } = await getOwnedListing(supabase, id, user.id);
   if (existingError) return NextResponse.json({ error: "No encontramos ese anuncio en tu cuenta." }, { status: 404 });
 
-  const { error } = await supabase.from("listings").update({ status: "inactive", updated_at: new Date().toISOString() }).eq("id", id);
+  const { error } = await supabase.from("listings").update({ status: "archived", updated_at: new Date().toISOString() }).eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ ok: true });

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { deleteCloudinaryImages, listingPayload, replaceImages } from "@/lib/listings";
+import { listingPayload, replaceImages } from "@/lib/listings";
 
 export const runtime = "nodejs";
 
@@ -47,9 +47,10 @@ export async function DELETE(_request, { params }) {
 
   const { id } = await params;
   const supabase = getSupabaseAdmin();
-  const { data: images } = await supabase.from("listing_images").select("public_id").eq("listing_id", id);
-  const { error } = await supabase.from("listings").delete().eq("id", id);
+  const { error } = await supabase
+    .from("listings")
+    .update({ status: "archived", updated_at: new Date().toISOString() })
+    .eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  await deleteCloudinaryImages((images || []).map((image) => image.public_id));
   return NextResponse.json({ ok: true });
 }

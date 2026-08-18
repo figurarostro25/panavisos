@@ -14,7 +14,7 @@ export async function GET(_request, { params }) {
       .from("listings")
       .select("*, category:categories(*), images:listing_images(*)")
       .eq("user_id", id)
-      .eq("status", "active")
+      .in("status", ["active", "sold", "rented"])
       .or(`expires_at.is.null,expires_at.gte.${now}`)
       .order("created_at", { ascending: false })
   ]);

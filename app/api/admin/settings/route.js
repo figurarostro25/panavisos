@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdmin, requireOwner } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
@@ -34,7 +34,7 @@ export async function GET() {
 }
 
 export async function PATCH(request) {
-  if (!(await requireAdmin())) {
+  if (!(await requireOwner())) {
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   }
 

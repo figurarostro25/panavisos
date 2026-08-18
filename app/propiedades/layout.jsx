@@ -1,11 +1,11 @@
-export const metadata = {
-  title: "Propiedades en Panama | Casas, apartamentos y locales | PanAvisos",
+﻿export const metadata = {
+  title: "Propiedades en Panamá | Casas, apartamentos y locales | PanAvisos",
   description:
-    "Encuentra casas, apartamentos, locales comerciales, terrenos y propiedades en venta o alquiler en Panama.",
+    "Encuentra casas, apartamentos, locales comerciales, terrenos y propiedades en venta o alquiler en Panamá.",
   alternates: { canonical: "/propiedades" },
   openGraph: {
-    title: "Propiedades en Panama | PanAvisos",
-    description: "Casas, apartamentos, locales y terrenos publicados en Panama.",
+    title: "Propiedades en Panamá | PanAvisos",
+    description: "Casas, apartamentos, locales y terrenos publicados en Panamá.",
     type: "website"
   }
 };

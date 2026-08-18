@@ -27,32 +27,23 @@ export async function POST(request) {
     return NextResponse.json({ error: "Las ofertas deben tener fecha de vigencia." }, { status: 400 });
   }
 
+  if (!body.responsibility_accepted) {
+    return NextResponse.json({ error: "Debes aceptar la responsabilidad del anuncio para publicar." }, { status: 400 });
+  }
+
   const supabase = getSupabaseAdmin();
   const token = getBearerToken(request);
   const { data: authData, error: authError } = await supabase.auth.getUser(token);
 
   if (authError || !authData?.user) {
-    return NextResponse.json({ error: "Debes iniciar sesion para publicar." }, { status: 401 });
+    return NextResponse.json({ error: "Debes iniciar sesión para publicar." }, { status: 401 });
   }
 
   const user = authData.user;
   const metadata = user.user_metadata || {};
-  const provider = user.app_metadata?.provider || "email";
-  const advertiserName = body.advertiser_name || metadata.full_name || metadata.name || user.email;
-  const advertiserPhone = body.whatsapp || body.advertiser_phone || null;
-  const profilePayload = {
-    id: user.id,
-    full_name: advertiserName,
-    phone: advertiserPhone,
-    avatar_url: metadata.avatar_url || metadata.picture || null,
-    provider,
-    status: "active",
-    updated_at: new Date().toISOString()
-  };
-
   const { data: existingProfile } = await supabase
     .from("profiles")
-    .select("status, role")
+    .select("status, role, avatar_url")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -60,11 +51,29 @@ export async function POST(request) {
     return NextResponse.json({ error: "Esta cuenta no puede publicar anuncios." }, { status: 403 });
   }
 
+  const provider = user.app_metadata?.provider || "email";
+  const advertiserName = body.advertiser_name || metadata.full_name || metadata.name || user.email;
+  const advertiserPhone = body.whatsapp || body.advertiser_phone || null;
+  const profilePayload = {
+    id: user.id,
+    full_name: advertiserName,
+    phone: advertiserPhone,
+    avatar_url: existingProfile?.avatar_url || metadata.avatar_url || metadata.picture || null,
+    provider,
+    status: "active",
+    updated_at: new Date().toISOString()
+  };
+
   const { error: profileError } = await supabase
     .from("profiles")
     .upsert({ ...profilePayload, role: existingProfile?.role || "user" }, { onConflict: "id" });
 
   if (profileError) return NextResponse.json({ error: profileError.message }, { status: 500 });
+
+  const { count: profileCount } = await supabase
+    .from("profiles")
+    .select("id", { count: "exact", head: true });
+  const founderCourtesy = !profileCount || profileCount <= 100;
 
   const payload = listingPayload(
     {
@@ -75,7 +84,7 @@ export async function POST(request) {
       advertiser_email: user.email,
       whatsapp: advertiserPhone,
       status: "active",
-      featured: false,
+      featured: founderCourtesy && body.featured !== false,
       expires_at: body.expires_at || defaultExpiresAt()
     },
     uniqueSlug(body.title)

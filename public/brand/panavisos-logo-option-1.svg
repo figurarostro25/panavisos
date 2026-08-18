@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 190" role="img" aria-labelledby="title description">
+  <title id="title">PanAvisos opción 1</title>
+  <desc id="description">Logo premium de PanAvisos con monograma PA</desc>
+  <rect x="8" y="18" width="154" height="154" rx="28" fill="#17212B"/>
+  <path fill="#FFFFFF" d="M36 128V55h44c23 0 38 13 38 33 0 21-16 35-40 35H60v5H36Zm24-52v27h17c10 0 16-5 16-14 0-8-6-13-16-13H60Z"/>
+  <path fill="#FFFFFF" d="M88 128 120 55h23l32 73h-26l-5-13h-26l-5 13H88Zm37-31h13l-7-18-6 18Z"/>
+  <path fill="#D7B45A" d="M28 145h106c8 0 14-6 14-14v-3H42c-8 0-14 6-14 14v3Z"/>
+  <circle cx="134" cy="52" r="10" fill="#1F6F78"/>
+  <text x="190" y="116" font-family="Arial, Helvetica, sans-serif" font-size="78" font-weight="900" letter-spacing="0">
+    <tspan fill="#17212B">Pan</tspan><tspan fill="#1F6F78">Avisos</tspan>
+  </text>
+  <text x="194" y="148" fill="#667085" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700">clasificados, propiedades y servicios</text>
+</svg>

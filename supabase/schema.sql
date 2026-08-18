@@ -14,16 +14,19 @@ create table if not exists public.profiles (
   full_name text,
   phone text,
   age integer,
-  bio text,
   avatar_url text,
+  profession text,
+  website_url text,
+  bio text,
+  interests text,
+  referral_code text,
+  points integer not null default 0,
   provider text,
   role text not null default 'user',
   status text not null default 'active',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
-
-alter table public.profiles add column if not exists bio text;
 
 create table if not exists public.listings (
   id uuid primary key default gen_random_uuid(),
@@ -38,9 +41,13 @@ create table if not exists public.listings (
   province text not null,
   district text not null,
   address_reference text,
+  property_type text,
   bedrooms integer not null default 0,
   bathrooms integer not null default 0,
   area_m2 integer not null default 0,
+  land_area_ha numeric(12, 4),
+  item_condition text,
+  requested_category text,
   description text not null,
   whatsapp text,
   email text,
@@ -51,6 +58,7 @@ create table if not exists public.listings (
   advertiser_age integer,
   lat numeric(10, 6),
   lng numeric(10, 6),
+  responsibility_accepted boolean not null default false,
   status text not null default 'active',
   featured boolean not null default false,
   expires_at timestamptz,
@@ -99,6 +107,31 @@ create table if not exists public.admin_messages (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.app_settings (
+  key text primary key,
+  value jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.admin_accounts (
+  id uuid primary key default gen_random_uuid(),
+  email text not null unique,
+  password_hash text not null,
+  role text not null default 'owner' check (role in ('owner', 'editor')),
+  status text not null default 'active' check (status in ('active', 'blocked')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.admin_recovery_tokens (
+  id uuid primary key default gen_random_uuid(),
+  email text not null,
+  token_hash text not null unique,
+  expires_at timestamptz not null,
+  used_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
 create index if not exists listings_status_idx on public.listings(status);
 create index if not exists listings_user_id_idx on public.listings(user_id);
 create index if not exists listings_category_idx on public.listings(category_id);
@@ -109,9 +142,16 @@ create index if not exists banners_status_idx on public.banners(status);
 create index if not exists banners_placement_idx on public.banners(placement);
 create index if not exists banners_dates_idx on public.banners(starts_at, ends_at);
 create index if not exists profiles_status_idx on public.profiles(status);
+create unique index if not exists profiles_referral_code_idx on public.profiles(referral_code) where referral_code is not null;
 create index if not exists admin_messages_status_idx on public.admin_messages(status);
 create index if not exists admin_messages_kind_idx on public.admin_messages(kind);
 create index if not exists admin_messages_created_at_idx on public.admin_messages(created_at);
+create index if not exists admin_recovery_tokens_email_idx on public.admin_recovery_tokens(email);
+create index if not exists admin_recovery_tokens_expires_idx on public.admin_recovery_tokens(expires_at);
+
+insert into public.app_settings (key, value)
+values ('max_listing_images', '5'::jsonb)
+on conflict (key) do nothing;
 
 alter table public.profiles enable row level security;
 alter table public.categories enable row level security;
@@ -119,6 +159,9 @@ alter table public.listings enable row level security;
 alter table public.listing_images enable row level security;
 alter table public.banners enable row level security;
 alter table public.admin_messages enable row level security;
+alter table public.app_settings enable row level security;
+alter table public.admin_accounts enable row level security;
+alter table public.admin_recovery_tokens enable row level security;
 
 drop policy if exists "Public can read categories" on public.categories;
 create policy "Public can read categories"
@@ -144,7 +187,7 @@ create policy "Users can update own profile"
 drop policy if exists "Public can read active listings" on public.listings;
 create policy "Public can read active listings"
   on public.listings for select
-  using (status = 'active');
+  using (status in ('active', 'sold', 'rented'));
 
 drop policy if exists "Public can read listing images" on public.listing_images;
 create policy "Public can read listing images"
@@ -154,7 +197,7 @@ create policy "Public can read listing images"
       select 1
       from public.listings
       where listings.id = listing_images.listing_id
-      and listings.status = 'active'
+      and listings.status in ('active', 'sold', 'rented')
     )
   );
 
@@ -166,60 +209,33 @@ create policy "Public can read active banners"
 insert into public.categories (name, slug, description, sort_order)
 values
   ('Bienes raices', 'bienes-raices', 'Casas, apartamentos, lotes, fincas y locales', 1),
-  ('Vehiculos', 'autos', 'Autos, motos, repuestos y accesorios', 2),
-  ('Empleos', 'empleos', 'Vacantes, oportunidades y trabajos temporales', 3),
-  ('Servicios', 'servicios', 'Profesionales, tecnicos, mantenimiento y asesorias', 4),
-  ('Hojas de vida', 'hojas-de-vida', 'Perfiles laborales y talento disponible', 5),
-  ('Marketplace', 'marketplace', 'Productos nuevos, usados, ofertas y promociones', 6),
-  ('Electronica', 'electronica', 'Audio, video, consolas, camaras y tecnologia', 7),
-  ('Celulares y accesorios', 'celulares-y-accesorios', 'Telefonos, cargadores, repuestos y accesorios', 8),
-  ('Computadoras y tablets', 'computadoras-y-tablets', 'Laptops, tablets, partes y accesorios', 9),
-  ('Hogar y muebles', 'hogar-y-muebles', 'Muebles, decoracion, electrodomesticos y hogar', 10),
-  ('Moda y accesorios', 'moda-y-accesorios', 'Ropa, calzado, relojes, carteras y accesorios', 11),
-  ('Bebes y ninos', 'bebes-y-ninos', 'Coches, juguetes, ropa y articulos infantiles', 12),
-  ('Mascotas', 'mascotas', 'Mascotas, alimentos, accesorios y servicios', 13),
-  ('Deportes', 'deportes', 'Articulos deportivos, bicicletas y equipos', 14),
-  ('Salud y belleza', 'salud-y-belleza', 'Cuidado personal, bienestar y productos de belleza', 15),
-  ('Estetica integral', 'estetica-integral', 'Belleza, cuidado facial, corporal y bienestar', 16),
-  ('Educacion y cursos', 'educacion-y-cursos', 'Cursos, clases, capacitaciones y tutores', 17),
-  ('Herramientas y construccion', 'herramientas-y-construccion', 'Herramientas, materiales, obra y remodelacion', 18),
-  ('Negocios e industria', 'negocios-e-industria', 'Equipos, inventario, maquinaria y oportunidades', 19),
-  ('Eventos y entretenimiento', 'eventos-y-entretenimiento', 'Musica, fiestas, eventos, arte y entretenimiento', 20),
-  ('Gratis y donaciones', 'gratis-y-donaciones', 'Articulos gratis, cambios y donaciones', 21),
-  ('Nineras y cuidado', 'nineras-y-cuidado', 'Cuidado infantil, adultos mayores y asistencia en casa', 22),
-  ('Limpieza del hogar', 'limpieza-del-hogar', 'Limpieza de casas, apartamentos y oficinas', 23),
-  ('Prestamos personales', 'prestamos-personales', 'Prestamos, financiamiento y consolidacion', 24),
-  ('Hospedajes', 'hospedajes', 'Alquileres temporales, habitaciones y estadias', 25)
-on conflict (slug) do nothing;
-
--- Categorias especificas para Marketplace y servicios que se agregan sin alterar las existentes.
-insert into public.categories (name, slug, description, sort_order)
-values
-  ('Cuidado de adultos mayores', 'cuidado-adultos-mayores', 'Acompanamiento y cuidado de adultos mayores', 26),
-  ('Electronica y audio', 'electronica-y-audio', 'Audio, video, fotografia y electronica', 27),
-  ('Jardineria', 'jardineria', 'Plantas, jardineria y equipos para exteriores', 28),
-  ('Electrodomesticos', 'electrodomesticos', 'Electrodomesticos y equipos para el hogar', 29),
-  ('Deportes y aire libre', 'deportes-aire-libre', 'Articulos deportivos y actividades al aire libre', 30),
-  ('Instrumentos musicales', 'instrumentos-musicales', 'Instrumentos, equipos y accesorios musicales', 31),
-  ('Arte y manualidades', 'arte-manualidades', 'Arte, materiales y proyectos creativos', 32),
-  ('Antiguedades y coleccion', 'antiguedades-coleccion', 'Antiguedades, coleccionables y articulos especiales', 33),
-  ('Autopartes', 'autopartes', 'Repuestos, piezas y accesorios para vehiculos', 34),
-  ('Bicicletas', 'bicicletas', 'Bicicletas, repuestos y accesorios', 35),
-  ('Libros, peliculas y musica', 'libros-peliculas-musica', 'Libros, peliculas, musica y medios', 36),
-  ('Videojuegos', 'videojuegos', 'Consolas, juegos y accesorios', 37),
-  ('Joyas y accesorios', 'joyas-accesorios', 'Joyas, relojes y accesorios personales', 38),
-  ('Bolsos y equipaje', 'bolsos-equipaje', 'Bolsos, maletas y equipaje', 39),
-  ('Ropa y calzado de hombre', 'ropa-calzado-hombre', 'Ropa, zapatos y accesorios para hombre', 40),
-  ('Ropa y calzado de mujer', 'ropa-calzado-mujer', 'Ropa, zapatos y accesorios para mujer', 41),
-  ('Juguetes y juegos', 'juguetes-juegos', 'Juguetes, juegos de mesa y entretenimiento familiar', 42),
-  ('Venta de garaje', 'venta-de-garaje', 'Articulos variados de venta de garaje', 43)
-on conflict (slug) do nothing;
+  ('Autos', 'autos', 'Carros, motos, repuestos y accesorios', 2),
+  ('Servicios', 'servicios', 'Profesionales, técnicos, mantenimiento y asesorías', 3),
+  ('Empleos', 'empleos', 'Vacantes, trabajos por servicio y oportunidades laborales', 4),
+  ('Niñeras y cuidado infantil', 'nineras-cuidado-infantil', 'Cuidado de niños, apoyo familiar y asistencia en casa', 5),
+  ('Limpieza del hogar', 'limpieza-del-hogar', 'Limpieza, mantenimiento y apoyo doméstico', 6),
+  ('Préstamos y asesoría financiera', 'prestamos-asesoria-financiera', 'Asesoría, préstamos personales y servicios financieros', 7),
+  ('Hospedajes', 'hospedajes', 'Habitaciones, alquiler temporal y estadías', 8),
+  ('Restaurantes y comida', 'restaurantes-comida', 'Restaurantes, fondas, comida a domicilio y catering', 9),
+  ('Belleza y bienestar', 'belleza-bienestar', 'Belleza, masajes, estética y cuidado personal', 10),
+  ('Terrenos y lotes', 'terrenos-lotes', 'Terrenos, lotes, fincas y oportunidades de inversión', 11),
+  ('Locales comerciales', 'locales-comerciales', 'Locales, oficinas, bodegas y espacios comerciales', 12),
+  ('Secretarias y asistentes', 'secretarias-asistentes', 'Secretarias, asistentes administrativos y apoyo de oficina', 13),
+  ('Saloneras y meseros', 'saloneras-meseros', 'Saloneras, meseros, atención al cliente y apoyo en restaurantes', 14),
+  ('Azafatas y eventos', 'azafatas-eventos', 'Azafatas, promotores, anfitriones y personal para eventos', 15),
+  ('Cuidado de adultos mayores', 'cuidado-adultos-mayores', 'Cuidado, acompañamiento y asistencia para adultos mayores', 16),
+  ('Masajes', 'masajes', 'Masajes terapéuticos, relajantes, deportivos y bienestar corporal', 17),
+  ('Otros', 'otros', 'Si no encuentras tu categoría, publícala aquí y la revisamos', 99)
+on conflict (slug) do update set
+  name = excluded.name,
+  description = excluded.description,
+  sort_order = excluded.sort_order;
 
 insert into public.banners (title, subtitle, cta_label, cta_url, placement, status, sort_order)
 select *
 from (
   values
-    ('Publica y encuentra oportunidades en Panama', 'Propiedades, autos, servicios y ofertas locales en un solo lugar.', 'Ver anuncios', '/', 'home', 'active', 1),
+    ('Publica y encuentra oportunidades en Panamá', 'Propiedades, autos, servicios y ofertas locales en un solo lugar.', 'Ver anuncios', '/', 'home', 'active', 1),
     ('Espacio destacado para promociones', 'Usa este banner para resaltar negocios, inmuebles, paquetes o anuncios importantes.', 'Panel admin', '/admin', 'home', 'active', 2)
 ) as seed(title, subtitle, cta_label, cta_url, placement, status, sort_order)
 where not exists (select 1 from public.banners);

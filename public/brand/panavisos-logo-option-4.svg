@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 190" role="img" aria-labelledby="title description">
+  <title id="title">PanAvisos opción 4</title>
+  <desc id="description">Logo tipográfico premium de PanAvisos con subrayado dorado limpio</desc>
+  <text x="24" y="105" font-family="Arial, Helvetica, sans-serif" font-size="78" font-weight="900" letter-spacing="-1">
+    <tspan fill="#151F2A">Pan</tspan><tspan fill="#12313F">Avisos</tspan>
+  </text>
+  <path
+    d="M184 132c58 15 150 15 250-10"
+    fill="none"
+    stroke="#C99A2E"
+    stroke-width="7"
+    stroke-linecap="round"
+  />
+  <path fill="#C99A2E" d="M432 116 470 111l-27 27c-4 4-10 1-8-5l3-8-8-2c-6-1-5-7 2-7Z"/>
+  <text x="28" y="154" fill="#667085" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" letter-spacing="0">
+    clasificados de Panamá
+  </text>
+</svg>

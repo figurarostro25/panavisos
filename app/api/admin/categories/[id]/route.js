@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdmin, requireOwner } from "@/lib/auth";
 import { slugify } from "@/lib/format";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
@@ -31,7 +31,7 @@ export async function PATCH(request, { params }) {
 }
 
 export async function DELETE(_request, { params }) {
-  if (!(await requireAdmin())) {
+  if (!(await requireOwner())) {
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   }
 

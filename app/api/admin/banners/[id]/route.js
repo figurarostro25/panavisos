@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdmin, requireOwner } from "@/lib/auth";
 import { bannerPayload } from "@/lib/banners";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
@@ -24,7 +24,7 @@ export async function PATCH(request, context) {
 }
 
 export async function DELETE(_request, context) {
-  if (!(await requireAdmin())) {
+  if (!(await requireOwner())) {
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   }
 

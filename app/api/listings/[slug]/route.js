@@ -12,7 +12,7 @@ export async function GET(_request, { params }) {
     .from("listings")
     .select("*, category:categories(*), images:listing_images(*), profile:profiles(*)")
     .eq("slug", slug)
-    .eq("status", "active")
+    .in("status", ["active", "sold", "rented"])
     .or(`expires_at.is.null,expires_at.gte.${now}`)
     .maybeSingle();
 
@@ -25,7 +25,7 @@ export async function GET(_request, { params }) {
       .from("listings")
       .select("*, category:categories(*), images:listing_images(*)")
       .eq("user_id", listing.user_id)
-      .eq("status", "active")
+      .in("status", ["active", "sold", "rented"])
       .neq("id", listing.id)
       .or(`expires_at.is.null,expires_at.gte.${now}`)
       .order("created_at", { ascending: false })

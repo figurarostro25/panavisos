@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 200" role="img" aria-labelledby="title description">
+  <title id="title">PanAvisos opción 5</title>
+  <desc id="description">Logo juvenil y profesional de PanAvisos con burbuja PA y acento dinámico</desc>
+  <g transform="translate(18 24)">
+    <rect x="0" y="0" width="150" height="128" rx="32" fill="#12313F"/>
+    <path fill="#12313F" d="M52 121h42l-28 30c-5 6-14 2-14-6v-24Z"/>
+    <circle cx="122" cy="31" r="15" fill="#D7B45A"/>
+    <path fill="#FFFFFF" d="M30 93V33h36c19 0 31 11 31 27 0 18-13 29-32 29H51v4H30Zm21-41v20h13c8 0 12-4 12-10s-4-10-12-10H51Z"/>
+    <path fill="#FFFFFF" d="M82 93 109 33h21l27 60h-24l-4-10h-21l-4 10H82Zm33-26h8l-4-13-4 13Z"/>
+    <path fill="#2DB8A8" d="M31 107h92c8 0 14 6 14 14v3H45c-8 0-14-6-14-14v-3Z"/>
+  </g>
+  <text x="190" y="113" font-family="Arial, Helvetica, sans-serif" font-size="78" font-weight="900" letter-spacing="-1">
+    <tspan fill="#17212B">Pan</tspan><tspan fill="#0D7E83">Avisos</tspan>
+  </text>
+  <path fill="none" stroke="#D7B45A" stroke-width="7" stroke-linecap="round" d="M548 130c44 11 91 5 136-18"/>
+  <circle cx="702" cy="105" r="6" fill="#D7B45A"/>
+  <text x="194" y="148" fill="#566576" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700">
+    publica fácil, encuentra rápido
+  </text>
+</svg>
