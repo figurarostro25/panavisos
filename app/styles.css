@@ -8929,7 +8929,7 @@ body {
   .marketplace-topbar .brand-logo {
     width: 152px;
     max-height: 48px;
-    filter: brightness(0) invert(1) drop-shadow(0 4px 10px rgba(52, 14, 77, 0.18));
+    filter: none;
   }
 
   .marketplace-topbar.is-scrolled .brand-logo {
@@ -9458,7 +9458,6 @@ body {
 
 /* Mobile home: one clear browse flow, matching the compact PanAvisos reference. */
 .mobile-home-intro,
-.mobile-brand,
 .mobile-search-symbol {
   display: none;
 }
@@ -9488,30 +9487,10 @@ body {
   }
 
   .home-topbar .brand-logo {
-    display: none !important;
-  }
-
-  .home-topbar .mobile-brand {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-    color: #ffffff;
-  }
-
-  .home-topbar .mobile-brand img {
-    width: 42px;
-    height: 42px;
-    padding: 4px;
-    border-radius: 8px;
-    background: #ffffff;
-  }
-
-  .home-topbar .mobile-brand strong {
-    color: #ffffff;
-    font-size: 1.18rem;
-    font-weight: 850;
-    letter-spacing: 0;
+    display: block !important;
+    width: 152px;
+    max-height: 48px;
+    filter: none !important;
   }
 
   .home-topbar .top-actions > .notification-button {

@@ -476,8 +476,8 @@ export function CatalogHome({ section = "home" }) {
     [catalogListings]
   );
   const serviceListings = useMemo(
-    () => catalogListings.filter((listing) => isServiceCategory(listing.category)),
-    [catalogListings]
+    () => (data.listings || []).filter((listing) => isServiceCategory(listing.category)),
+    [data.listings]
   );
   useEffect(() => {
     if (!data.categories?.length) return;
@@ -707,7 +707,7 @@ export function CatalogHome({ section = "home" }) {
           </div>
         ) : null}
 
-        {section !== "home" ? (
+        {section !== "home" && !(section === "marketplace" && listingGroup === "servicios") ? (
           <CategoryDirectory
             title={sectionCopy.categoriesTitle}
             description={sectionCopy.categoriesDescription}
@@ -804,7 +804,13 @@ export function CatalogHome({ section = "home" }) {
           <section className="market-results">
             <div className="toolbar">
               <div>
-                <strong>{section === "home" ? "Destacados de hoy" : sectionCopy.resultsTitle}</strong>
+                <strong>
+                  {section === "home"
+                    ? "Destacados de hoy"
+                    : section === "marketplace" && listingGroup === "servicios"
+                      ? "Servicios y empleos"
+                      : sectionCopy.resultsTitle}
+                </strong>
                 {!loading && !catalogError ? <span className="muted"> - {listings.length} anuncios</span> : null}
               </div>
               <div className="listing-tools">
@@ -827,32 +833,31 @@ export function CatalogHome({ section = "home" }) {
             </div>
 
             {catalogError ? (
-              <div className="catalog-refresh-notice" role="status">
-                <span>Estamos actualizando los anuncios.</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCatalogError(false);
-                    setLoading(true);
-                    setCatalogReloadKey((current) => current + 1);
-                  }}
-                >
-                  Reintentar
-                </button>
-              </div>
+              section === "marketplace" && listingGroup === "servicios" ? (
+                <div className="notice">Todavía no hay anuncios de servicios publicados.</div>
+              ) : (
+                <div className="catalog-refresh-notice" role="status">
+                  <span>Estamos actualizando los anuncios.</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCatalogError(false);
+                      setLoading(true);
+                      setCatalogReloadKey((current) => current + 1);
+                    }}
+                  >
+                    Reintentar
+                  </button>
+                </div>
+              )
             ) : orderedListings.length || (!loading && listings.length === 0) ? (
               <>
-                {section !== "home" ? (
-                  <h2 className="block-title listing-feed-title">
-                    {section === "properties"
-                      ? "Propiedades disponibles"
-                      : section === "marketplace" && listingGroup === "servicios"
-                        ? "Servicios y empleos"
-                        : "Anuncios de Marketplace"}
-                  </h2>
-                ) : null}
                 {!loading && listings.length === 0 ? (
-                  <div className="notice">Todavía no hay anuncios con esos filtros.</div>
+                  <div className="notice">
+                    {section === "marketplace" && listingGroup === "servicios"
+                      ? "Todavía no hay anuncios de servicios publicados."
+                      : "Todavía no hay anuncios con esos filtros."}
+                  </div>
                 ) : (
                   <div className="grid listing-feed-grid">
                     {orderedListings.map((listing) => (
@@ -1409,10 +1414,6 @@ function Topbar({ profile, categories = [], section, accountOpen, inquiryCount =
       <div className="topbar-inner">
         <Link className="brand" href="/">
           <img className="brand-logo" src="/brand/panavisos-logo.svg" alt="PanAvisos" />
-          <span className="mobile-brand" aria-hidden="true">
-            <img src="/brand/panavisos-mark.svg" alt="" />
-            <strong>PanAvisos</strong>
-          </span>
         </Link>
         <nav className="main-menu" aria-label="Categorías principales">
           <Link className={section === "properties" ? "active" : ""} href="/propiedades">
