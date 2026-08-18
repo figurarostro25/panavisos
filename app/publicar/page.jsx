@@ -69,6 +69,7 @@ export default function PublicarPage() {
   const [maxImages, setMaxImages] = useState(DEFAULT_MAX_IMAGES);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [showRequiredErrors, setShowRequiredErrors] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -232,6 +233,10 @@ export default function PublicarPage() {
   }, [form.district, selectedLocationKey]);
 
   const currentStep = Math.min(step, 3);
+  const missingStepOneFields = getMissingPublishFields(form);
+  const visibleError = showRequiredErrors && currentStep === 1
+    ? (missingStepOneFields.length ? formatMissingPublishFields(missingStepOneFields) : "")
+    : error;
 
   function setCategory(categoryId) {
     const nextCategory = categories.find((category) => category.id === categoryId);
@@ -311,9 +316,15 @@ export default function PublicarPage() {
 
   function goNext() {
     setError("");
-    if (currentStep === 1 && (!form.title || !form.price || !form.category_id || !form.description)) {
-      setError("Completa título, precio, categoría y descripción.");
-      return;
+    if (currentStep === 1) {
+      const missingFields = getMissingPublishFields(form);
+      if (missingFields.length) {
+        setShowRequiredErrors(true);
+        setError(formatMissingPublishFields(missingFields));
+        focusPublishField(missingFields[0].key);
+        return;
+      }
+      setShowRequiredErrors(false);
     }
 
     if (currentStep === 1 && form.operation === "Oferta" && !form.expires_at) {
@@ -526,7 +537,7 @@ export default function PublicarPage() {
           </p>
 
           {message ? <p className="notice">{message}</p> : null}
-          {error ? <p className="error">{error}</p> : null}
+          {visibleError ? <p className="error">{visibleError}</p> : null}
 
           {currentStep === 1 ? (
             <div className="step-pane">
@@ -540,12 +551,27 @@ export default function PublicarPage() {
 
               <label className="field">
                 <span>Título</span>
-                <input required value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
+                <input
+                  id="publish-title"
+                  required
+                  aria-invalid={showRequiredErrors && !form.title.trim()}
+                  value={form.title}
+                  onChange={(event) => setForm({ ...form, title: event.target.value })}
+                />
+                {showRequiredErrors && !form.title.trim() ? <small className="field-error">Escribe un título.</small> : null}
               </label>
 
               <label className="field">
                 <span>Precio USD</span>
-                <input required type="number" value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} />
+                <input
+                  id="publish-price"
+                  required
+                  type="number"
+                  aria-invalid={showRequiredErrors && String(form.price).trim() === ""}
+                  value={form.price}
+                  onChange={(event) => setForm({ ...form, price: event.target.value })}
+                />
+                {showRequiredErrors && String(form.price).trim() === "" ? <small className="field-error">Indica el precio.</small> : null}
               </label>
 
               <PublishCategoryChooser
@@ -553,6 +579,7 @@ export default function PublicarPage() {
                 activeGroup={activePublishGroup}
                 selectedCategoryId={form.category_id}
                 suggestedQuery={form.title}
+                invalid={showRequiredErrors && !form.category_id}
                 loading={categoriesLoading && !categories.length}
                 error={categoriesError}
                 onRetry={() => setCategoriesReloadKey((current) => current + 1)}
@@ -653,7 +680,15 @@ export default function PublicarPage() {
 
               <label className="field">
                 <span>Descripción</span>
-                <textarea required rows={5} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
+                <textarea
+                  id="publish-description"
+                  required
+                  rows={5}
+                  aria-invalid={showRequiredErrors && !form.description.trim()}
+                  value={form.description}
+                  onChange={(event) => setForm({ ...form, description: event.target.value })}
+                />
+                {showRequiredErrors && !form.description.trim() ? <small className="field-error">Añade una descripción.</small> : null}
               </label>
 
               <label className="field">
@@ -804,6 +839,7 @@ export default function PublicarPage() {
           ) : null}
 
           <div className="publish-bottom-bar">
+            {visibleError ? <p className="publish-bottom-error" role="alert">{visibleError}</p> : null}
             <button className="secondary" type="button" disabled={currentStep === 1 || saving} onClick={() => setStep((value) => Math.max(1, value - 1))}>
               Anterior
             </button>
@@ -858,6 +894,7 @@ function PublishCategoryChooser({
   activeGroup,
   selectedCategoryId,
   suggestedQuery,
+  invalid,
   loading,
   error,
   onRetry,
@@ -901,12 +938,43 @@ function PublishCategoryChooser({
         {selectedCategoryId ? <small>Categoría seleccionada</small> : null}
       </div>
 
+      <label className="publish-category-direct" htmlFor="publish-category-select">
+        <span>Categoría</span>
+        <select
+          id="publish-category-select"
+          value={selectedCategoryId}
+          aria-invalid={invalid}
+          onChange={(event) => {
+            const categoryId = event.target.value;
+            if (!categoryId) {
+              clearSelection();
+              return;
+            }
+            const item = categories.find((entry) => entry.category.id === categoryId);
+            onChooseCategory(categoryId);
+            setQuery(item?.category.name || "");
+            setQueryTouched(true);
+          }}
+        >
+          <option value="">Selecciona una categoría</option>
+          {groups.flatMap((group) => group.sections.map((section) => (
+            <optgroup key={`${group.key}-${section.label}`} label={`${group.label}: ${section.label}`}>
+              {section.categories.map((category) => (
+                <option key={category.id} value={category.id}>{category.name}</option>
+              ))}
+            </optgroup>
+          )))}
+        </select>
+        <small>También puedes usar el buscador para encontrarla más rápido.</small>
+      </label>
+
       <div className="publish-category-search">
         <label htmlFor="publish-category-search">Busca el producto o servicio</label>
         <input
           id="publish-category-search"
           type="search"
           value={query}
+          aria-invalid={invalid}
           onChange={(event) => {
             setQuery(event.target.value);
             setQueryTouched(true);
@@ -944,26 +1012,6 @@ function PublishCategoryChooser({
         </div>
       ) : null}
 
-      <span className="publish-category-or">O explora por tipo</span>
-
-      <div className="publish-type-grid">
-        {groups.map((group) => (
-          <button
-            className={`publish-type-card ${activeGroup?.key === group.key ? "active" : ""}`}
-            type="button"
-            key={group.key}
-            onClick={() => {
-              onChooseType(group);
-              setQuery("");
-              setQueryTouched(true);
-            }}
-          >
-            <strong>{group.label}</strong>
-            <span>{group.description}</span>
-          </button>
-        ))}
-      </div>
-
       {loading ? <p className="muted">Cargando categorías...</p> : null}
       {error ? (
         <span className="category-load-error" role="status">
@@ -972,31 +1020,94 @@ function PublishCategoryChooser({
         </span>
       ) : null}
 
-      {activeGroup && categoryCount && !selectedCategory ? (
-        <div className="publish-subcategory-panel">
-          <span className="field-label">Categoría</span>
-          {activeGroup.sections.map((section) => (
-            <div className="publish-subcategory-section" key={section.label}>
-              <strong>{section.label}</strong>
-              <div className="publish-subcategory-list">
-                {section.categories.map((category) => (
-                  <button
-                    className={selectedCategoryId === category.id ? "active" : ""}
-                    type="button"
-                    key={category.id}
-                    onClick={() => onChooseCategory(category.id)}
-                  >
-                    <span>{category.name}</span>
-                    {category.description ? <small>{category.description}</small> : null}
-                  </button>
-                ))}
-              </div>
-            </div>
+      <div className="publish-category-browse">
+        <span className="publish-category-or">O explora por tipo</span>
+
+        <div className="publish-type-grid">
+          {groups.map((group) => (
+            <button
+              className={`publish-type-card ${activeGroup?.key === group.key ? "active" : ""}`}
+              type="button"
+              key={group.key}
+              onClick={() => {
+                onChooseType(group);
+                setQuery("");
+                setQueryTouched(true);
+              }}
+            >
+              <strong>{group.label}</strong>
+              <span>{group.description}</span>
+            </button>
           ))}
         </div>
-      ) : null}
+
+        {activeGroup && categoryCount && !selectedCategory ? (
+          <div className="publish-subcategory-panel">
+            <span className="field-label">Categoría</span>
+            {activeGroup.sections.map((section) => (
+              <div className="publish-subcategory-section" key={section.label}>
+                <strong>{section.label}</strong>
+                <div className="publish-subcategory-list">
+                  {section.categories.map((category) => (
+                    <button
+                      className={selectedCategoryId === category.id ? "active" : ""}
+                      type="button"
+                      key={category.id}
+                      onClick={() => onChooseCategory(category.id)}
+                    >
+                      <span>{category.name}</span>
+                      {category.description ? <small>{category.description}</small> : null}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </div>
+      {invalid ? <small className="field-error">Selecciona una categoría.</small> : null}
     </section>
   );
+}
+
+function getMissingPublishFields(form) {
+  return [
+    { key: "title", label: "título", missing: !form.title.trim() },
+    { key: "price", label: "precio", missing: String(form.price).trim() === "" },
+    { key: "category", label: "categoría", missing: !form.category_id },
+    { key: "description", label: "descripción", missing: !form.description.trim() }
+  ].filter((field) => field.missing);
+}
+
+function formatMissingPublishFields(fields) {
+  if (fields.length === 1) {
+    const messages = {
+      title: "Escribe un título para continuar.",
+      price: "Indica el precio para continuar.",
+      category: "Selecciona una categoría para continuar.",
+      description: "Añade una descripción para continuar."
+    };
+    return messages[fields[0].key];
+  }
+
+  const labels = fields.map((field) => field.label);
+  const last = labels.pop();
+  return `Falta completar: ${labels.join(", ")} y ${last}.`;
+}
+
+function focusPublishField(key) {
+  const desktopCategory = window.matchMedia("(min-width: 761px)").matches;
+  const ids = {
+    title: "publish-title",
+    price: "publish-price",
+    category: desktopCategory ? "publish-category-select" : "publish-category-search",
+    description: "publish-description"
+  };
+  window.setTimeout(() => {
+    const target = document.getElementById(ids[key]);
+    target?.scrollIntoView({ behavior: "smooth", block: "center" });
+    target?.focus({ preventScroll: true });
+  }, 0);
 }
 
 const categorySearchAliases = {
