@@ -95,7 +95,7 @@ export async function POST(request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   if (kind === "inquiry" && payload.listing_id) {
-    notifySeller(data).catch((notifyError) => {
+    await notifySeller(data).catch((notifyError) => {
       console.error("No se pudo notificar al anunciante", notifyError);
     });
   }

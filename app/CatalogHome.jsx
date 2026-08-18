@@ -2161,6 +2161,7 @@ function ListingDetail({ listing, profile, onClose }) {
   const [activeImage, setActiveImage] = useState(0);
   const [copied, setCopied] = useState(false);
   const [shared, setShared] = useState(false);
+  const [contactOpen, setContactOpen] = useState(false);
   const images = [...(listing.images || [])].sort((a, b) => a.position - b.position);
   const image = optimizeImageUrl(images[activeImage]?.url, 1200);
   const isPlaceholder = Boolean(listing.is_placeholder);
@@ -2210,6 +2211,16 @@ function ListingDetail({ listing, profile, onClose }) {
     } catch (shareError) {
       if (shareError?.name !== "AbortError") await copyListingLink();
     }
+  }
+
+  function openContactForm() {
+    setContactOpen(true);
+    window.setTimeout(() => {
+      document.getElementById(`listing-contact-${listing.id}`)?.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+    }, 0);
   }
 
   return (
@@ -2276,9 +2287,12 @@ function ListingDetail({ listing, profile, onClose }) {
             <PriceBlock listing={listing} large />
             <p className="muted">Publicado en {listing.district}, {listing.province}</p>
 
-            {!isPlaceholder && !closed ? <FeedbackForm profile={profile} listing={listing} compact /> : null}
-
             <div className="detail-actions">
+              {!isPlaceholder ? (
+                <button className="primary listing-message-action" type="button" onClick={openContactForm}>
+                  Enviar mensaje
+                </button>
+              ) : null}
               <Link className={isPlaceholder ? "primary" : "secondary"} href={isPlaceholder ? "/publicar" : `/anuncio/${listing.slug}`}>
                 {isPlaceholder ? "Publicar aquí" : "Abrir anuncio"}
               </Link>
@@ -2293,7 +2307,7 @@ function ListingDetail({ listing, profile, onClose }) {
               {isPlaceholder ? (
                 <p className="notice placeholder-detail-note">Este es un espacio de ejemplo. Crea tu cuenta con correo y contraseña para publicar un anuncio real.</p>
               ) : null}
-              {!isPlaceholder && !closed && whatsapp ? (
+              {!isPlaceholder && whatsapp ? (
                 <a
                   className="primary whatsapp-contact-action"
                   href={`https://wa.me/${whatsapp}?text=${whatsappMessage}`}
@@ -2319,6 +2333,12 @@ function ListingDetail({ listing, profile, onClose }) {
                 </a>
               ) : null}
             </div>
+
+            {!isPlaceholder && contactOpen ? (
+              <div className="listing-contact-section" id={`listing-contact-${listing.id}`}>
+                <FeedbackForm profile={profile} listing={listing} compact />
+              </div>
+            ) : null}
 
             <h3>Detalles</h3>
             <dl className="detail-list">

@@ -7122,6 +7122,11 @@ button:disabled {
   gap: 10px;
 }
 
+.listing-contact-section {
+  min-width: 0;
+  scroll-margin-top: 68px;
+}
+
 .detail-list {
   display: grid;
   gap: 10px;
@@ -9352,6 +9357,20 @@ body {
     min-height: 0;
   }
 
+  .listing-modal .gallery-stage {
+    width: 100%;
+    height: clamp(250px, 78vw, 390px);
+    min-height: 250px;
+    max-height: 390px;
+  }
+
+  .listing-modal .gallery-stage img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
+  }
+
   .listing-modal .listing-info {
     border: 0;
   }
@@ -9359,6 +9378,22 @@ body {
   .listing-modal .listing-info-scroll {
     max-height: none;
     overflow: visible;
+  }
+
+  .listing-modal .detail-actions {
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .listing-modal .detail-actions > * {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    white-space: normal;
+  }
+
+  .listing-modal .detail-actions .whatsapp-contact-action {
+    grid-column: auto;
   }
 
   .public-listing-topbar.topbar {
