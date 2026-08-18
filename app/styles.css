@@ -9558,7 +9558,7 @@ body {
     background: transparent;
   }
 
-  .home-market-home .mobile-home-intro {
+  .market-home .mobile-home-intro {
     display: block;
     width: 100%;
     max-width: none;
@@ -9566,7 +9566,7 @@ body {
     background: #ffffff;
   }
 
-  .home-market-home .mobile-home-intro h1 {
+  .market-home .mobile-home-intro h1 {
     margin: 0;
     color: #203140;
     font-size: 1.1rem;
@@ -9574,13 +9574,13 @@ body {
     line-height: 1.2;
   }
 
-  .home-market-home .home-quick-categories {
+  .market-home .home-quick-categories {
     gap: 8px;
     padding: 0 12px 14px;
     background: #ffffff;
   }
 
-  .home-market-home .home-quick-category {
+  .market-home .home-quick-category {
     min-height: 74px;
     padding: 8px 4px 7px;
     border-color: #e6e9ef;
@@ -9588,18 +9588,18 @@ body {
     box-shadow: 0 5px 14px rgba(23, 42, 64, 0.07);
   }
 
-  .home-market-home .home-quick-category small {
+  .market-home .home-quick-category small {
     display: none;
   }
 
-  .home-market-home .home-quick-category strong {
+  .market-home .home-quick-category strong {
     overflow: visible;
     font-size: 0.73rem;
     font-weight: 800;
     text-overflow: clip;
   }
 
-  .home-market-home .home-quick-icon {
+  .market-home .home-quick-icon {
     width: 31px;
     height: 31px;
     border-radius: 9px;

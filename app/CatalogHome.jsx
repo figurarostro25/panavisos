@@ -633,13 +633,11 @@ export function CatalogHome({ section = "home" }) {
           </section>
         ) : null}
 
-        {section === "home" ? (
-          <section className="home-band mobile-home-intro">
-            <h1>Encuentra y anuncia en Panamá</h1>
-          </section>
-        ) : null}
+        <section className="home-band mobile-home-intro">
+          <h1>Encuentra y anuncia en Panamá</h1>
+        </section>
 
-        {section === "home" ? <HomeQuickCategories /> : null}
+        <HomeQuickCategories section={section} listingGroup={listingGroup} />
 
         <section className="home-band universal-search-band">
           <form className="universal-search" onSubmit={submitHeroSearch}>
@@ -1297,24 +1295,45 @@ function demoListing({ id, category, title, province, district, description, fea
   };
 }
 
-function HomeQuickCategories() {
+function HomeQuickCategories({ section, listingGroup }) {
+  const activeSection =
+    section === "properties"
+      ? "properties"
+      : section === "marketplace" && listingGroup === "servicios"
+        ? "services"
+        : section === "marketplace"
+          ? "marketplace"
+          : "";
+
   return (
     <section className="home-band home-quick-categories" aria-label="Explora categorías principales">
-      <Link className="home-quick-category" href="/propiedades">
+      <Link
+        className="home-quick-category"
+        href="/propiedades"
+        aria-current={activeSection === "properties" ? "page" : undefined}
+      >
         <span className="home-quick-icon property-icon">PR</span>
         <span>
           <strong>Propiedades</strong>
           <small>Venta, alquiler y terrenos</small>
         </span>
       </Link>
-      <Link className="home-quick-category" href="/marketplace?grupo=servicios">
+      <Link
+        className="home-quick-category"
+        href="/marketplace?grupo=servicios"
+        aria-current={activeSection === "services" ? "page" : undefined}
+      >
         <span className="home-quick-icon service-icon">SV</span>
         <span>
           <strong>Servicios</strong>
           <small>Profesionales, empleos y cuidado</small>
         </span>
       </Link>
-      <Link className="home-quick-category" href="/marketplace">
+      <Link
+        className="home-quick-category"
+        href="/marketplace"
+        aria-current={activeSection === "marketplace" ? "page" : undefined}
+      >
         <span className="home-quick-icon marketplace-icon">MP</span>
         <span>
           <strong>Marketplace</strong>
