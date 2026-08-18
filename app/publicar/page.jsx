@@ -461,7 +461,7 @@ export default function PublicarPage() {
 
   return (
     <>
-      <header className="topbar marketplace-topbar">
+      <header className="topbar marketplace-topbar publish-topbar">
         <Link className="brand" href="/">
           <img className="brand-logo" src="/brand/panavisos-logo.svg" alt="PanAvisos" />
         </Link>
@@ -552,6 +552,7 @@ export default function PublicarPage() {
                 groups={publishCategoryGroups}
                 activeGroup={activePublishGroup}
                 selectedCategoryId={form.category_id}
+                suggestedQuery={form.title}
                 loading={categoriesLoading && !categories.length}
                 error={categoriesError}
                 onRetry={() => setCategoriesReloadKey((current) => current + 1)}
@@ -856,13 +857,39 @@ function PublishCategoryChooser({
   groups,
   activeGroup,
   selectedCategoryId,
+  suggestedQuery,
   loading,
   error,
   onRetry,
   onChooseType,
   onChooseCategory
 }) {
+  const [query, setQuery] = useState("");
+  const [queryTouched, setQueryTouched] = useState(false);
   const categoryCount = activeGroup?.sections.reduce((total, section) => total + section.categories.length, 0) || 0;
+  const categories = useMemo(
+    () => groups.flatMap((group) => group.sections.flatMap((section) => section.categories.map((category) => ({ category, group })))),
+    [groups]
+  );
+  const selectedCategory = categories.find((item) => item.category.id === selectedCategoryId);
+  const searchResults = useMemo(() => searchPublishCategories(categories, query), [categories, query]);
+
+  useEffect(() => {
+    const titleQuery = String(suggestedQuery || "").trim();
+    if (!queryTouched && !selectedCategoryId && titleQuery.length >= 3) setQuery(titleQuery);
+  }, [queryTouched, selectedCategoryId, suggestedQuery]);
+
+  function chooseSearchResult(item) {
+    onChooseCategory(item.category.id);
+    setQuery(item.category.name);
+    setQueryTouched(true);
+  }
+
+  function clearSelection() {
+    onChooseCategory("");
+    setQuery("");
+    setQueryTouched(false);
+  }
 
   return (
     <section className="publish-category-chooser" aria-labelledby="publish-category-title">
@@ -874,13 +901,62 @@ function PublishCategoryChooser({
         {selectedCategoryId ? <small>Categoría seleccionada</small> : null}
       </div>
 
+      <div className="publish-category-search">
+        <label htmlFor="publish-category-search">Busca el producto o servicio</label>
+        <input
+          id="publish-category-search"
+          type="search"
+          value={query}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setQueryTouched(true);
+          }}
+          placeholder="Ej.: teclado, celular, masaje o apartamento"
+          autoComplete="off"
+        />
+        {query.trim().length >= 2 && !selectedCategory ? (
+          <div className="publish-category-results" role="listbox" aria-label="Categorías sugeridas">
+            {searchResults.length ? searchResults.map((item) => (
+              <button
+                type="button"
+                role="option"
+                key={item.category.id}
+                onClick={() => chooseSearchResult(item)}
+              >
+                <span>
+                  <strong>{item.category.name}</strong>
+                  <small>{item.category.description || item.group.label}</small>
+                </span>
+                <em>{item.group.label}</em>
+              </button>
+            )) : <p>No encontramos esa categoría. Puedes elegir un tipo abajo.</p>}
+          </div>
+        ) : null}
+      </div>
+
+      {selectedCategory ? (
+        <div className="publish-category-selected" role="status">
+          <span>
+            <small>Categoría</small>
+            <strong>{selectedCategory.category.name}</strong>
+          </span>
+          <button type="button" onClick={clearSelection}>Cambiar</button>
+        </div>
+      ) : null}
+
+      <span className="publish-category-or">O explora por tipo</span>
+
       <div className="publish-type-grid">
         {groups.map((group) => (
           <button
             className={`publish-type-card ${activeGroup?.key === group.key ? "active" : ""}`}
             type="button"
             key={group.key}
-            onClick={() => onChooseType(group)}
+            onClick={() => {
+              onChooseType(group);
+              setQuery("");
+              setQueryTouched(true);
+            }}
           >
             <strong>{group.label}</strong>
             <span>{group.description}</span>
@@ -896,7 +972,7 @@ function PublishCategoryChooser({
         </span>
       ) : null}
 
-      {activeGroup && categoryCount ? (
+      {activeGroup && categoryCount && !selectedCategory ? (
         <div className="publish-subcategory-panel">
           <span className="field-label">Categoría</span>
           {activeGroup.sections.map((section) => (
@@ -921,6 +997,52 @@ function PublishCategoryChooser({
       ) : null}
     </section>
   );
+}
+
+const categorySearchAliases = {
+  "computadoras-y-tablets": "teclado teclados mouse monitor laptop computadora pc impresora",
+  "electronica-y-audio": "audifono audifonos bocina bocinas parlante radio television tv camara",
+  "celulares-y-accesorios": "telefono telefonos celular celulares smartphone cargador",
+  "hogar-y-muebles": "silla sillas mesa cama sofa mueble muebles",
+  "herramientas-y-construccion": "taladro martillo herramienta herramientas materiales",
+  autos: "auto carro carros vehiculo sedan camioneta",
+  "bienes-raices": "apartamento casa vivienda propiedad alquiler venta",
+  "locales-comerciales": "local oficina consultorio bodega",
+  empleos: "trabajo vacante buscar empleo contratar",
+  servicios: "servicio profesional tecnico reparacion",
+  masajes: "masaje masajista relajante terapeutico"
+};
+
+function normalizeCategorySearch(value = "") {
+  return String(value)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
+function searchPublishCategories(items, value) {
+  const query = normalizeCategorySearch(value);
+  if (query.length < 2) return [];
+
+  return items
+    .map((item) => {
+      const name = normalizeCategorySearch(item.category.name);
+      const slug = normalizeCategorySearch(item.category.slug);
+      const aliases = normalizeCategorySearch(categorySearchAliases[item.category.slug] || "");
+      const description = normalizeCategorySearch(item.category.description);
+      const group = normalizeCategorySearch(`${item.group.label} ${item.group.description}`);
+      let rank = 10;
+      if (name === query) rank = 0;
+      else if (name.startsWith(query)) rank = 1;
+      else if (name.includes(query) || slug.includes(query)) rank = 2;
+      else if (aliases.includes(query)) rank = 3;
+      else if (description.includes(query) || group.includes(query)) rank = 4;
+      return { ...item, rank };
+    })
+    .filter((item) => item.rank < 10)
+    .sort((a, b) => a.rank - b.rank || a.category.name.localeCompare(b.category.name))
+    .slice(0, 6);
 }
 
 function PhotoUploader({ images, maxImages, uploadingPhotos, onUpload, onRemove }) {

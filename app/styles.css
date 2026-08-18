@@ -2721,6 +2721,155 @@ textarea:focus {
   }
 }
 
+/* Publish category search is intentionally page-scoped so catalog cards and
+   desktop layouts keep their existing dimensions. */
+.publish-category-search {
+  position: relative;
+  display: grid;
+  gap: 6px;
+}
+
+.publish-category-search > label,
+.publish-category-or {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.publish-category-search input {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid #b8cbd3;
+  border-radius: 8px;
+  padding: 0 12px;
+  background: #fff;
+}
+
+.publish-category-search input:focus {
+  border-color: #007185;
+  outline: 2px solid rgba(0, 113, 133, 0.16);
+  outline-offset: 1px;
+}
+
+.publish-category-results {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid #b8cbd3;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(16, 42, 67, 0.12);
+}
+
+.publish-category-results button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-height: 54px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 9px 11px;
+  color: var(--ink);
+  background: #fff;
+  text-align: left;
+}
+
+.publish-category-results button:last-child {
+  border-bottom: 0;
+}
+
+.publish-category-results button:hover {
+  background: #eefbfc;
+}
+
+.publish-category-results button > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.publish-category-results small,
+.publish-category-results em {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-style: normal;
+}
+
+.publish-category-results p {
+  margin: 0;
+  padding: 12px;
+  color: var(--muted);
+}
+
+.publish-category-selected {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 58px;
+  border: 1px solid #8bc7cf;
+  border-radius: 8px;
+  padding: 9px 11px;
+  background: #eefbfc;
+}
+
+.publish-category-selected > span {
+  display: grid;
+  gap: 2px;
+}
+
+.publish-category-selected small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.publish-category-selected button {
+  min-height: 34px;
+  border: 1px solid #8bc7cf;
+  border-radius: 7px;
+  padding: 0 10px;
+  color: var(--teal-dark);
+  background: #fff;
+  font-weight: 900;
+}
+
+@media (max-width: 760px) {
+  .marketplace-topbar:not(.menu-open) .mobile-nav-drawer,
+  .marketplace-topbar:not(.menu-open) .mobile-menu-backdrop {
+    display: none !important;
+  }
+
+  .publish-workspace,
+  .publish-form {
+    width: 100%;
+    min-width: 0;
+    overflow-x: clip;
+  }
+
+  .publish-form {
+    padding: 14px 14px 88px;
+  }
+
+  .publish-category-chooser {
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .publish-category-heading h2 {
+    font-size: 1rem;
+  }
+
+  .publish-category-results button {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  .publish-category-results em {
+    display: none;
+  }
+}
+
 /* PanAvisos home: quick discovery and one consistent listing feed. */
 .home-quick-categories {
   display: none;
@@ -9810,5 +9959,43 @@ body {
     color: #14212c;
     background: #ffffff;
     font-size: 0.62rem;
+  }
+}
+
+/* Final publish-page guard. These selectors are deliberately more specific
+   than the legacy responsive rules above. */
+@media (max-width: 760px) {
+  .publish-topbar.marketplace-topbar {
+    min-height: 64px !important;
+    overflow: hidden !important;
+    padding: max(7px, env(safe-area-inset-top)) 12px 7px !important;
+  }
+
+  .publish-topbar.marketplace-topbar .brand {
+    padding-right: 0 !important;
+    overflow: visible !important;
+  }
+
+  .publish-topbar.marketplace-topbar .brand-logo {
+    width: 130px !important;
+    max-height: 40px !important;
+  }
+
+  .publish-topbar.marketplace-topbar .top-actions {
+    display: none !important;
+  }
+
+  .publish-category-chooser .publish-type-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .publish-category-chooser .publish-type-card {
+    min-height: 68px;
+    align-content: center;
+    padding: 10px;
+  }
+
+  .publish-category-chooser .publish-type-card span {
+    display: none;
   }
 }
