@@ -44,7 +44,6 @@ export default function PublicarPage() {
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [step, setStep] = useState(1);
-  const [publishGroupKey, setPublishGroupKey] = useState("");
   const [editingId, setEditingId] = useState("");
   const [locationOpen, setLocationOpen] = useState(false);
   const [selectedLocationKey, setSelectedLocationKey] = useState("");
@@ -148,7 +147,6 @@ export default function PublicarPage() {
     () => publishCategoryGroups.find((group) => categoryBelongsToGroup(form.category_id, group)),
     [form.category_id, publishCategoryGroups]
   );
-  const activePublishGroup = publishCategoryGroups.find((group) => group.key === publishGroupKey) || selectedPublishGroup || null;
   const isRealEstate = selectedCategory?.slug === "bienes-raices";
   const hasItemCondition = selectedPublishGroup ? ["article", "vehicle"].includes(selectedPublishGroup.key) : false;
 
@@ -177,26 +175,15 @@ export default function PublicarPage() {
 
   function setCategory(categoryId) {
     const nextCategory = categories.find((category) => category.id === categoryId);
+    const nextGroup = publishCategoryGroups.find((group) => categoryBelongsToGroup(categoryId, group));
     setForm({
       ...form,
       category_id: categoryId,
+      operation: nextGroup?.operation || form.operation,
       bedrooms: nextCategory?.slug === "bienes-raices" ? form.bedrooms : "",
       bathrooms: nextCategory?.slug === "bienes-raices" ? form.bathrooms : "",
       area_m2: nextCategory?.slug === "bienes-raices" ? form.area_m2 : ""
     });
-  }
-
-  function choosePublishGroup(group) {
-    setPublishGroupKey(group.key);
-    setForm((current) => ({
-      ...current,
-      category_id: categoryBelongsToGroup(current.category_id, group) ? current.category_id : "",
-      operation: group.operation || current.operation,
-      item_condition: ["article", "vehicle"].includes(group.key) ? current.item_condition : "",
-      bedrooms: group.key === "property" ? current.bedrooms : "",
-      bathrooms: group.key === "property" ? current.bathrooms : "",
-      area_m2: group.key === "property" ? current.area_m2 : ""
-    }));
   }
 
   function chooseLocation(location) {
@@ -391,14 +378,6 @@ export default function PublicarPage() {
 
           {currentStep === 1 ? (
             <div className="step-pane">
-              <PublishCategoryChooser
-                groups={publishCategoryGroups}
-                activeGroupKey={activePublishGroup?.key || ""}
-                selectedCategoryId={form.category_id}
-                onGroupSelect={choosePublishGroup}
-                onCategorySelect={setCategory}
-              />
-
               <PhotoUploader
                 images={form.images}
                 maxImages={maxImages}
@@ -417,7 +396,22 @@ export default function PublicarPage() {
                 <input required type="number" value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} />
               </label>
 
-              <div className="field-row publish-operation-row">
+              <div className="field-row">
+                <label className="field">
+                  <span>Categoria</span>
+                  <select required value={form.category_id} onChange={(event) => setCategory(event.target.value)}>
+                    <option value="">Selecciona una categoria</option>
+                    {publishCategoryGroups.map((group) => (
+                      <optgroup key={group.key} label={group.label}>
+                        {group.sections.flatMap((section) => section.categories).map((category) => (
+                          <option key={category.id} value={category.id}>
+                            {category.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                </label>
                 <label className="field">
                   <span>Tipo</span>
                   <select value={form.operation} onChange={(event) => setForm({ ...form, operation: event.target.value })}>
@@ -625,54 +619,6 @@ export default function PublicarPage() {
         </section>
       </main>
     </>
-  );
-}
-
-function PublishCategoryChooser({ groups, activeGroupKey, selectedCategoryId, onGroupSelect, onCategorySelect }) {
-  const activeGroup = groups.find((group) => group.key === activeGroupKey);
-
-  return (
-    <div className="publish-category-chooser">
-      <div className="publish-section-heading">
-        <span>Tipo de publicacion</span>
-      </div>
-      <div className="publish-type-grid">
-        {groups.map((group) => (
-          <button
-            className={group.key === activeGroupKey ? "selected" : ""}
-            type="button"
-            key={group.key}
-            onClick={() => onGroupSelect(group)}
-          >
-            <strong>{group.label}</strong>
-            <span>{group.description}</span>
-          </button>
-        ))}
-      </div>
-
-      {activeGroup ? (
-        <div className="publish-subcategory-panel">
-          {activeGroup.sections.map((section) => (
-            <section key={section.label} className="publish-subcategory-section">
-              <h3>{section.label}</h3>
-              <div className="publish-subcategory-list">
-                {section.categories.map((category) => (
-                  <button
-                    className={category.id === selectedCategoryId ? "selected" : ""}
-                    type="button"
-                    key={category.id}
-                    onClick={() => onCategorySelect(category.id)}
-                  >
-                    <span>{category.name}</span>
-                    <small>{category.description}</small>
-                  </button>
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
-      ) : null}
-    </div>
   );
 }
 
