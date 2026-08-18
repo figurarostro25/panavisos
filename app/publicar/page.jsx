@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { locationSuggestions } from "@/lib/locations";
+import { locationSuggestions, nearestLocationFromCoordinates } from "@/lib/locations";
 import { money, provinces } from "@/lib/format";
 import { getPublishCategoryGroups } from "@/lib/publishCategories";
 import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
@@ -47,6 +47,8 @@ export default function PublicarPage() {
   const [editingId, setEditingId] = useState("");
   const [locationOpen, setLocationOpen] = useState(false);
   const [selectedLocationKey, setSelectedLocationKey] = useState("");
+  const [locationStatus, setLocationStatus] = useState("");
+  const [locationAttempted, setLocationAttempted] = useState(false);
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -195,7 +197,47 @@ export default function PublicarPage() {
     });
     setSelectedLocationKey(normalize(location.district));
     setLocationOpen(false);
+    setLocationStatus("manual");
   }
+
+  function requestCurrentLocation() {
+    setLocationAttempted(true);
+
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setLocationStatus("unsupported");
+      return;
+    }
+
+    setLocationStatus("loading");
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const nearest = nearestLocationFromCoordinates(coords.latitude, coords.longitude);
+        if (!nearest) {
+          setLocationStatus("manual");
+          return;
+        }
+
+        setForm((current) => ({
+          ...current,
+          province: nearest.province,
+          district: nearest.district,
+          address_reference: nearest.label
+        }));
+        setSelectedLocationKey(normalize(nearest.district));
+        setLocationOpen(false);
+        setLocationStatus("detected");
+      },
+      (geolocationError) => {
+        setLocationStatus(geolocationError.code === 1 ? "denied" : "manual");
+      },
+      { enableHighAccuracy: false, maximumAge: 300000, timeout: 10000 }
+    );
+  }
+
+  useEffect(() => {
+    if (currentStep !== 2 || form.district || locationAttempted) return;
+    requestCurrentLocation();
+  }, [currentStep, form.district, locationAttempted]);
 
   function goNext() {
     setError("");
@@ -494,42 +536,57 @@ export default function PublicarPage() {
 
           {currentStep === 2 ? (
             <div className="step-pane">
-              <label className="field location-field">
-                <span>Ubicacion</span>
-                <input
-                  required
-                  value={form.district}
-                  onChange={(event) => {
-                    setForm({ ...form, district: event.target.value });
-                    setSelectedLocationKey("");
-                    setLocationOpen(true);
-                  }}
-                  onFocus={() => {
-                    if (selectedLocationKey !== normalize(form.district)) setLocationOpen(true);
-                  }}
-                  onBlur={() => window.setTimeout(() => setLocationOpen(false), 120)}
-                  autoComplete="off"
-                  aria-expanded={locationOpen && locationMatches.length > 0}
-                  placeholder="Ej: Parque Lefevre, Coronado..."
-                />
-                {locationOpen && locationMatches.length ? (
-                  <div className="suggestion-list">
-                    {locationMatches.map((location) => (
-                      <button
-                        type="button"
-                        key={location.label}
-                        onPointerDown={(event) => {
-                          event.preventDefault();
-                          chooseLocation(location);
-                        }}
-                        onClick={() => chooseLocation(location)}
-                      >
-                        {location.label}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-              </label>
+              <div className="location-field">
+                <label className="field location-input-wrap">
+                  <span>Ubicacion</span>
+                  <input
+                    required
+                    value={form.district}
+                    onChange={(event) => {
+                      setForm({ ...form, district: event.target.value });
+                      setSelectedLocationKey("");
+                      setLocationStatus("manual");
+                      setLocationOpen(true);
+                    }}
+                    onFocus={() => {
+                      if (selectedLocationKey !== normalize(form.district)) setLocationOpen(true);
+                    }}
+                    onBlur={() => window.setTimeout(() => setLocationOpen(false), 120)}
+                    autoComplete="off"
+                    aria-expanded={locationOpen && locationMatches.length > 0}
+                    placeholder="Ej: Parque Lefevre, Coronado..."
+                  />
+                  {locationOpen && locationMatches.length ? (
+                    <div className="suggestion-list">
+                      {locationMatches.map((location) => (
+                        <button
+                          type="button"
+                          key={location.label}
+                          onPointerDown={(event) => {
+                            event.preventDefault();
+                            chooseLocation(location);
+                          }}
+                          onClick={() => chooseLocation(location)}
+                        >
+                          {location.label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </label>
+                <div className="location-detect-row">
+                  <span className="location-status" aria-live="polite">
+                    {locationStatus === "loading" ? "Detectando tu ubicacion..." : null}
+                    {locationStatus === "detected" ? "Ubicacion aproximada detectada. Puedes corregirla." : null}
+                    {locationStatus === "denied" ? "Permiso no concedido. Escribela manualmente." : null}
+                    {locationStatus === "unsupported" ? "Tu navegador no permite detectar ubicacion." : null}
+                    {locationStatus === "manual" && form.district ? "Ubicacion editable." : null}
+                  </span>
+                  <button className="secondary location-detect-button" type="button" onClick={requestCurrentLocation} disabled={locationStatus === "loading"}>
+                    {locationStatus === "loading" ? "Detectando..." : "Usar mi ubicacion"}
+                  </button>
+                </div>
+              </div>
 
               <label className="field">
                 <span>Provincia</span>

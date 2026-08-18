@@ -3892,6 +3892,32 @@ button:disabled {
   position: relative;
 }
 
+.location-input-wrap {
+  position: relative;
+}
+
+.location-detect-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.location-status {
+  min-height: 1.2em;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
+.location-detect-button {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 10px;
+  font-size: 0.78rem;
+}
+
 .suggestion-list {
   position: absolute;
   right: 0;
