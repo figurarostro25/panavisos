@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" role="img" aria-labelledby="title">
+  <title id="title">Cevenpro</title>
+  <rect width="192" height="192" rx="38" fill="#0B1D33"/>
+  <path d="M39 145V71l33-22 33 22v74" fill="none" stroke="#FFFFFF" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M60 145V95h25v50" fill="none" stroke="#00B7A7" stroke-width="9" stroke-linejoin="round"/>
+  <path d="M34 145h78" fill="none" stroke="#FFFFFF" stroke-width="11" stroke-linecap="round"/>
+  <path d="m101 90 30-30h25" fill="none" stroke="#F2B84B" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m148 48 14 12-14 12" fill="none" stroke="#F2B84B" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
