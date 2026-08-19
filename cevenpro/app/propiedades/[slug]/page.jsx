@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { LeadForm } from "@/components/LeadForm";
 import { PropertyCard } from "@/components/PropertyCard";
 import { getPublicProperties, getPublicProperty } from "@/lib/properties";
 
@@ -45,11 +44,8 @@ export default async function PropertyDetailPage({ params }) {
   const advisorPhone = String(property.advisor?.whatsapp || property.advisor?.phone || "").replace(/\D/g, "");
   const officePhone = String(process.env.NEXT_PUBLIC_CEVENPRO_WHATSAPP || "").replace(/\D/g, "");
   const contactPhone = advisorPhone || officePhone;
-  const contactName = property.advisor?.name || "Cevenpro";
-  const advisorMessage = encodeURIComponent(`Hola ${contactName}, deseo información sobre ${property.title}.`);
+  const advisorMessage = encodeURIComponent(`Hola, deseo información sobre ${property.title}.`);
   const whatsappHref = contactPhone ? `https://wa.me/${contactPhone}?text=${advisorMessage}` : "";
-  const advisorWebsite = property.advisor?.website || "";
-  const advisorBio = property.advisor?.bio || "";
 
   return (
     <>
@@ -144,15 +140,10 @@ export default async function PropertyDetailPage({ params }) {
 
             <aside className="property-contact" id="consulta">
               <div className="property-advisor-summary">
-                <span className="eyebrow">Asesor / corredora</span>
-                <h3>{contactName}</h3>
+                <span className="eyebrow">Contacto directo</span>
                 {contactPhone ? <p>WhatsApp: {contactPhone}</p> : <p>Contacto disponible en el panel de Cevenpro.</p>}
-                {advisorWebsite ? <a href={advisorWebsite} target="_blank" rel="noreferrer">{advisorWebsite}</a> : null}
-                {advisorBio ? <p className="advisor-bio">{advisorBio}</p> : null}
               </div>
-              {whatsappHref ? <a className="button whatsapp property-advisor-whatsapp" href={whatsappHref} target="_blank" rel="noreferrer">Mensaje por WhatsApp</a> : null}
-              <LeadForm compact title="Solicita información" source={`propiedad:${property.slug}`} />
-              <p className="contact-context">Tu solicitud quedará vinculada automáticamente a <strong>{details.code}</strong>.</p>
+              {whatsappHref ? <a className="button whatsapp property-advisor-whatsapp" href={whatsappHref} target="_blank" rel="noreferrer">Contactar</a> : null}
             </aside>
           </div>
         </section>
