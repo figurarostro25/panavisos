@@ -51,7 +51,7 @@ export default async function HomePage() {
         <section className="property-section">
           <div className="shell">
             <div className="section-heading">
-              <div><span className="eyebrow">Novedades Cevenpro</span><h2>Propiedades destacadas</h2><p>Las tres publicaciones más recientes para explorar.</p></div>
+              <div><span className="eyebrow">Novedades Cevenpro</span><h2>Propiedades destacadas</h2><p>Las seis publicaciones más recientes para explorar.</p></div>
               <Link className="text-link" href="/propiedades">Explorar todo</Link>
             </div>
             <div className="property-grid">
