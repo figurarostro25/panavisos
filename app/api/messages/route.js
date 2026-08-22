@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { notifyListingAdvertiser } from "@/lib/emailNotifications";
 import { isHoneypotTriggered, rateLimit, rateLimitResponse } from "@/lib/antiSpam";
 
 export const runtime = "nodejs";
@@ -51,5 +52,11 @@ export async function POST(request) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  if (kind === "inquiry" && payload.listing_id) {
+    await notifyListingAdvertiser(data).catch((notifyError) => {
+      console.error("No se pudo notificar al anunciante", notifyError);
+    });
+  }
   return NextResponse.json({ message: data });
 }
