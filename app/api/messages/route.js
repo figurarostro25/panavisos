@@ -1,10 +1,24 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { isHoneypotTriggered, rateLimit, rateLimitResponse } from "@/lib/antiSpam";
 
 export const runtime = "nodejs";
 
 export async function POST(request) {
   const body = await request.json();
+  const limit = rateLimit(
+    request,
+    String(body.sender_email || body.sender_phone || body.kind || "anonymous").slice(0, 120)
+  );
+  if (!limit.allowed) {
+    return NextResponse.json(rateLimitResponse(limit.retryAfter), {
+      status: 429,
+      headers: { "Retry-After": String(limit.retryAfter) }
+    });
+  }
+  if (isHoneypotTriggered(body.website)) {
+    return NextResponse.json({ ok: true });
+  }
   const message = String(body.message || "").trim();
   const senderEmail = String(body.sender_email || "").trim();
   const kind = String(body.kind || "feedback").slice(0, 40);

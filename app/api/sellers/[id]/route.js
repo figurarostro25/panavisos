@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { PUBLIC_PROFILE_SELECT } from "@/lib/publicProfile";
 
 export const runtime = "nodejs";
 
@@ -9,7 +10,7 @@ export async function GET(_request, { params }) {
   const now = new Date().toISOString();
 
   const [{ data: profile, error: profileError }, { data: listings, error: listingError }] = await Promise.all([
-    supabase.from("profiles").select("*").eq("id", id).maybeSingle(),
+    supabase.from("profiles").select(PUBLIC_PROFILE_SELECT).eq("id", id).maybeSingle(),
     supabase
       .from("listings")
       .select("*, category:categories(*), images:listing_images(*)")

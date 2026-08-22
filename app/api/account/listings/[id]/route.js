@@ -54,7 +54,9 @@ export async function PATCH(request, { params }) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const imageError = await replaceImages(supabase, id, body.images || []);
-  if (imageError) return NextResponse.json({ error: imageError.message }, { status: 500 });
+  if (imageError) {
+    return NextResponse.json({ error: imageError.message }, { status: imageError.code === "INVALID_IMAGES" ? 400 : 500 });
+  }
 
   const { data: listing } = await getOwnedListing(supabase, id, user.id);
   return NextResponse.json({ listing, status: listing?.status || "active" });

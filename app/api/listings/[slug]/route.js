@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { PUBLIC_PROFILE_SELECT } from "@/lib/publicProfile";
 
 export const runtime = "nodejs";
 
@@ -10,7 +11,7 @@ export async function GET(_request, { params }) {
 
   const { data: listing, error } = await supabase
     .from("listings")
-    .select("*, category:categories(*), images:listing_images(*), profile:profiles(*)")
+    .select(`*, category:categories(*), images:listing_images(*), profile:profiles(${PUBLIC_PROFILE_SELECT})`)
     .eq("slug", slug)
     .eq("status", "active")
     .or(`expires_at.is.null,expires_at.gte.${now}`)
