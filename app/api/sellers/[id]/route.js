@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { PUBLIC_PROFILE_SELECT } from "@/lib/publicProfile";
+import { sanitizeListingForViewer, sanitizeProfileForViewer } from "@/lib/listingVisibility";
+import { getAuthenticatedViewer } from "@/lib/viewer";
 
 export const runtime = "nodejs";
 
-export async function GET(_request, { params }) {
+export async function GET(request, { params }) {
+  const isAuthenticated = Boolean(await getAuthenticatedViewer(request));
   const { id } = await params;
   const supabase = getSupabaseAdmin();
   const now = new Date().toISOString();
@@ -24,5 +27,11 @@ export async function GET(_request, { params }) {
     return NextResponse.json({ error: profileError?.message || listingError?.message }, { status: 500 });
   }
 
-  return NextResponse.json({ profile, listings: listings || [] });
+  return NextResponse.json(
+    {
+      profile: sanitizeProfileForViewer(profile, isAuthenticated),
+      listings: (listings || []).map((listing) => sanitizeListingForViewer(listing, isAuthenticated))
+    },
+    { headers: { "Cache-Control": isAuthenticated ? "private, no-store" : "public, s-maxage=60, stale-while-revalidate=600" } }
+  );
 }

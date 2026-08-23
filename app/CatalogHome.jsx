@@ -54,6 +54,7 @@ const popularNeeds = [
 export function CatalogHome({ section = "home" }) {
   const [data, setData] = useState({ categories: [], listings: [], banners: [] });
   const [selected, setSelected] = useState(null);
+  const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [accountOpen, setAccountOpen] = useState(false);
   const [activeBanner, setActiveBanner] = useState(0);
@@ -68,7 +69,10 @@ export function CatalogHome({ section = "home" }) {
 
     async function loadCatalog() {
       try {
-        const response = await fetch("/api/catalog");
+        const headers = session?.access_token
+          ? { Authorization: `Bearer ${session.access_token}` }
+          : undefined;
+        const response = await fetch("/api/catalog", { headers, cache: "no-store" });
         if (!response.ok) throw new Error("Catalog request failed");
 
         const payload = await response.json();
@@ -91,7 +95,7 @@ export function CatalogHome({ section = "home" }) {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [session?.access_token]);
 
   useEffect(() => {
     if (!hasSupabaseBrowserConfig()) return;
@@ -100,10 +104,12 @@ export function CatalogHome({ section = "home" }) {
 
     async function loadSession() {
       const { data } = await supabase.auth.getSession();
+      setSession(data.session || null);
       await hydrateProfile(data.session);
     }
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session || null);
       hydrateProfile(session);
     });
 
@@ -138,6 +144,8 @@ export function CatalogHome({ section = "home" }) {
 
   async function logoutProfile() {
     await getSupabaseBrowser().auth.signOut();
+    setSession(null);
+    setSelected(null);
     setProfile(null);
   }
 
@@ -557,6 +565,7 @@ export function CatalogHome({ section = "home" }) {
       {selected ? (
         <ListingDetail
           listing={selected}
+          session={session}
           profile={profile}
           onRequireAccount={() => setAccountOpen(true)}
           onClose={() => setSelected(null)}
@@ -1262,13 +1271,14 @@ function ListingCard({ listing, onSelect }) {
   );
 }
 
-function ListingDetail({ listing, profile, onRequireAccount, onClose }) {
+function ListingDetail({ listing, session, profile, onRequireAccount, onClose }) {
   const [activeImage, setActiveImage] = useState(0);
   const [copied, setCopied] = useState(false);
   const images = [...(listing.images || [])].sort((a, b) => a.position - b.position);
   const image = images[activeImage]?.url;
   const hasMap = listing.lat && listing.lng;
   const whatsapp = String(listing.whatsapp || "").replace(/\D/g, "");
+  const canViewAdvertiser = Boolean(session?.user && profile);
   const whatsappMessage = encodeURIComponent(`Hola, vi este anuncio en PanAvisos: ${listing.title}. Sigue disponible?`);
   const showRealEstateFacts = listing.category?.slug === "bienes-raices";
 
@@ -1335,8 +1345,12 @@ function ListingDetail({ listing, profile, onRequireAccount, onClose }) {
               <button className="secondary" type="button" onClick={copyListingLink}>
                 {copied ? "Link copiado" : "Copiar link"}
               </button>
-              {whatsapp ? (
-                profile ? (
+              {!canViewAdvertiser ? (
+                <button className="primary" type="button" onClick={onRequireAccount}>
+                  Inicia sesión para contactar
+                </button>
+              ) : whatsapp ? (
+                canViewAdvertiser ? (
                   <a
                     className="primary"
                     href={`https://wa.me/${whatsapp}?text=${whatsappMessage}`}
@@ -1346,9 +1360,7 @@ function ListingDetail({ listing, profile, onRequireAccount, onClose }) {
                     Enviar mensaje
                   </a>
                 ) : (
-                  <button className="primary" type="button" onClick={onRequireAccount}>
-                    Registrate para responder
-                  </button>
+                  <button className="primary" type="button" onClick={onRequireAccount}>Registrate para responder</button>
                 )
               ) : null}
               {listing.website_url ? (
@@ -1361,7 +1373,7 @@ function ListingDetail({ listing, profile, onRequireAccount, onClose }) {
                   Video
                 </a>
               ) : null}
-              {listing.email ? (
+              {canViewAdvertiser && listing.email ? (
                 <a className="secondary" href={`mailto:${listing.email}`}>
                   Email
                 </a>
@@ -1416,7 +1428,7 @@ function ListingDetail({ listing, profile, onRequireAccount, onClose }) {
               </a>
             ) : null}
 
-            {listing.user_id ? (
+            {canViewAdvertiser && listing.user_id ? (
               <div className="seller-panel compact-seller-panel">
                 <span className="avatar-badge">{initials(listing.profile?.full_name || listing.advertiser_name || "PA")}</span>
                 <div>
@@ -1428,7 +1440,7 @@ function ListingDetail({ listing, profile, onRequireAccount, onClose }) {
               </div>
             ) : null}
 
-            <FeedbackForm profile={profile} listing={listing} compact />
+            <FeedbackForm session={session} profile={profile} listing={listing} compact onRequireAccount={onRequireAccount} />
           </div>
         </aside>
       </article>
@@ -1436,7 +1448,7 @@ function ListingDetail({ listing, profile, onRequireAccount, onClose }) {
   );
 }
 
-function FeedbackForm({ profile, listing = null, compact = false }) {
+function FeedbackForm({ session, profile, listing = null, compact = false, onRequireAccount }) {
   const sellerPhone = String(listing?.whatsapp || listing?.advertiser_phone || listing?.profile?.phone || "").replace(/\D/g, "");
   const initialMessage = listing
     ? `Me interesa el anuncio "${listing.title}" que tienes publicado en PanAvisos.`
@@ -1465,6 +1477,17 @@ function FeedbackForm({ profile, listing = null, compact = false }) {
     }));
   }, [profile]);
 
+  if (listing && !session?.user) {
+    return (
+      <section className={`seller-contact-card ${compact ? "compact" : ""}`}>
+        <span className="eyebrow">Consulta directa</span>
+        <h2>Inicia sesión para enviar mensajes</h2>
+        <p className="muted">Puedes ver el anuncio sin registrarte, pero el contacto del anunciante y el envío de consultas requieren una cuenta.</p>
+        <button className="primary" type="button" onClick={onRequireAccount}>Iniciar sesión o registrarme</button>
+      </section>
+    );
+  }
+
   async function submit(event) {
     event.preventDefault();
     setStatus("");
@@ -1478,9 +1501,11 @@ function FeedbackForm({ profile, listing = null, compact = false }) {
         ].filter(Boolean).join("\n")
       : form.message;
 
+    const headers = { "Content-Type": "application/json" };
+    if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
     const response = await fetch("/api/messages", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({
         ...form,
         subject: isDemandSuggestion ? `Demanda: ${form.interest.trim()}` : form.subject,

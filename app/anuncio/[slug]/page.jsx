@@ -4,16 +4,21 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { money } from "@/lib/format";
+import { getSupabaseBrowser, hasSupabaseBrowserConfig } from "@/lib/supabaseBrowser";
 
 export default function PublicListingPage() {
   const { slug } = useParams();
   const [payload, setPayload] = useState({ listing: null, sellerListings: [] });
+  const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (!slug) return;
-    fetch(`/api/listings/${slug}`)
+    const headers = session?.access_token
+      ? { Authorization: `Bearer ${session.access_token}` }
+      : undefined;
+    fetch(`/api/listings/${slug}`, { headers, cache: "no-store" })
       .then(async (response) => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "No pudimos cargar este anuncio.");
@@ -21,7 +26,18 @@ export default function PublicListingPage() {
       })
       .catch((listingError) => setError(listingError.message))
       .finally(() => setLoading(false));
-  }, [slug]);
+  }, [slug, session?.access_token]);
+
+  useEffect(() => {
+    if (!hasSupabaseBrowserConfig()) return;
+
+    const supabase = getSupabaseBrowser();
+    supabase.auth.getSession().then(({ data }) => setSession(data.session || null));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession || null);
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
 
   return (
     <>
@@ -31,7 +47,7 @@ export default function PublicListingPage() {
         {error ? <p className="error">{error}</p> : null}
         {payload.listing ? (
           <>
-            <ListingMiniWeb listing={payload.listing} />
+            <ListingMiniWeb listing={payload.listing} session={session} />
             <SellerMore listing={payload.listing} sellerListings={payload.sellerListings} />
           </>
         ) : null}
@@ -62,7 +78,7 @@ function PublicHeader() {
   );
 }
 
-function ListingMiniWeb({ listing }) {
+function ListingMiniWeb({ listing, session }) {
   const [activeImage, setActiveImage] = useState(0);
   const [copied, setCopied] = useState(false);
   const images = useMemo(() => [...(listing.images || [])].sort((a, b) => a.position - b.position), [listing.images]);
@@ -70,6 +86,7 @@ function ListingMiniWeb({ listing }) {
   const whatsapp = String(listing.whatsapp || listing.advertiser_phone || "").replace(/\D/g, "");
   const whatsappMessage = encodeURIComponent(`Hola, vi este anuncio en PanAvisos: ${listing.title}. Sigue disponible?`);
   const sellerName = listing.profile?.full_name || listing.advertiser_name || "Anunciante PanAvisos";
+  const canViewAdvertiser = Boolean(session?.user && listing.profile);
   const showRealEstateFacts = listing.category?.slug === "bienes-raices";
 
   async function copyLink() {
@@ -123,7 +140,11 @@ function ListingMiniWeb({ listing }) {
         <p className="muted">Publicado en {listing.district}, {listing.province}</p>
 
         <div className="share-actions">
-          {whatsapp ? (
+          {!canViewAdvertiser ? (
+            <Link className="primary" href="/cuenta">
+              Inicia sesión para contactar
+            </Link>
+          ) : whatsapp ? (
             <a className="primary" href={`https://wa.me/${whatsapp}?text=${whatsappMessage}`} target="_blank" rel="noreferrer">
               Contactar por WhatsApp
             </a>
@@ -172,26 +193,35 @@ function ListingMiniWeb({ listing }) {
         <h2>Descripcion</h2>
         <p>{listing.description}</p>
 
-        <div className="seller-panel">
-          <span className="avatar-badge">{initials(sellerName)}</span>
-          <div>
-            <h2>{sellerName}</h2>
-            <p className="muted">{listing.profile?.phone || listing.advertiser_phone || "Contacto disponible en el anuncio"}</p>
-            {listing.user_id ? (
-              <Link className="secondary compact-link" href={`/vendedor/${listing.user_id}`}>
-                Ver mas anuncios
-              </Link>
-            ) : null}
+        {canViewAdvertiser ? (
+          <div className="seller-panel">
+            <span className="avatar-badge">{initials(sellerName)}</span>
+            <div>
+              <h2>{sellerName}</h2>
+              <p className="muted">{listing.profile?.phone || listing.advertiser_phone || "Contacto disponible en el anuncio"}</p>
+              {listing.user_id ? (
+                <Link className="secondary compact-link" href={`/vendedor/${listing.user_id}`}>
+                  Ver mas anuncios
+                </Link>
+              ) : null}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="seller-panel">
+            <div>
+              <h2>Datos del anunciante protegidos</h2>
+              <p className="muted">Regístrate o inicia sesión para ver quién publicó este anuncio y contactar.</p>
+            </div>
+          </div>
+        )}
 
-        <ListingInquiryForm listing={listing} sellerName={sellerName} />
+        <ListingInquiryForm listing={listing} sellerName={sellerName} session={session} />
       </aside>
     </section>
   );
 }
 
-function ListingInquiryForm({ listing, sellerName }) {
+function ListingInquiryForm({ listing, sellerName, session }) {
   const sellerPhone = String(listing.whatsapp || listing.advertiser_phone || listing.profile?.phone || "").replace(/\D/g, "");
   const sellerDial = sellerPhone ? (sellerPhone.startsWith("507") ? sellerPhone : `507${sellerPhone}`) : "";
   const defaultMessage = `Me interesa el anuncio "${listing.title}" que tienes publicado en PanAvisos.`;
@@ -212,9 +242,11 @@ function ListingInquiryForm({ listing, sellerName }) {
     setError("");
     setSending(true);
 
+    const headers = { "Content-Type": "application/json" };
+    if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
     const response = await fetch("/api/messages", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({
         kind: "inquiry",
         subject: `Consulta sobre: ${listing.title}`,
@@ -237,6 +269,17 @@ function ListingInquiryForm({ listing, sellerName }) {
 
     setStatus("Consulta enviada. Gracias por escribir.");
     setForm((current) => ({ ...current, message: defaultMessage }));
+  }
+
+  if (!session?.user) {
+    return (
+      <section className="seller-contact-card">
+        <span className="eyebrow">Consulta directa</span>
+        <h2>Inicia sesión para enviar mensajes</h2>
+        <p className="muted">El anuncio es público, pero el contacto y el envío de consultas requieren una cuenta.</p>
+        <Link className="primary inquiry-submit" href="/cuenta">Iniciar sesión o registrarme</Link>
+      </section>
+    );
   }
 
   return (

@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { PUBLIC_PROFILE_SELECT } from "@/lib/publicProfile";
+import { sanitizeListingForViewer } from "@/lib/listingVisibility";
+import { getAuthenticatedViewer } from "@/lib/viewer";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(request) {
+  const isAuthenticated = Boolean(await getAuthenticatedViewer(request));
   const supabase = getSupabaseAdmin();
   const now = new Date().toISOString();
   const [
@@ -15,7 +19,7 @@ export async function GET() {
       supabase.from("categories").select("*").order("sort_order").order("name"),
       supabase
         .from("listings")
-        .select("*, category:categories(*), images:listing_images(*)")
+        .select(`*, category:categories(*), images:listing_images(*), profile:profiles(${PUBLIC_PROFILE_SELECT})`)
         .eq("status", "active")
         .or(`expires_at.is.null,expires_at.gte.${now}`)
         .order("featured", { ascending: false })
@@ -37,5 +41,12 @@ export async function GET() {
     );
   }
 
-  return NextResponse.json({ categories, listings, banners });
+  return NextResponse.json(
+    {
+      categories: categories || [],
+      listings: (listings || []).map((listing) => sanitizeListingForViewer(listing, isAuthenticated)),
+      banners: banners || []
+    },
+    { headers: { "Cache-Control": isAuthenticated ? "private, no-store" : "public, s-maxage=60, stale-while-revalidate=600" } }
+  );
 }

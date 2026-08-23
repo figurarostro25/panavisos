@@ -4,16 +4,21 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { money } from "@/lib/format";
+import { getSupabaseBrowser, hasSupabaseBrowserConfig } from "@/lib/supabaseBrowser";
 
 export default function SellerPage() {
   const { id } = useParams();
   const [payload, setPayload] = useState({ profile: null, listings: [] });
+  const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (!id) return;
-    fetch(`/api/sellers/${id}`)
+    const headers = session?.access_token
+      ? { Authorization: `Bearer ${session.access_token}` }
+      : undefined;
+    fetch(`/api/sellers/${id}`, { headers, cache: "no-store" })
       .then(async (response) => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "No pudimos cargar este vendedor.");
@@ -21,9 +26,21 @@ export default function SellerPage() {
       })
       .catch((sellerError) => setError(sellerError.message))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, session?.access_token]);
 
-  const sellerName = payload.profile?.full_name || "Anunciante PanAvisos";
+  useEffect(() => {
+    if (!hasSupabaseBrowserConfig()) return;
+
+    const supabase = getSupabaseBrowser();
+    supabase.auth.getSession().then(({ data }) => setSession(data.session || null));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession || null);
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  const canViewAdvertiser = Boolean(session?.user && payload.profile);
+  const sellerName = canViewAdvertiser ? payload.profile.full_name || "Anunciante PanAvisos" : "Anunciante PanAvisos";
 
   return (
     <>
@@ -54,7 +71,8 @@ export default function SellerPage() {
               <span className="avatar-badge large">{initials(sellerName)}</span>
               <div>
                 <span className="eyebrow">Vendedor</span>
-                <h1>{sellerName}</h1>
+                <h1>{canViewAdvertiser ? sellerName : "Perfil protegido"}</h1>
+                {!canViewAdvertiser ? <p className="muted">Inicia sesión para ver los datos del anunciante.</p> : null}
                 <p className="muted">{payload.listings.length} anuncios activos en PanAvisos.</p>
               </div>
             </section>
