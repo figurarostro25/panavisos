@@ -335,7 +335,7 @@ function ListingInquiryForm({ listing, sellerName, session }) {
 }
 
 function SellerMore({ listing, sellerListings }) {
-  if (!sellerListings.length) return null;
+  if (!listing.user_id || !sellerListings.length) return null;
 
   return (
     <section className="seller-more">

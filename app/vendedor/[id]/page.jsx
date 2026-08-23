@@ -39,7 +39,7 @@ export default function SellerPage() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  const canViewAdvertiser = Boolean(session?.user && payload.profile);
+  const canViewAdvertiser = Boolean(session?.user);
   const sellerName = canViewAdvertiser ? payload.profile.full_name || "Anunciante PanAvisos" : "Anunciante PanAvisos";
 
   return (

@@ -1278,7 +1278,7 @@ function ListingDetail({ listing, session, profile, onRequireAccount, onClose })
   const image = images[activeImage]?.url;
   const hasMap = listing.lat && listing.lng;
   const whatsapp = String(listing.whatsapp || "").replace(/\D/g, "");
-  const canViewAdvertiser = Boolean(session?.user && profile);
+  const canViewAdvertiser = Boolean(session?.user);
   const whatsappMessage = encodeURIComponent(`Hola, vi este anuncio en PanAvisos: ${listing.title}. Sigue disponible?`);
   const showRealEstateFacts = listing.category?.slug === "bienes-raices";
 
