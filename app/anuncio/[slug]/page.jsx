@@ -318,6 +318,10 @@ function ListingInquiryForm({ listing, sellerName }) {
         </label>
       </div>
       <p className="contact-required-note">Deja al menos un medio de contacto para que el anunciante pueda responderte.</p>
+        <p className="contact-privacy-note">
+          PanAvisos guarda tu consulta y comparte tu nombre, mensaje y los medios de contacto que proporciones con el anunciante.
+          {" "}<Link href="/privacidad">Ver privacidad</Link>.
+        </p>
         <label className="field">
           <span>Mensaje</span>
           <textarea required rows={5} value={form.message} onChange={(event) => setForm({ ...form, message: event.target.value })} />

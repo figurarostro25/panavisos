@@ -62,6 +62,8 @@ export async function POST(request) {
       .from("listings")
       .select("id")
       .eq("id", listingId)
+      .eq("status", "active")
+      .or(`expires_at.is.null,expires_at.gte.${new Date().toISOString()}`)
       .maybeSingle();
 
     if (listingError || !listing) {
@@ -71,7 +73,7 @@ export async function POST(request) {
     listingId = listing.id;
   }
 
-  const metadata = messageMetadata(request, body.client_meta);
+  const metadata = isListingInquiry ? "" : messageMetadata(request, body.client_meta);
   const finalMessage = metadata ? `${message.slice(0, 3600)}\n\n---\nDatos técnicos:\n${metadata}` : message;
 
   const payload = {

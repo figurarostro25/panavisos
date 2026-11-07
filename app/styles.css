@@ -6640,6 +6640,19 @@ button:disabled {
   line-height: 1.4;
 }
 
+.contact-privacy-note {
+  margin: -8px 0 12px;
+  color: #5a6a76;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.contact-privacy-note a {
+  color: #0a5a78;
+  font-weight: 700;
+  text-underline-offset: 2px;
+}
+
 .message-status {
   margin-left: auto;
   color: #6b7b85;

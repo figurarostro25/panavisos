@@ -804,7 +804,7 @@ export function CatalogHome({ section = "home" }) {
               <div>
                 <strong>
                   {section === "home"
-                    ? "Destacados de hoy"
+                    ? "Anuncios disponibles"
                     : section === "marketplace" && listingGroup === "servicios"
                       ? "Servicios y empleos"
                       : sectionCopy.resultsTitle}
@@ -2559,6 +2559,10 @@ function FeedbackForm({ profile, listing = null, compact = false }) {
             </label>
           </div>
           <p className="contact-required-note">Deja al menos un medio de contacto para que el anunciante pueda responderte.</p>
+          <p className="contact-privacy-note">
+            PanAvisos guarda tu consulta y comparte tu nombre, mensaje y los medios de contacto que proporciones con el anunciante.
+            {" "}<Link href="/privacidad">Ver privacidad</Link>.
+          </p>
           <label className="field">
             <span>Mensaje</span>
             <textarea

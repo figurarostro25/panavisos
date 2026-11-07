@@ -31,6 +31,13 @@ export default function PrivacyPage() {
           del contenido y prevenir abuso.
         </p>
 
+        <h2>Consultas sobre anuncios</h2>
+        <p>
+          Cuando envías una consulta, PanAvisos guarda el mensaje en el historial de la plataforma y comparte con el
+          anunciante el nombre, el mensaje y los medios de contacto que proporcionaste para que pueda responderte.
+          Si eliges llamar o abrir WhatsApp, serás dirigido a ese servicio para contactar directamente al anunciante.
+        </p>
+
         <h2>Control de publicaciones</h2>
         <p>
           Los anunciantes pueden solicitar ajustes o eliminacion de contenido. PanAvisos puede conservar registros

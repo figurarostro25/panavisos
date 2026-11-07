@@ -10,7 +10,7 @@ export async function GET(_request, { params }) {
 
   const { data: listing, error } = await supabase
     .from("listings")
-    .select("*, category:categories(*), images:listing_images(*), profile:profiles(*)")
+    .select("*, category:categories(*), images:listing_images(*), profile:profiles(id,full_name,phone,avatar_url,profession,website_url,bio,interests)")
     .eq("slug", slug)
     .in("status", ["active", "sold", "rented"])
     .or(`expires_at.is.null,expires_at.gte.${now}`)
@@ -25,7 +25,7 @@ export async function GET(_request, { params }) {
       .from("listings")
       .select("*, category:categories(*), images:listing_images(*)")
       .eq("user_id", listing.user_id)
-      .in("status", ["active", "sold", "rented"])
+      .eq("status", "active")
       .neq("id", listing.id)
       .or(`expires_at.is.null,expires_at.gte.${now}`)
       .order("created_at", { ascending: false })
