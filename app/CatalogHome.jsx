@@ -615,7 +615,7 @@ export function CatalogHome({ section = "home" }) {
               <Link href="/publicar">Anuncia aquí</Link>
             </div>
             <div className="hero-carousel sponsored-carousel">
-              <PromoBanner banner={activeHeroBanner} />
+              <PromoBanner banner={activeHeroBanner} priority />
               {heroBanners.length > 1 ? (
                 <div className="banner-dots" aria-label="Anuncios patrocinados">
                   {heroBanners.map((banner, index) => (
@@ -1990,7 +1990,7 @@ function statusLabel(status) {
   return labels[status] || "Pendiente";
 }
 
-function PromoBanner({ banner, large = false, compact = false }) {
+function PromoBanner({ banner, large = false, compact = false, priority = false }) {
   const content = banner || {
     title: "Promociona aquí",
     subtitle: "Crea banners desde el panel admin y mostrarlos en portada.",
@@ -2012,7 +2012,17 @@ function PromoBanner({ banner, large = false, compact = false }) {
       aria-label={title || subtitle || content.cta_label || "Publicidad destacada"}
       {...wrapperProps}
     >
-      {content.image_url ? <img src={optimizeImageUrl(content.image_url, 1200)} alt="" loading="lazy" decoding="async" /> : null}
+      {content.image_url ? (
+        <img
+          src={optimizeImageUrl(content.image_url, 800)}
+          alt=""
+          width="1200"
+          height="900"
+          loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : "auto"}
+          decoding="async"
+        />
+      ) : null}
       {!artworkOnly ? <div>
         <span className="eyebrow">{content.eyebrow || "Destacado"}</span>
         {title ? <h2>{title}</h2> : null}
@@ -2116,7 +2126,7 @@ function SiteFooter() {
 
 function ListingCard({ listing, onSelect }) {
   const images = [...(listing.images || [])].sort((a, b) => a.position - b.position);
-  const image = optimizeImageUrl(images[0]?.url, 640);
+  const image = optimizeImageUrl(images[0]?.url, 320);
   const isPlaceholder = Boolean(listing.is_placeholder);
   const showRealEstateFacts = listing.category?.slug === "bienes-raices";
   const closed = closedStatus(listing.status);
@@ -2125,7 +2135,7 @@ function ListingCard({ listing, onSelect }) {
     <article className={`card marketplace-card ${isPlaceholder ? "placeholder-card" : ""}`}>
       <button className="card-image-button" type="button" onClick={() => onSelect(listing)}>
         {image ? (
-          <img className="card-image" src={image} alt={listing.title} loading="lazy" decoding="async" />
+          <img className="card-image" src={image} alt={listing.title} width="640" height="640" loading="lazy" decoding="async" />
         ) : (
           <div className="card-image empty-image">{isPlaceholder ? "Disponible" : "A"}</div>
         )}
