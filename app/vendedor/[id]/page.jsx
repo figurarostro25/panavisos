@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { money } from "@/lib/format";
+import { optimizeImageUrl } from "@/lib/images";
 
 export default function SellerPage() {
   const { id } = useParams();
@@ -48,7 +49,7 @@ export default function SellerPage() {
           <>
             <section className="seller-hero">
               {payload.profile?.avatar_url ? (
-                <img className="profile-photo seller-profile-photo" src={payload.profile.avatar_url} alt="" />
+                <img className="profile-photo seller-profile-photo" src={optimizeImageUrl(payload.profile.avatar_url, 160)} alt="" width="160" height="160" loading="lazy" decoding="async" />
               ) : (
                 <span className="avatar-badge large">{initials(sellerName)}</span>
               )}
@@ -91,13 +92,13 @@ export default function SellerPage() {
 }
 
 function PublicListingCard({ listing }) {
-  const image = [...(listing.images || [])].sort((a, b) => a.position - b.position)[0]?.url;
+  const image = optimizeImageUrl([...(listing.images || [])].sort((a, b) => a.position - b.position)[0]?.url, 320);
   const closed = closedStatus(listing.status);
 
   return (
     <Link className="public-listing-card" href={`/anuncio/${listing.slug}`}>
       <span className="public-card-media">
-        {image ? <img src={image} alt="" /> : <span className="mini-image-placeholder">A</span>}
+        {image ? <img src={image} alt="" width="640" height="640" loading="lazy" decoding="async" /> : <span className="mini-image-placeholder">A</span>}
         {closed ? <span className={`small-status-ribbon ${listing.status}`}>{closed}</span> : null}
       </span>
       <strong>{money(listing.price)}</strong>

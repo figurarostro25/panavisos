@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { money, whatsappDialNumber } from "@/lib/format";
+import { optimizeImageUrl } from "@/lib/images";
 
 export default function PublicListingPage() {
   const { slug } = useParams();
@@ -67,7 +68,7 @@ function ListingMiniWeb({ listing }) {
   const [copied, setCopied] = useState(false);
   const [shared, setShared] = useState(false);
   const images = useMemo(() => [...(listing.images || [])].sort((a, b) => a.position - b.position), [listing.images]);
-  const image = images[activeImage]?.url;
+  const image = optimizeImageUrl(images[activeImage]?.url, 1200);
   const whatsapp = whatsappDialNumber(listing.whatsapp || listing.advertiser_phone || listing.profile?.phone || "");
   const whatsappMessage = encodeURIComponent(`Hola, vi este anuncio en PanAvisos: ${listing.title}. Sigue disponible?`);
   const sellerName = listing.profile?.full_name || listing.advertiser_name || "Anunciante PanAvisos";
@@ -103,7 +104,7 @@ function ListingMiniWeb({ listing }) {
     <section className="miniweb-layout">
       <div className="miniweb-gallery">
         <div className="miniweb-stage">
-          {image ? <img src={image} alt={listing.title} /> : <span className="empty-image gallery-empty">A</span>}
+          {image ? <img src={image} alt={listing.title} width="1200" height="900" fetchPriority="high" /> : <span className="empty-image gallery-empty">A</span>}
           {closed ? <div className={`listing-status-ribbon ${listing.status}`}>{closed.ribbon}</div> : null}
           {images.length > 1 ? (
             <>
@@ -126,7 +127,7 @@ function ListingMiniWeb({ listing }) {
                 onClick={() => setActiveImage(index)}
                 aria-label={`Ver imagen ${index + 1}`}
               >
-                <img src={item.url} alt="" />
+                <img src={optimizeImageUrl(item.url, 180)} alt="" width="180" height="180" loading="lazy" decoding="async" />
               </button>
             ))}
           </div>
@@ -220,7 +221,7 @@ function ListingMiniWeb({ listing }) {
 
         <div className="seller-panel">
           {listing.profile?.avatar_url ? (
-            <img className="profile-photo seller-profile-photo" src={listing.profile.avatar_url} alt="" />
+            <img className="profile-photo seller-profile-photo" src={optimizeImageUrl(listing.profile.avatar_url, 160)} alt="" width="160" height="160" loading="lazy" decoding="async" />
           ) : (
             <span className="avatar-badge">{initials(sellerName)}</span>
           )}
