@@ -61,7 +61,7 @@ export default function SellerPage() {
                 {payload.profile?.bio ? <p className="profile-bio seller-profile-bio">{payload.profile.bio}</p> : null}
                 <div className="seller-profile-links">
                   {payload.profile?.website_url ? (
-                    <a className="secondary compact-link" href={payload.profile.website_url} target="_blank" rel="noreferrer">
+                    <a className="secondary compact-link" href={payload.profile.website_url} target="_blank" rel="ugc nofollow noreferrer">
                       Sitio web
                     </a>
                   ) : null}

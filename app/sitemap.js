@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSiteUrl } from "@/lib/site";
 import { leadPageList } from "@/lib/leadPages";
+import { isListingIndexEligible } from "@/lib/listingSeo";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 3600;
@@ -26,7 +27,7 @@ export default async function sitemap() {
     const now = new Date().toISOString();
     const { data: listings, error } = await getSupabaseAdmin()
       .from("listings")
-      .select("slug, updated_at")
+      .select("slug,updated_at,status,expires_at,title,description,province,district,property_type,item_condition,bedrooms,bathrooms,area_m2,land_area_ha,video_url,images:listing_images(id)")
       .eq("status", "active")
       .or(`expires_at.is.null,expires_at.gte.${now}`)
       .order("updated_at", { ascending: false });
@@ -35,7 +36,7 @@ export default async function sitemap() {
 
     return [
       ...staticPages,
-      ...(listings || []).map((listing) => ({
+      ...(listings || []).filter((listing) => isListingIndexEligible(listing)).map((listing) => ({
         url: `${siteUrl}/anuncio/${listing.slug}`,
         lastModified: listing.updated_at || undefined,
         changeFrequency: "weekly",

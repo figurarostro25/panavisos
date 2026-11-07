@@ -2328,12 +2328,12 @@ function ListingDetail({ listing, profile, onClose }) {
                 </a>
               ) : null}
               {!isPlaceholder && listing.website_url ? (
-                <a className="secondary" href={listing.website_url} target="_blank" rel="noreferrer">
+                <a className="secondary" href={listing.website_url} target="_blank" rel="ugc nofollow noreferrer">
                   Sitio web
                 </a>
               ) : null}
               {!isPlaceholder && listing.video_url ? (
-                <a className="secondary" href={listing.video_url} target="_blank" rel="noreferrer">
+                <a className="secondary" href={listing.video_url} target="_blank" rel="ugc nofollow noreferrer">
                   Video
                 </a>
               ) : null}

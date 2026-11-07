@@ -557,7 +557,9 @@ export default function PublicarPage() {
                   aria-invalid={showRequiredErrors && !form.title.trim()}
                   value={form.title}
                   onChange={(event) => setForm({ ...form, title: event.target.value })}
+                  placeholder="Ej: Laptop Lenovo ThinkPad en buen estado"
                 />
+                <small>Usa un título claro con el producto, servicio o propiedad y su característica principal.</small>
                 {showRequiredErrors && !form.title.trim() ? <small className="field-error">Escribe un título.</small> : null}
               </label>
 
@@ -688,6 +690,7 @@ export default function PublicarPage() {
                   value={form.description}
                   onChange={(event) => setForm({ ...form, description: event.target.value })}
                 />
+                <small>Cuenta detalles reales: estado, medidas o características, qué incluye, condiciones y disponibilidad. Evita copiar frases genéricas o repetir palabras para aparecer en búsquedas.</small>
                 {showRequiredErrors && !form.description.trim() ? <small className="field-error">Añade una descripción.</small> : null}
               </label>
 

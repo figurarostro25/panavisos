@@ -1,29 +1,30 @@
-﻿import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { getPublicListingBySlug } from "@/lib/publicListings";
+import { isListingIndexEligible, listingMetaDescription } from "@/lib/listingSeo";
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
 
   try {
-    const { data: listing } = await getSupabaseAdmin()
-      .from("listings")
-      .select("title, description, district, province, listing_images(url, position)")
-      .eq("slug", slug)
-      .eq("status", "active")
-      .maybeSingle();
-
-    if (!listing) return { title: "Anuncio no disponible | PanAvisos" };
+    const { data: listing, error } = await getPublicListingBySlug(slug);
+    if (error) throw error;
+    if (!listing) {
+      return {
+        title: "Anuncio no disponible | PanAvisos",
+        robots: { index: false, follow: true }
+      };
+    }
 
     const location = [listing.district, listing.province].filter(Boolean).join(", ");
-    const description = String(
-      listing.description || `${listing.title}${location ? ` en ${location}` : ""}. Consulta detalles en PanAvisos.`
-    ).slice(0, 155);
-    const image = [...(listing.listing_images || [])]
+    const description = listingMetaDescription(listing);
+    const indexable = isListingIndexEligible(listing);
+    const image = [...(listing.images || [])]
       .sort((a, b) => Number(a.position || 0) - Number(b.position || 0))[0]?.url;
 
     return {
       title: `${listing.title}${location ? ` en ${location}` : ""} | PanAvisos`,
       description,
-      alternates: { canonical: `/anuncio/${slug}` },
+      ...(indexable ? { alternates: { canonical: `/anuncio/${slug}` } } : {}),
+      robots: { index: indexable, follow: true },
       openGraph: {
         title: listing.title,
         description,
@@ -33,7 +34,7 @@ export async function generateMetadata({ params }) {
       }
     };
   } catch {
-    return { title: "Anuncio en Panamá | PanAvisos" };
+    return { title: "Anuncio en Panamá | PanAvisos", robots: { index: false, follow: true } };
   }
 }
 
