@@ -3620,6 +3620,9 @@ textarea:focus {
   }
 
   .site-footer nav a {
+    display: flex;
+    min-height: 44px;
+    align-items: center;
     font-size: 0.74rem;
     line-height: 1.3;
   }
@@ -5671,18 +5674,37 @@ button:disabled {
 }
 
 .banner-dots button {
-  width: 10px;
-  height: 10px;
-  min-height: 0;
+  display: grid;
+  width: 24px;
+  height: 24px;
+  min-height: 24px;
+  place-items: center;
   border: 0;
   border-radius: 999px;
   padding: 0;
-  background: rgba(255, 255, 255, 0.72);
+  background: transparent;
+}
+
+.banner-dots button::before {
+  width: 10px;
+  height: 10px;
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.82);
+  content: "";
 }
 
 .banner-dots button.active {
-  width: 24px;
+  width: 32px;
+}
+
+.banner-dots button.active::before {
+  width: 20px;
   background: #fff;
+}
+
+.universal-search-intro .eyebrow,
+.feedback-panel .eyebrow {
+  color: #596579;
 }
 
 .market-layout {
