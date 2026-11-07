@@ -31,7 +31,7 @@ const categoryLooks = {
 const headerCategoryGroups = [
   { label: "Bienes raíces", terms: ["bienes", "propiedades", "inmuebles"] },
   { label: "Servicios", terms: ["empleo", "servicio", "profesional", "trabajo"] },
-  { label: "Marketplace", terms: ["auto", "vehiculo", "carro", "moto", "producto", "marketplace"] },
+  { label: "Productos", terms: ["auto", "vehiculo", "carro", "moto", "producto", "marketplace"] },
   { label: "Hojas de Vida", terms: ["hoja", "curriculum", "cv"] }
 ];
 
