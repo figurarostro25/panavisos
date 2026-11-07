@@ -15,7 +15,7 @@ export async function GET() {
       supabase.from("categories").select("*").order("sort_order").order("name"),
       supabase
         .from("listings")
-        .select("*, category:categories(*), images:listing_images(*), profile:profiles(id,full_name,phone,avatar_url,profession,website_url,bio,interests)")
+        .select("id,user_id,category_id,title,slug,operation,price,original_price,discount_percent,province,district,address_reference,property_type,bedrooms,bathrooms,area_m2,land_area_ha,item_condition,requested_category,description,whatsapp,email,website_url,advertiser_name,advertiser_phone,lat,lng,status,featured,expires_at,created_at,updated_at,video_url,category:categories(*),images:listing_images(id,url,position),profile:profiles(id,full_name,phone,avatar_url,profession,website_url,bio,interests)")
         .eq("status", "active")
         .or(`expires_at.is.null,expires_at.gte.${now}`)
         .order("featured", { ascending: false })
