@@ -2130,6 +2130,11 @@ function ListingCard({ listing, onSelect }) {
   const isPlaceholder = Boolean(listing.is_placeholder);
   const showRealEstateFacts = listing.category?.slug === "bienes-raices";
   const closed = closedStatus(listing.status);
+  const normalizedDescription = (listing.description || "").replace(/\s+/g, " ").trim();
+  const descriptionPreview =
+    normalizedDescription.length > 120
+      ? `${normalizedDescription.slice(0, 117).trimEnd()}…`
+      : normalizedDescription;
 
   return (
     <article className={`card marketplace-card ${isPlaceholder ? "placeholder-card" : ""}`}>
@@ -2153,7 +2158,7 @@ function ListingCard({ listing, onSelect }) {
           {listing.district}, {listing.province}
         </span>
         {listing.description ? (
-          <span className="card-description">{listing.description}</span>
+          <span className="card-description">{descriptionPreview}</span>
         ) : null}
         {showRealEstateFacts ? (
           <div className="facts compact-facts">
