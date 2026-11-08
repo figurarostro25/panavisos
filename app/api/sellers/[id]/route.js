@@ -16,7 +16,7 @@ export async function GET(_request, { params }) {
       .maybeSingle(),
     supabase
       .from("listings")
-      .select("id,title,slug,price,province,district,status,images:listing_images(id,url,position)")
+      .select("id,title,slug,operation,price,budget_min,budget_max,province,district,status,images:listing_images(id,url,position)")
       .eq("user_id", id)
       .eq("status", "active")
       .or(`expires_at.is.null,expires_at.gte.${now}`)

@@ -1,0 +1,108 @@
+.whatsapp-contact-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border-color: #128c7e;
+  color: #ffffff;
+  background: #128c7e;
+}
+
+.whatsapp-contact-action:hover {
+  border-color: #0c6b60;
+  color: #ffffff;
+  background: #0c6b60;
+}
+
+.whatsapp-contact-action svg {
+  flex: 0 0 21px;
+  width: 21px;
+  height: 21px;
+  fill: currentColor;
+}
+
+.whatsapp-contact-action svg path:first-child {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.listing-social-link {
+  display: inline-flex;
+  width: 100%;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  transition: filter 140ms ease, transform 140ms ease;
+}
+
+.listing-social-link:hover {
+  filter: brightness(0.94);
+  transform: translateY(-1px);
+}
+
+.listing-social-link:focus-visible,
+.whatsapp-contact-action:focus-visible {
+  outline: 3px solid #ffc928;
+  outline-offset: 2px;
+}
+
+.listing-social-link svg {
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+}
+
+.listing-social-link.instagram {
+  border-color: #c13584;
+  color: #ffffff;
+  background: linear-gradient(115deg, #f58529 0%, #dd2a7b 48%, #8134af 100%);
+}
+
+.listing-social-link.instagram svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+}
+
+.listing-social-link.instagram .social-icon-dot {
+  fill: currentColor;
+  stroke: none;
+}
+
+.listing-social-link.facebook {
+  border-color: #1877f2;
+  color: #ffffff;
+  background: #1877f2;
+}
+
+.listing-social-link.facebook svg {
+  fill: currentColor;
+  stroke: none;
+}
+
+.listing-social-link.website {
+  border-color: #bed3de;
+  color: #12313f;
+  background: #ffffff;
+}
+
+.listing-social-link.website svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .listing-social-link {
+    transition: none;
+  }
+}

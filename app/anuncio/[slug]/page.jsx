@@ -18,7 +18,7 @@ export default async function PublicListingPage({ params }) {
     const now = new Date().toISOString();
     const { data, error: sellerListingsError } = await getSupabaseAdmin()
       .from("listings")
-      .select("id,title,slug,price,province,district,status,images:listing_images(id,url,position)")
+      .select("id,title,slug,operation,price,budget_min,budget_max,province,district,status,images:listing_images(id,url,position)")
       .eq("user_id", listing.user_id)
       .eq("status", "active")
       .neq("id", listing.id)

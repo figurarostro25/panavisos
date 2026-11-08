@@ -17,10 +17,31 @@ function getBearerToken(request) {
 }
 
 export async function POST(request) {
-  const body = await request.json();
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "La publicación no tiene un formato válido." }, { status: 400 });
+  }
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return NextResponse.json({ error: "La publicación no tiene un formato válido." }, { status: 400 });
+  }
 
-  if (!body.title || !body.category_id || !body.price || !body.province || !body.district || !body.description) {
+  const isSearchRequest = body.operation === "Busco";
+  if (!body.title || !body.category_id || (!isSearchRequest && !body.price) || !body.province || !body.district || !body.description) {
     return NextResponse.json({ error: "Faltan datos obligatorios." }, { status: 400 });
+  }
+
+  if (isSearchRequest) {
+    const phoneDigits = String(body.whatsapp || body.advertiser_phone || "").replace(/\D/g, "");
+    if (!body.public_contact_consent || phoneDigits.length < 7 || phoneDigits.length > 15) {
+      return NextResponse.json({ error: "Para publicar una búsqueda, autoriza mostrar tu WhatsApp y verifica el número." }, { status: 400 });
+    }
+    const budgetMin = optionalBudget(body.budget_min);
+    const budgetMax = optionalBudget(body.budget_max);
+    if (budgetMin.invalid || budgetMax.invalid || (budgetMin.value != null && budgetMax.value != null && budgetMin.value > budgetMax.value)) {
+      return NextResponse.json({ error: "Revisa el rango de presupuesto e intenta nuevamente." }, { status: 400 });
+    }
   }
 
   if (body.operation === "Oferta" && !body.expires_at) {
@@ -102,4 +123,10 @@ export async function POST(request) {
   if (imageError) return NextResponse.json({ error: imageError.message }, { status: 500 });
 
   return NextResponse.json({ listing, status: "active" });
+}
+
+function optionalBudget(value) {
+  if (value === "" || value == null) return { value: null, invalid: false };
+  const number = Number(value);
+  return { value: number, invalid: !Number.isFinite(number) || number < 0 };
 }

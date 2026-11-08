@@ -1,8 +1,8 @@
 import { RequestFormPage } from "@/app/RequestFormPage";
 
 export const metadata = {
-  title: "Yo busco | PanAvisos",
-  description: "Cuéntanos qué propiedad, empleo, vehículo, producto o servicio necesitas encontrar en Panamá."
+  title: "Publica lo que buscas en Panamá | Yo busco | PanAvisos",
+  description: "Publica gratis lo que buscas en Panamá: apartamento, empleo, auto, producto o servicio. Indica presupuesto y zona para que te contacten."
 };
 
 export default function YoBuscoPage() {

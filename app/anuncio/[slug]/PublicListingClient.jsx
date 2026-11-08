@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import ListingSocialLinks from "@/app/ListingSocialLinks";
 import { useMemo, useState } from "react";
-import { money, whatsappDialNumber } from "@/lib/format";
+import { listingPriceLabel, money, whatsappDialNumber } from "@/lib/format";
 import { optimizeImageUrl } from "@/lib/images";
 
 export default function PublicListingPage({ initialPayload }) {
@@ -52,10 +53,12 @@ function ListingMiniWeb({ listing }) {
   const images = useMemo(() => [...(listing.images || [])].sort((a, b) => a.position - b.position), [listing.images]);
   const image = optimizeImageUrl(images[activeImage]?.url, 1200);
   const whatsapp = whatsappDialNumber(listing.whatsapp || listing.advertiser_phone || listing.profile?.phone || "");
-  const whatsappMessage = encodeURIComponent(`Hola, vi este anuncio en PanAvisos: ${listing.title}. Sigue disponible?`);
+  const whatsappMessage = encodeURIComponent(listing.operation === "Busco"
+    ? `Hola, vi tu búsqueda en PanAvisos: ${listing.title}. Tengo una opción que puede interesarte.`
+    : `Hola, vi este anuncio en PanAvisos: ${listing.title}. Sigue disponible?`);
   const sellerName = listing.profile?.full_name || listing.advertiser_name || "Anunciante PanAvisos";
   const showRealEstateFacts = listing.category?.slug === "bienes-raices";
-  const closed = closedStatus(listing.status);
+  const closed = closedStatus(listing.status, listing.operation);
 
   async function copyLink() {
     await navigator.clipboard.writeText(window.location.href);
@@ -86,7 +89,7 @@ function ListingMiniWeb({ listing }) {
     <section className="miniweb-layout">
       <div className="miniweb-gallery">
         <div className="miniweb-stage">
-          {image ? <img src={image} alt={listing.title} width="1200" height="900" fetchPriority="high" /> : <span className="empty-image gallery-empty">A</span>}
+          {image ? <img src={image} alt={listing.title} width="1200" height="900" fetchPriority="high" /> : <span className={`empty-image gallery-empty ${listing.operation === "Busco" ? "search-card-image" : ""}`}>{listing.operation === "Busco" ? "BUSCO" : "A"}</span>}
           {closed ? <div className={`listing-status-ribbon ${listing.status}`}>{closed.ribbon}</div> : null}
           {images.length > 1 ? (
             <>
@@ -123,7 +126,7 @@ function ListingMiniWeb({ listing }) {
             <span>{closed.copy}</span>
           </div>
         ) : null}
-        <span className="eyebrow">{listing.category?.name || "Anuncio"}</span>
+        <span className="eyebrow">{listing.operation === "Busco" ? "Yo busco" : listing.category?.name || "Anuncio"}</span>
         <h1>{listing.title}</h1>
         <PriceBlock listing={listing} />
         <p className="muted">Publicado en {listing.district}, {listing.province}</p>
@@ -132,21 +135,21 @@ function ListingMiniWeb({ listing }) {
 
         <div className="share-actions">
           {!closed && whatsapp ? (
-            <a className="primary" href={`https://wa.me/${whatsapp}?text=${whatsappMessage}`} target="_blank" rel="noreferrer">
+            <a className="primary whatsapp-contact-action" href={`https://wa.me/${whatsapp}?text=${whatsappMessage}`} target="_blank" rel="noreferrer">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M20.5 11.7a8.5 8.5 0 0 1-12.6 7.4L3 20l.9-4.7A8.5 8.5 0 1 1 20.5 11.7Z" />
+                <path d="M8.4 7.8c-.3-.5-.6-.5-.9-.5h-.7c-.3 0-.7.1-1 .5-.4.4-1.3 1.3-1.3 3.1s1.3 3.5 1.5 3.8c.2.2 2.6 4.1 6.4 5.5 3.2 1.2 3.9 1 4.6.9.7-.1 2.2-.9 2.5-1.8.3-.9.3-1.6.2-1.8-.1-.2-.3-.3-.7-.5l-2.5-1.2c-.3-.1-.6-.2-.8.2-.2.4-.9 1.2-1.1 1.5-.2.2-.4.3-.8.1-.4-.2-1.7-.6-3.2-2-.1-.1-.9-.8-1.1-1.1-.2-.3 0-.5.2-.7l.6-.7c.2-.2.2-.4.3-.6.1-.2 0-.5 0-.7L8.4 7.8Z" />
+              </svg>
               Contactar por WhatsApp
             </a>
           ) : null}
+          <ListingSocialLinks listing={listing} />
           <button className="secondary" type="button" onClick={copyLink}>
             {copied ? "Link copiado" : "Copiar link"}
           </button>
           <button className="secondary" type="button" onClick={shareLink}>
             {shared ? "Enlace listo" : "Compartir"}
           </button>
-          {listing.website_url ? (
-            <a className="secondary" href={listing.website_url} target="_blank" rel="ugc nofollow noreferrer">
-              Sitio web
-            </a>
-          ) : null}
           {listing.video_url ? (
             <a className="secondary" href={listing.video_url} target="_blank" rel="ugc nofollow noreferrer">
               Video
@@ -214,7 +217,7 @@ function ListingMiniWeb({ listing }) {
             {listing.profile?.bio ? <p className="seller-panel-bio">{listing.profile.bio}</p> : null}
             {listing.user_id ? (
               <Link className="secondary compact-link" href={`/vendedor/${listing.user_id}`}>
-                Ver más anuncios
+                {listing.operation === "Busco" ? "Ver más publicaciones" : "Ver más anuncios"}
               </Link>
             ) : null}
           </div>
@@ -227,7 +230,9 @@ function ListingMiniWeb({ listing }) {
 
 function ListingInquiryForm({ listing, sellerName }) {
   const sellerDial = whatsappDialNumber(listing.whatsapp || listing.advertiser_phone || listing.profile?.phone || "");
-  const defaultMessage = `Me interesa el anuncio "${listing.title}" que tienes publicado en PanAvisos.`;
+  const defaultMessage = listing.operation === "Busco"
+    ? `Vi tu búsqueda "${listing.title}" en PanAvisos y tengo una opción que puede interesarte.`
+    : `Me interesa el anuncio "${listing.title}" que tienes publicado en PanAvisos.`;
   const [form, setForm] = useState({
     sender_name: "",
     sender_email: "",
@@ -276,7 +281,7 @@ function ListingInquiryForm({ listing, sellerName }) {
     <section className="seller-contact-card">
       <div>
         <span className="eyebrow">{sellerName}</span>
-        <h2>Enviar mensaje</h2>
+          <h2>{listing.operation === "Busco" ? "Ofrecer una opción" : "Enviar mensaje"}</h2>
       </div>
       <form onSubmit={submit}>
         <label className="field contact-identity-field">
@@ -309,7 +314,7 @@ function ListingInquiryForm({ listing, sellerName }) {
           <textarea required rows={5} value={form.message} onChange={(event) => setForm({ ...form, message: event.target.value })} />
         </label>
         <button className="primary inquiry-submit" type="submit" disabled={sending}>
-          {sending ? "Enviando..." : "Enviar mensaje"}
+          {sending ? "Enviando..." : listing.operation === "Busco" ? "Enviar propuesta" : "Enviar mensaje"}
         </button>
         <div className="contact-shortcuts">
           {sellerDial ? <a className="phone-action" href={`tel:+${sellerDial}`}>Llamar</a> : <span className="disabled-contact-action">Llamar</span>}
@@ -334,7 +339,7 @@ function SellerMore({ listing, sellerListings }) {
   return (
     <section className="seller-more">
       <div className="section-heading">
-        <h2>Más anuncios de este vendedor</h2>
+        <h2>{listing.operation === "Busco" ? "Más publicaciones de esta persona" : "Más anuncios de este vendedor"}</h2>
         <Link className="secondary compact-link" href={`/vendedor/${listing.user_id}`}>
           Ver todos
         </Link>
@@ -350,15 +355,15 @@ function SellerMore({ listing, sellerListings }) {
 
 function PublicListingCard({ listing }) {
   const image = [...(listing.images || [])].sort((a, b) => a.position - b.position)[0]?.url;
-  const closed = closedStatus(listing.status);
+  const closed = closedStatus(listing.status, listing.operation);
 
   return (
     <Link className="public-listing-card" href={`/anuncio/${listing.slug}`}>
       <span className="public-card-media">
-        {image ? <img src={image} alt="" /> : <span className="mini-image-placeholder">A</span>}
+        {image ? <img src={image} alt="" /> : <span className={`mini-image-placeholder ${listing.operation === "Busco" ? "search-card-image" : ""}`}>{listing.operation === "Busco" ? "BUSCO" : "A"}</span>}
         {closed ? <span className={`small-status-ribbon ${listing.status}`}>{closed.short}</span> : null}
       </span>
-      <strong>{money(listing.price)}</strong>
+      <strong>{listingPriceLabel(listing)}</strong>
       <span>{listing.title}</span>
       <small>{listing.district}, {listing.province}</small>
     </Link>
@@ -366,6 +371,9 @@ function PublicListingCard({ listing }) {
 }
 
 function PriceBlock({ listing }) {
+  if (listing.operation === "Busco") {
+    return <div className="price-block large"><strong>{listingPriceLabel(listing)}</strong><span className="search-budget-caption">Presupuesto</span></div>;
+  }
   return (
     <div className="price-block large">
       <strong>{money(listing.price)}</strong>
@@ -383,13 +391,13 @@ function initials(value) {
     .toUpperCase();
 }
 
-function closedStatus(status) {
+function closedStatus(status, operation = "") {
   if (status === "sold") {
     return {
-      title: "Vendido en PanAvisos",
-      ribbon: "Vendido",
-      short: "Vendido",
-      copy: "Este anuncio queda visible como referencia para mostrar actividad real en la página."
+      title: operation === "Busco" ? "Búsqueda cerrada" : "Vendido en PanAvisos",
+      ribbon: operation === "Busco" ? "Encontrado" : "Vendido",
+      short: operation === "Busco" ? "Encontrado" : "Vendido",
+      copy: operation === "Busco" ? "El anunciante indicó que ya encontró una opción." : "Este anuncio queda visible como referencia para mostrar actividad real en la página."
     };
   }
   if (status === "rented") {

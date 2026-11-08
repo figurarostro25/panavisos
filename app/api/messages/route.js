@@ -39,6 +39,12 @@ export async function POST(request) {
   const senderEmail = String(body.sender_email || "").trim();
   const senderPhone = String(body.sender_phone || "").trim();
   const kind = String(body.kind || "feedback").slice(0, 40);
+  if (kind.startsWith("search_request_")) {
+    return NextResponse.json(
+      { error: "Yo busco ahora se publica en el catálogo. Usa panavisos.com/yo-busco para crear una búsqueda pública." },
+      { status: 410 }
+    );
+  }
   const allowsAnonymousEmail = kind === "demand_suggestion";
   const requiresGoogle = kind === "support";
   const isListingInquiry = kind === "inquiry";
@@ -134,7 +140,7 @@ export async function POST(request) {
     });
   }
 
-  if (kind === "loan_request" || kind.startsWith("search_request_")) {
+  if (kind === "loan_request") {
     notifyLeadTeam(data).catch((notifyError) => {
       console.error("No se pudo notificar al equipo", notifyError);
     });
@@ -204,7 +210,7 @@ async function notifySeller(inquiry) {
   const supabase = getSupabaseAdmin();
   const { data: listing } = await supabase
     .from("listings")
-    .select("id,title,slug,user_id,advertiser_email,email")
+    .select("id,title,slug,operation,user_id,advertiser_email,email")
     .eq("id", inquiry.listing_id)
     .maybeSingle();
 
@@ -222,14 +228,15 @@ async function notifySeller(inquiry) {
   const listingUrl = listing.slug ? `${siteUrl}/anuncio/${listing.slug}` : siteUrl;
   const accountUrl = `${siteUrl}/cuenta`;
   const from = String(process.env.NOTIFICATION_FROM_EMAIL || "PanAvisos <onboarding@resend.dev>").trim();
-  const subject = `Nuevo interesado en: ${listing.title || inquiry.listing_title || "tu anuncio"}`;
+  const isSearchListing = listing.operation === "Busco";
+  const subject = `${isSearchListing ? "Nueva propuesta para tu búsqueda" : "Nuevo interesado en"}: ${listing.title || inquiry.listing_title || "tu anuncio"}`;
   const senderName = inquiry.sender_name || "Un visitante";
   const senderEmail = inquiry.sender_email || "Sin correo";
   const senderPhone = inquiry.sender_phone || "Sin telefono";
   const cleanMessage = String(inquiry.message || "").split(/\n---\nDatos/i)[0].trim();
 
   const text = [
-    `Hola, tienes una nueva consulta en PanAvisos.`,
+    isSearchListing ? "Hola, recibiste una propuesta para tu búsqueda en PanAvisos." : "Hola, tienes una nueva consulta en PanAvisos.",
     ``,
     `Anuncio: ${listing.title || inquiry.listing_title || "Anuncio"}`,
     `Enlace: ${listingUrl}`,
@@ -246,7 +253,7 @@ async function notifySeller(inquiry) {
 
   const html = `
     <div style="font-family:Arial,sans-serif;line-height:1.5;color:#172331">
-      <h2 style="margin:0 0 12px">Nueva consulta en PanAvisos</h2>
+      <h2 style="margin:0 0 12px">${isSearchListing ? "Nueva propuesta para tu búsqueda" : "Nueva consulta en PanAvisos"}</h2>
       <p><strong>Anuncio:</strong> ${escapeHtml(listing.title || inquiry.listing_title || "Anuncio")}</p>
       <p><a href="${listingUrl}">Ver anuncio</a> | <a href="${accountUrl}">Abrir mi cuenta</a></p>
       <hr style="border:0;border-top:1px solid #e2e8ee;margin:18px 0" />

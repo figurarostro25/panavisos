@@ -8,6 +8,7 @@ import { money, provinces } from "@/lib/format";
 import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
 import { fetchCategoriesWithRetry, readCachedCategories } from "@/lib/categoryCache";
 import { findPublishCategoryGroup, getPublishCategoryGroups } from "@/lib/publishCategories";
+import { getListingContactLinks } from "@/lib/externalLinks";
 
 const DEFAULT_MAX_IMAGES = 5;
 
@@ -22,6 +23,8 @@ const emptyForm = {
   category_id: "",
   operation: "Venta",
   price: "",
+  budget_min: "",
+  budget_max: "",
   original_price: "",
   discount_percent: "",
   province: "Panama",
@@ -40,10 +43,13 @@ const emptyForm = {
   whatsapp: "",
   email: "",
   website_url: "",
+  instagram_url: "",
+  facebook_url: "",
   video_url: "",
   expires_at: defaultExpiresAt(),
   featured: true,
   responsibility_accepted: false,
+  public_contact_consent: false,
   images: []
 };
 
@@ -436,6 +442,16 @@ export default function PublicarPage() {
       setError("Acepta la responsabilidad del anuncio antes de publicar.");
       return;
     }
+    if (form.operation === "Busco" && !form.public_contact_consent) {
+      setSaving(false);
+      setError("Autoriza la publicación pública y el contacto por WhatsApp antes de continuar.");
+      return;
+    }
+    if (form.operation === "Busco" && form.budget_min && form.budget_max && Number(form.budget_min) > Number(form.budget_max)) {
+      setSaving(false);
+      setError("El presupuesto mínimo no puede superar el máximo.");
+      return;
+    }
 
     const payload = {
       ...form,
@@ -563,18 +579,25 @@ export default function PublicarPage() {
                 {showRequiredErrors && !form.title.trim() ? <small className="field-error">Escribe un título.</small> : null}
               </label>
 
-              <label className="field">
-                <span>Precio USD</span>
-                <input
-                  id="publish-price"
-                  required
-                  type="number"
-                  aria-invalid={showRequiredErrors && String(form.price).trim() === ""}
-                  value={form.price}
-                  onChange={(event) => setForm({ ...form, price: event.target.value })}
-                />
-                {showRequiredErrors && String(form.price).trim() === "" ? <small className="field-error">Indica el precio.</small> : null}
-              </label>
+              {form.operation === "Busco" ? (
+                <div className="field-row">
+                  <label className="field"><span>Presupuesto mínimo USD</span><input type="number" min="0" value={form.budget_min} onChange={(event) => setForm({ ...form, budget_min: event.target.value })} /></label>
+                  <label className="field"><span>Presupuesto máximo USD</span><input type="number" min="0" value={form.budget_max} onChange={(event) => setForm({ ...form, budget_max: event.target.value })} /></label>
+                </div>
+              ) : (
+                <label className="field">
+                  <span>Precio USD</span>
+                  <input
+                    id="publish-price"
+                    required
+                    type="number"
+                    aria-invalid={showRequiredErrors && String(form.price).trim() === ""}
+                    value={form.price}
+                    onChange={(event) => setForm({ ...form, price: event.target.value })}
+                  />
+                  {showRequiredErrors && String(form.price).trim() === "" ? <small className="field-error">Indica el precio.</small> : null}
+                </label>
+              )}
 
               <PublishCategoryChooser
                 groups={publishCategoryGroups}
@@ -596,6 +619,7 @@ export default function PublicarPage() {
                   <option>Alquiler</option>
                   <option>Servicio</option>
                   <option>Oferta</option>
+                  <option>Busco</option>
                 </select>
               </label>
 
@@ -695,13 +719,35 @@ export default function PublicarPage() {
               </label>
 
               <label className="field">
-                <span>Sitio web</span>
-                <input type="url" value={form.website_url} onChange={(event) => setForm({ ...form, website_url: event.target.value })} placeholder="https://cliente.com" />
+                <span>Sitio web (opcional)</span>
+                <input type="url" value={form.website_url} onChange={(event) => setForm({ ...form, website_url: event.target.value })} placeholder="https://tusitio.com" />
               </label>
 
               <label className="field">
-                <span>WhatsApp opcional</span>
-                <input value={form.whatsapp} onChange={(event) => setForm({ ...form, whatsapp: event.target.value })} placeholder="Ej: 6000-0000" />
+                <span>Instagram (opcional)</span>
+                <input
+                  type="url"
+                  value={form.instagram_url}
+                  onChange={(event) => setForm({ ...form, instagram_url: event.target.value })}
+                  placeholder="https://www.instagram.com/tuusuario"
+                />
+                <small>Agrega el enlace público de tu perfil de Instagram.</small>
+              </label>
+
+              <label className="field">
+                <span>Facebook (opcional)</span>
+                <input
+                  type="url"
+                  value={form.facebook_url}
+                  onChange={(event) => setForm({ ...form, facebook_url: event.target.value })}
+                  placeholder="https://www.facebook.com/tuempresa"
+                />
+                <small>Agrega el enlace público de tu página de Facebook.</small>
+              </label>
+
+              <label className="field">
+                <span>{form.operation === "Busco" ? "WhatsApp público" : "WhatsApp opcional"}</span>
+                <input required={form.operation === "Busco"} value={form.whatsapp} onChange={(event) => setForm({ ...form, whatsapp: event.target.value })} placeholder="Ej: 6000-0000" />
               </label>
 
               <label className="field">
@@ -815,13 +861,19 @@ export default function PublicarPage() {
                     Confirmo que soy responsable por la información, fotos, precio y condiciones de este anuncio. Entiendo que PanAvisos solo facilita la publicación y el contacto.
                   </span>
                 </label>
+                {form.operation === "Busco" ? (
+                  <label className="responsibility-check">
+                    <input type="checkbox" checked={form.public_contact_consent} onChange={(event) => setForm({ ...form, public_contact_consent: event.target.checked })} />
+                    <span>Autorizo publicar esta búsqueda y mostrar públicamente mi nombre y WhatsApp para que me contacten. Puedo retirar el anuncio desde mi cuenta.</span>
+                  </label>
+                ) : null}
                 <div className="review-row">
                   <span>Título</span>
                   <strong>{form.title || "Sin título"}</strong>
                 </div>
                 <div className="review-row">
-                  <span>Precio</span>
-                  <strong>{money(form.price)}</strong>
+                  <span>{form.operation === "Busco" ? "Presupuesto" : "Precio"}</span>
+                  <strong>{form.operation === "Busco" ? formatBudgetLabel(form.budget_min, form.budget_max) : money(form.price)}</strong>
                 </div>
                 <div className="review-row">
                   <span>Ubicación</span>
@@ -1078,7 +1130,7 @@ function PublishCategoryChooser({
 function getMissingPublishFields(form) {
   return [
     { key: "title", label: "título", missing: !form.title.trim() },
-    { key: "price", label: "precio", missing: String(form.price).trim() === "" },
+    { key: "price", label: "precio", missing: form.operation !== "Busco" && String(form.price).trim() === "" },
     { key: "category", label: "categoría", missing: !form.category_id },
     { key: "description", label: "descripción", missing: !form.description.trim() }
   ].filter((field) => field.missing);
@@ -1210,6 +1262,14 @@ function PhotoUploader({ images, maxImages, uploadingPhotos, onUpload, onRemove 
 }
 
 function PriceBlock({ listing }) {
+  if (listing.operation === "Busco") {
+    return (
+      <div className="price-stack">
+        <strong className="price">{formatBudgetLabel(listing.budget_min, listing.budget_max)}</strong>
+        <span className="search-budget-caption">Presupuesto</span>
+      </div>
+    );
+  }
   const hasDiscount = Number(listing.original_price) > Number(listing.price || 0);
   return (
     <div className="price-stack">
@@ -1218,6 +1278,15 @@ function PriceBlock({ listing }) {
       {hasDiscount && listing.discount_percent ? <span className="discount-badge">{listing.discount_percent}% menos</span> : null}
     </div>
   );
+}
+
+function formatBudgetLabel(minValue, maxValue) {
+  const min = Number(minValue || 0);
+  const max = Number(maxValue || 0);
+  if (min && max) return `${money(min)}–${money(max)}`;
+  if (max) return `Hasta ${money(max)}`;
+  if (min) return `Desde ${money(min)}`;
+  return "Presupuesto flexible";
 }
 
 function normalize(value) {
@@ -1231,13 +1300,16 @@ function listingToForm(listing) {
   const images = [...(listing.images || [])]
     .sort((a, b) => a.position - b.position)
     .map((image) => ({ url: image.url, public_id: image.public_id }));
+  const contactLinks = getListingContactLinks(listing);
 
   return {
     ...emptyForm,
     title: listing.title || "",
     category_id: listing.category_id || "",
     operation: listing.operation || "Venta",
-    price: listing.price ?? "",
+    price: listing.operation === "Busco" ? (listing.budget_max ?? listing.budget_min ?? listing.price ?? "") : (listing.price ?? ""),
+    budget_min: listing.budget_min ?? "",
+    budget_max: listing.budget_max ?? "",
     original_price: listing.original_price ?? "",
     discount_percent: listing.discount_percent ?? "",
     province: listing.province || "Panama",
@@ -1255,11 +1327,14 @@ function listingToForm(listing) {
     description: listing.description || "",
     whatsapp: listing.whatsapp || "",
     email: listing.email || "",
-    website_url: listing.website_url || "",
+    website_url: contactLinks.websiteUrl,
+    instagram_url: contactLinks.instagramUrl,
+    facebook_url: contactLinks.facebookUrl,
     video_url: listing.video_url || "",
     expires_at: listing.expires_at ? String(listing.expires_at).slice(0, 10) : defaultExpiresAt(),
     featured: Boolean(listing.featured),
     responsibility_accepted: listing.responsibility_accepted ?? true,
+    public_contact_consent: listing.public_contact_consent ?? false,
     images
   };
 }

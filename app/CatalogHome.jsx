@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { money, provinces, whatsappDialNumber } from "@/lib/format";
+import ListingSocialLinks from "@/app/ListingSocialLinks";
+import { listingPriceLabel, money, provinces, whatsappDialNumber } from "@/lib/format";
 import { optimizeImageUrl } from "@/lib/images";
 import { distanceInKm, nearestKnownLocation, searchAreaOptions } from "@/lib/locations";
 import { completeOAuthRedirect, getSupabaseBrowser, hasSupabaseBrowserConfig } from "@/lib/supabaseBrowser";
@@ -520,8 +521,7 @@ export function CatalogHome({ section = "home", initialListingGroup = "", initia
         (!filters.category || listing.category_id === filters.category) &&
         (!filters.province || listing.province === filters.province) &&
         listingMatchesSearchArea(listing, searchArea) &&
-        Number(listing.price) >= min &&
-        Number(listing.price) <= max
+        listingMatchesPriceFilter(listing, min, max)
       );
     });
   }, [catalogListings, filters, listingGroup, marketplaceListings, propertyListings, searchArea, section, serviceListings]);
@@ -1039,18 +1039,17 @@ function SearchRequestBand() {
         <span className="eyebrow dark-eyebrow">Yo busco</span>
         <h2 id="search-request-title">¿No encontraste lo que necesitas?</h2>
         <p>
-          Cuéntanos qué buscas, tu zona y presupuesto. Guardamos la solicitud de forma privada para conectarte con
-          opciones relevantes.
+          Publica qué buscas, tu zona y presupuesto. Las personas que tengan una opción podrán encontrar tu publicación y contactarte.
         </p>
         <div className="search-request-actions">
-          <Link className="primary" href="/yo-busco">Crear solicitud gratis</Link>
-          <small>No se publica en el catálogo.</small>
+          <Link className="primary" href="/yo-busco">Publicar mi búsqueda</Link>
+          <small>Publica tu búsqueda para que te contacten con opciones.</small>
         </div>
       </div>
       <ol className="search-request-steps">
         <li><span>1</span><div><strong>Elige el rubro</strong><small>Propiedad, empleo, vehículo, servicio u otro.</small></div></li>
         <li><span>2</span><div><strong>Define lo importante</strong><small>Zona, presupuesto, radio y condiciones.</small></div></li>
-        <li><span>3</span><div><strong>Recibe opciones</strong><small>Un asesor revisa y canaliza tu solicitud.</small></div></li>
+        <li><span>3</span><div><strong>Recibe propuestas</strong><small>Contactan contigo directamente por WhatsApp o desde el anuncio.</small></div></li>
       </ol>
     </section>
   );
@@ -1979,7 +1978,7 @@ function MiniListing({ listing }) {
       {image ? <img src={image} alt="" /> : <span className="mini-image-placeholder">A</span>}
       <div>
         <strong>{listing.title}</strong>
-        <small>{money(listing.price)} - {statusLabel(listing.status)}</small>
+        <small>{listingPriceLabel(listing)} - {statusLabel(listing.status)}</small>
         <Link href={`/publicar?edit=${listing.id}`}>Editar</Link>
       </div>
     </article>
@@ -2139,7 +2138,7 @@ function ListingCard({ listing, onSelect }) {
   const image = optimizeImageUrl(images[0]?.url, 320);
   const isPlaceholder = Boolean(listing.is_placeholder);
   const showRealEstateFacts = listing.category?.slug === "bienes-raices";
-  const closed = closedStatus(listing.status);
+  const closed = closedStatus(listing.status, listing.operation);
   const normalizedTitle = (listing.title || "").replace(/\s+/g, " ").trim();
   const titlePreview =
     normalizedTitle.length > 72
@@ -2157,12 +2156,13 @@ function ListingCard({ listing, onSelect }) {
         {image ? (
           <img className="card-image" src={image} alt={listing.title} width="640" height="640" loading="lazy" decoding="async" />
         ) : (
-          <div className="card-image empty-image">{isPlaceholder ? "Disponible" : "A"}</div>
+          <div className={`card-image empty-image ${listing.operation === "Busco" ? "search-card-image" : ""}`}>{isPlaceholder ? "Disponible" : listing.operation === "Busco" ? "BUSCO" : "A"}</div>
         )}
         {closed ? <span className={`small-status-ribbon ${listing.status}`}>{closed.short}</span> : null}
         {images.length > 1 ? <span className="image-count">{images.length} fotos</span> : null}
       </button>
       <div className="card-body">
+        {listing.operation === "Busco" ? <span className="fresh-badge search-listing-badge">Yo busco</span> : null}
         {isPlaceholder ? <span className="fresh-badge">{listing.placeholder_badge || "Espacio disponible"}</span> : null}
         {!isPlaceholder && listing.featured ? <span className="fresh-badge">Resaltado</span> : null}
         <PriceBlock listing={listing} />
@@ -2202,9 +2202,11 @@ function ListingDetail({ listing, profile, onClose }) {
   const isPlaceholder = Boolean(listing.is_placeholder);
   const hasMap = listing.lat && listing.lng;
   const whatsapp = isPlaceholder ? "" : whatsappDialNumber(listing.whatsapp || listing.advertiser_phone || listing.profile?.phone || "");
-  const whatsappMessage = encodeURIComponent(`Hola, vi este anuncio en PanAvisos: ${listing.title}. Sigue disponible?`);
+  const whatsappMessage = encodeURIComponent(listing.operation === "Busco"
+    ? `Hola, vi tu búsqueda en PanAvisos: ${listing.title}. Tengo una opción que puede interesarte.`
+    : `Hola, vi este anuncio en PanAvisos: ${listing.title}. Sigue disponible?`);
   const showRealEstateFacts = listing.category?.slug === "bienes-raices";
-  const closed = closedStatus(listing.status);
+  const closed = closedStatus(listing.status, listing.operation);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -2280,7 +2282,7 @@ function ListingDetail({ listing, profile, onClose }) {
             X
           </button>
           <div className="gallery-stage">
-            {image ? <img src={image} alt={listing.title} decoding="async" /> : <div className="empty-image gallery-empty">A</div>}
+            {image ? <img src={image} alt={listing.title} decoding="async" /> : <div className={`empty-image gallery-empty ${listing.operation === "Busco" ? "search-card-image" : ""}`}>{listing.operation === "Busco" ? "BUSCO" : "A"}</div>}
             {closed ? <div className={`listing-status-ribbon ${listing.status}`}>{closed.ribbon}</div> : null}
             {images.length > 1 ? (
               <>
@@ -2325,11 +2327,26 @@ function ListingDetail({ listing, profile, onClose }) {
             <div className="detail-actions">
               {!isPlaceholder ? (
                 <button className="primary listing-message-action" type="button" onClick={openContactForm}>
-                  Enviar mensaje
+                  {listing.operation === "Busco" ? "Ofrecer una opción" : "Enviar mensaje"}
                 </button>
               ) : null}
+              {!isPlaceholder && whatsapp ? (
+                <a
+                  className="primary whatsapp-contact-action"
+                  href={`https://wa.me/${whatsapp}?text=${whatsappMessage}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M20.5 11.7a8.5 8.5 0 0 1-12.6 7.4L3 20l.9-4.7A8.5 8.5 0 1 1 20.5 11.7Z" />
+                    <path d="M8.4 7.8c-.3-.5-.6-.5-.9-.5h-.7c-.3 0-.7.1-1 .5-.4.4-1.3 1.3-1.3 3.1s1.3 3.5 1.5 3.8c.2.2 2.6 4.1 6.4 5.5 3.2 1.2 3.9 1 4.6.9.7-.1 2.2-.9 2.5-1.8.3-.9.3-1.6.2-1.8-.1-.2-.3-.3-.7-.5l-2.5-1.2c-.3-.1-.6-.2-.8.2-.2.4-.9 1.2-1.1 1.5-.2.2-.4.3-.8.1-.4-.2-1.7-.6-3.2-2-.1-.1-.9-.8-1.1-1.1-.2-.3 0-.5.2-.7l.6-.7c.2-.2.2-.4.3-.6.1-.2 0-.5 0-.7L8.4 7.8Z" />
+                  </svg>
+                  Contactar por WhatsApp
+                </a>
+              ) : null}
+              {!isPlaceholder ? <ListingSocialLinks listing={listing} /> : null}
               <Link className={isPlaceholder ? "primary" : "secondary"} href={isPlaceholder ? "/publicar" : `/anuncio/${listing.slug}`}>
-                {isPlaceholder ? "Publicar aquí" : "Abrir anuncio"}
+                {isPlaceholder ? "Publicar aquí" : "Ver anuncio completo"}
               </Link>
               <button className="secondary" type="button" onClick={copyListingLink}>
                 {copied ? "Link copiado" : "Copiar link"}
@@ -2341,21 +2358,6 @@ function ListingDetail({ listing, profile, onClose }) {
               ) : null}
               {isPlaceholder ? (
                 <p className="notice placeholder-detail-note">Este es un espacio de ejemplo. Crea tu cuenta con correo y contraseña para publicar un anuncio real.</p>
-              ) : null}
-              {!isPlaceholder && whatsapp ? (
-                <a
-                  className="primary whatsapp-contact-action"
-                  href={`https://wa.me/${whatsapp}?text=${whatsappMessage}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  WhatsApp
-                </a>
-              ) : null}
-              {!isPlaceholder && listing.website_url ? (
-                <a className="secondary" href={listing.website_url} target="_blank" rel="ugc nofollow noreferrer">
-                  Sitio web
-                </a>
               ) : null}
               {!isPlaceholder && listing.video_url ? (
                 <a className="secondary" href={listing.video_url} target="_blank" rel="ugc nofollow noreferrer">
@@ -2466,7 +2468,9 @@ function ListingDetail({ listing, profile, onClose }) {
 function FeedbackForm({ profile, listing = null, compact = false }) {
   const sellerPhone = whatsappDialNumber(listing?.whatsapp || listing?.advertiser_phone || listing?.profile?.phone || "");
   const initialMessage = listing
-    ? `Me interesa el anuncio "${listing.title}" que tienes publicado en PanAvisos.`
+    ? listing.operation === "Busco"
+      ? `Vi tu búsqueda "${listing.title}" en PanAvisos y tengo una opción que puede interesarte.`
+      : `Me interesa el anuncio "${listing.title}" que tienes publicado en PanAvisos.`
     : "";
   const [form, setForm] = useState({
     kind: listing ? "inquiry" : "demand_suggestion",
@@ -2548,7 +2552,7 @@ function FeedbackForm({ profile, listing = null, compact = false }) {
       <section className={`seller-contact-card ${compact ? "compact" : ""} ${profile ? "has-profile" : ""}`}>
         <div>
           <span className="eyebrow">Consulta directa</span>
-          <h2>Enviar mensaje</h2>
+          <h2>{listing?.operation === "Busco" ? "Ofrecer una opción" : "Enviar mensaje"}</h2>
           <p className="muted">Deja tus datos y el mensaje llega al anunciante. PanAvisos conserva el historial para seguimiento.</p>
         </div>
         <form onSubmit={submit}>
@@ -2599,7 +2603,7 @@ function FeedbackForm({ profile, listing = null, compact = false }) {
             />
           </label>
           <button className="primary inquiry-submit" type="submit" disabled={sending}>
-            {sending ? "Enviando..." : "Enviar mensaje"}
+            {sending ? "Enviando..." : listing?.operation === "Busco" ? "Enviar propuesta" : "Enviar mensaje"}
           </button>
           <div className="contact-shortcuts">
             {sellerPhone ? (
@@ -2707,13 +2711,13 @@ function formatDate(value) {
   }).format(new Date(value));
 }
 
-function closedStatus(status) {
+function closedStatus(status, operation = "") {
   if (status === "sold") {
     return {
-      title: "Vendido en PanAvisos",
-      ribbon: "Vendido",
-      short: "Vendido",
-      copy: "Este anuncio queda visible como referencia para mostrar actividad real en la página."
+      title: operation === "Busco" ? "Búsqueda cerrada" : "Vendido en PanAvisos",
+      ribbon: operation === "Busco" ? "Encontrado" : "Vendido",
+      short: operation === "Busco" ? "Encontrado" : "Vendido",
+      copy: operation === "Busco" ? "El anunciante indicó que ya encontró una opción." : "Este anuncio queda visible como referencia para mostrar actividad real en la página."
     };
   }
   if (status === "rented") {
@@ -2735,6 +2739,14 @@ function PriceBlock({ listing, large = false }) {
       </div>
     );
   }
+  if (listing.operation === "Busco") {
+    return (
+      <div className={`price-stack ${large ? "large" : ""}`}>
+        <strong className={large ? "detail-price" : "price"}>{listingPriceLabel(listing)}</strong>
+        <span className="search-budget-caption">Presupuesto</span>
+      </div>
+    );
+  }
   const hasDiscount = Number(listing.original_price) > Number(listing.price || 0);
   return (
     <div className={`price-stack ${large ? "large" : ""}`}>
@@ -2743,6 +2755,18 @@ function PriceBlock({ listing, large = false }) {
       {hasDiscount && listing.discount_percent ? <span className="discount-badge">{listing.discount_percent}% menos</span> : null}
     </div>
   );
+}
+
+function listingMatchesPriceFilter(listing, min, max) {
+  if (listing.operation !== "Busco") {
+    return Number(listing.price) >= min && Number(listing.price) <= max;
+  }
+  const hasMin = listing.budget_min !== null && listing.budget_min !== undefined && listing.budget_min !== "";
+  const hasMax = listing.budget_max !== null && listing.budget_max !== undefined && listing.budget_max !== "";
+  if (!hasMin && !hasMax) return true;
+  const budgetMin = hasMin ? Number(listing.budget_min) : 0;
+  const budgetMax = hasMax ? Number(listing.budget_max) : Number.MAX_SAFE_INTEGER;
+  return budgetMax >= min && budgetMin <= max;
 }
 
 function initials(value) {

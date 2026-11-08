@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { money, provinces } from "@/lib/format";
+import { listingPriceLabel, money, provinces } from "@/lib/format";
 
 const emptyListing = {
   title: "",
   category_id: "",
   operation: "Venta",
   price: "",
+  budget_min: "",
+  budget_max: "",
   original_price: "",
   discount_percent: "",
   province: "Panama",
@@ -21,6 +23,8 @@ const emptyListing = {
   whatsapp: "",
   email: "",
   website_url: "",
+  instagram_url: "",
+  facebook_url: "",
   video_url: "",
   advertiser_name: "",
   advertiser_phone: "",
@@ -30,6 +34,7 @@ const emptyListing = {
   lng: "",
   status: "active",
   featured: false,
+  public_contact_consent: false,
   expires_at: "",
   images: []
 };
@@ -203,6 +208,21 @@ export default function AdminPage() {
     event.preventDefault();
     setSaving(true);
     setError("");
+    if (listingForm.operation === "Busco") {
+      const phoneDigits = String(listingForm.whatsapp || listingForm.advertiser_phone || "").replace(/\D/g, "");
+      const min = listingForm.budget_min === "" ? null : Number(listingForm.budget_min);
+      const max = listingForm.budget_max === "" ? null : Number(listingForm.budget_max);
+      if (!listingForm.public_contact_consent || phoneDigits.length < 7 || phoneDigits.length > 15) {
+        setSaving(false);
+        setError("Una búsqueda pública necesita consentimiento registrado y un WhatsApp válido.");
+        return;
+      }
+      if ((min != null && (!Number.isFinite(min) || min < 0)) || (max != null && (!Number.isFinite(max) || max < 0)) || (min != null && max != null && min > max)) {
+        setSaving(false);
+        setError("Revisa el rango de presupuesto.");
+        return;
+      }
+    }
     const method = listingForm.id ? "PATCH" : "POST";
     const url = listingForm.id ? `/api/admin/listings/${listingForm.id}` : "/api/admin/listings";
     const category = categories.find((item) => item.id === listingForm.category_id);
@@ -333,6 +353,8 @@ export default function AdminPage() {
       category_id: listing.category_id || "",
       operation: listing.operation || "Venta",
       price: listing.price || "",
+      budget_min: listing.budget_min ?? "",
+      budget_max: listing.budget_max ?? "",
       original_price: listing.original_price || "",
       discount_percent: listing.discount_percent || "",
       province: listing.province || "Panama",
@@ -345,6 +367,8 @@ export default function AdminPage() {
       whatsapp: listing.whatsapp || "",
       email: listing.email || "",
       website_url: listing.website_url || "",
+      instagram_url: listing.instagram_url || "",
+      facebook_url: listing.facebook_url || "",
       video_url: listing.video_url || "",
       advertiser_name: listing.advertiser_name || "",
       advertiser_phone: listing.advertiser_phone || "",
@@ -354,6 +378,7 @@ export default function AdminPage() {
       lng: listing.lng || "",
       status: listing.status || "active",
       featured: Boolean(listing.featured),
+      public_contact_consent: Boolean(listing.public_contact_consent),
       expires_at: toDateInput(listing.expires_at),
       images: (listing.images || []).sort((a, b) => a.position - b.position)
     });
@@ -690,18 +715,27 @@ export default function AdminPage() {
                       <option>Servicio</option>
                       <option>Oferta</option>
                       <option>Promocion</option>
+                      <option>Busco</option>
                     </select>
                   </label>
                   <label className="field">
-                    <span>Precio final USD</span>
+                    <span>{listingForm.operation === "Busco" ? "Presupuesto máximo USD" : "Precio final USD"}</span>
                     <input
-                      required
+                      required={listingForm.operation !== "Busco"}
                       type="number"
                       value={listingForm.price}
                       onChange={(event) => setListingForm({ ...listingForm, price: event.target.value })}
                     />
                   </label>
                 </div>
+
+                {listingForm.operation === "Busco" ? (
+                  <div className="field-row">
+                    <label className="field"><span>Presupuesto mínimo USD</span><input type="number" min="0" value={listingForm.budget_min} onChange={(event) => setListingForm({ ...listingForm, budget_min: event.target.value })} /></label>
+                    <label className="field"><span>Presupuesto máximo USD</span><input type="number" min="0" value={listingForm.budget_max} onChange={(event) => setListingForm({ ...listingForm, budget_max: event.target.value })} /></label>
+                    <label className="responsibility-check"><input type="checkbox" checked={listingForm.public_contact_consent} onChange={(event) => setListingForm({ ...listingForm, public_contact_consent: event.target.checked })} /><span>Consentimiento público registrado</span></label>
+                  </div>
+                ) : null}
 
                 <div className="field-row">
                   <label className="field">
@@ -834,6 +868,26 @@ export default function AdminPage() {
                     value={listingForm.website_url}
                     onChange={(event) => setListingForm({ ...listingForm, website_url: event.target.value })}
                     placeholder="https://cliente.com"
+                  />
+                </label>
+
+                <label className="field">
+                  <span>Instagram</span>
+                  <input
+                    type="url"
+                    value={listingForm.instagram_url}
+                    onChange={(event) => setListingForm({ ...listingForm, instagram_url: event.target.value })}
+                    placeholder="https://www.instagram.com/usuario"
+                  />
+                </label>
+
+                <label className="field">
+                  <span>Facebook</span>
+                  <input
+                    type="url"
+                    value={listingForm.facebook_url}
+                    onChange={(event) => setListingForm({ ...listingForm, facebook_url: event.target.value })}
+                    placeholder="https://www.facebook.com/pagina"
                   />
                 </label>
 
@@ -990,7 +1044,7 @@ export default function AdminPage() {
                       <span className={`status-badge ${listing.status}`}>{statusLabel(listing.status)}</span>
                     </div>
                     <p className="muted">
-                      {money(listing.price)} - {listing.category?.name || "Sin categoría"} - {listing.province}
+                      {listingPriceLabel(listing)} - {listing.category?.name || "Sin categoría"} - {listing.province}
                     </p>
                     <p className="muted">
                       {listing.profile?.full_name || listing.advertiser_name || "Admin"}

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { money } from "@/lib/format";
+import { listingPriceLabel } from "@/lib/format";
 import { optimizeImageUrl } from "@/lib/images";
 
 export default function SellerPage() {
@@ -54,10 +54,10 @@ export default function SellerPage() {
                 <span className="avatar-badge large">{initials(sellerName)}</span>
               )}
               <div>
-                <span className="eyebrow">Vendedor</span>
+                <span className="eyebrow">Usuario PanAvisos</span>
                 <h1>{sellerName}</h1>
                 {payload.profile?.profession ? <p className="profile-profession">{payload.profile.profession}</p> : null}
-                <p className="muted">{payload.listings.length} anuncios visibles en PanAvisos.</p>
+                <p className="muted">{payload.listings.length} publicaciones visibles en PanAvisos.</p>
                 {payload.profile?.bio ? <p className="profile-bio seller-profile-bio">{payload.profile.bio}</p> : null}
                 <div className="seller-profile-links">
                   {payload.profile?.website_url ? (
@@ -72,7 +72,7 @@ export default function SellerPage() {
 
             <section className="seller-more">
               <div className="section-heading">
-                <h2>Anuncios visibles</h2>
+                <h2>Publicaciones visibles</h2>
                 <Link className="secondary compact-link" href="/">
                   Ver catálogo
                 </Link>
@@ -93,7 +93,7 @@ export default function SellerPage() {
 
 function PublicListingCard({ listing }) {
   const image = optimizeImageUrl([...(listing.images || [])].sort((a, b) => a.position - b.position)[0]?.url, 320);
-  const closed = closedStatus(listing.status);
+  const closed = closedStatus(listing.status, listing.operation);
 
   return (
     <Link className="public-listing-card" href={`/anuncio/${listing.slug}`}>
@@ -101,15 +101,15 @@ function PublicListingCard({ listing }) {
         {image ? <img src={image} alt="" width="640" height="640" loading="lazy" decoding="async" /> : <span className="mini-image-placeholder">A</span>}
         {closed ? <span className={`small-status-ribbon ${listing.status}`}>{closed}</span> : null}
       </span>
-      <strong>{money(listing.price)}</strong>
+      <strong>{listingPriceLabel(listing)}</strong>
       <span>{listing.title}</span>
       <small>{listing.district}, {listing.province}</small>
     </Link>
   );
 }
 
-function closedStatus(status) {
-  if (status === "sold") return "Vendido";
+function closedStatus(status, operation = "") {
+  if (status === "sold") return operation === "Busco" ? "Encontrado" : "Vendido";
   if (status === "rented") return "Alquilado";
   return "";
 }

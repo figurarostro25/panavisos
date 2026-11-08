@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { money } from "@/lib/format";
+import { listingPriceLabel } from "@/lib/format";
 import { completeOAuthRedirect, getSupabaseBrowser } from "@/lib/supabaseBrowser";
 import { getAuthRedirectOrigin } from "@/lib/site";
 
@@ -45,6 +45,7 @@ export default function AccountPage() {
       hashParams.has("access_token") ||
       hashParams.get("type") === "signup";
     const cameFromPublish = urlParams.get("published") === "1";
+    const cameFromSearchPublish = urlParams.get("published") === "search";
     const cameFromUpdate = urlParams.get("updated") === "1";
 
     async function loadSession() {
@@ -54,7 +55,7 @@ export default function AccountPage() {
       await loadProfile(data.session);
       await loadMyListings(data.session);
       await loadMyInquiries(data.session);
-      if (nextPath && data.session?.user && !cameFromEmail && !cameFromPublish && !cameFromUpdate) {
+      if (nextPath && data.session?.user && !cameFromEmail && !cameFromPublish && !cameFromUpdate && !cameFromSearchPublish) {
         window.location.href = nextPath;
       } else if (cameFromOAuth && data.session?.user) {
         setMessage("Sesión iniciada con Google.");
@@ -65,6 +66,10 @@ export default function AccountPage() {
       } else if (cameFromPublish && data.session?.user) {
         setActiveTab("listings");
         setMessage("Anuncio publicado. Ya aparece activo en tus publicaciones.");
+        window.history.replaceState({}, "", window.location.pathname);
+      } else if (cameFromSearchPublish && data.session?.user) {
+        setActiveTab("listings");
+        setMessage("Búsqueda publicada. Ya aparece en el catálogo y puedes administrarla desde aquí.");
         window.history.replaceState({}, "", window.location.pathname);
       } else if (cameFromUpdate && data.session?.user) {
         setActiveTab("listings");
@@ -512,7 +517,7 @@ export default function AccountPage() {
                   Mensajes {messageCount ? <span className="pill">{messageCount}</span> : null}
                 </button>
                 <button className={activeTab === "listings" ? "active" : ""} type="button" onClick={() => selectAccountTab("listings")}>
-                  Mis anuncios
+                  Mis publicaciones
                 </button>
                 <button className={activeTab === "profile" ? "active" : ""} type="button" onClick={() => selectAccountTab("profile")}>
                   Perfil
@@ -570,7 +575,7 @@ export default function AccountPage() {
                 <section className="my-listings-section account-tab-panel" id="anuncios">
                   <div className="section-head compact-head">
                     <div>
-                      <h2>Mis anuncios</h2>
+                      <h2>Mis publicaciones</h2>
                       <p className="muted">{loadingListings ? "Cargando..." : "Edita, marca vendido/alquilado o archiva sin borrar historial."}</p>
                     </div>
                   </div>
@@ -787,14 +792,14 @@ function AccountListingCard({ listing, onStatusChange }) {
   const isArchived = listing.status === "archived";
   return (
     <article className="account-listing-card">
-      {image ? <img src={image} alt="" /> : <span className="mini-image-placeholder">A</span>}
+      {image ? <img src={image} alt="" /> : <span className={`mini-image-placeholder ${listing.operation === "Busco" ? "search-card-image" : ""}`}>{listing.operation === "Busco" ? "BUSCO" : "A"}</span>}
       <div className="account-listing-body">
         <div>
-          <span className={`status-pill ${listing.status || "pending"}`}>{statusLabel(listing.status)}</span>
+          <span className={`status-pill ${listing.status || "pending"}`}>{listing.operation === "Busco" && listing.status === "sold" ? "Encontrado" : statusLabel(listing.status)}</span>
           <h3>{listing.title}</h3>
           <p className="muted">{listing.district || "Sin ubicación"}, {listing.province}</p>
         </div>
-        <strong>{money(listing.price)}</strong>
+        <strong>{listingPriceLabel(listing)}</strong>
         <div className="account-listing-actions">
           {listing.slug && !isArchived ? (
             <Link className="secondary" href={`/anuncio/${listing.slug}`}>
@@ -806,10 +811,10 @@ function AccountListingCard({ listing, onStatusChange }) {
           </Link>
           {listing.status !== "sold" ? (
             <button className="secondary" type="button" onClick={() => onStatusChange(listing, "sold")}>
-              Vendido
+              {listing.operation === "Busco" ? "Encontrado" : "Vendido"}
             </button>
           ) : null}
-          {listing.status !== "rented" ? (
+          {listing.operation !== "Busco" && listing.status !== "rented" ? (
             <button className="secondary" type="button" onClick={() => onStatusChange(listing, "rented")}>
               Alquilado
             </button>

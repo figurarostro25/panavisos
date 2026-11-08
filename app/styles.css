@@ -6323,6 +6323,27 @@ button:disabled {
   font-weight: 900;
 }
 
+.search-listing-badge {
+  background: #d9f3f4;
+  color: #07596a;
+}
+
+.search-card-image,
+.mini-image-placeholder.search-card-image {
+  background: linear-gradient(135deg, #dff5f6, #f4fbfb);
+  color: #087f91;
+  letter-spacing: 0.08em;
+  font-size: 1rem;
+}
+
+.search-budget-caption {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
 .placeholder-detail-note {
   margin: 0;
 }
