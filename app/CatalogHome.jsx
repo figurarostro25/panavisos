@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { money, provinces, whatsappDialNumber } from "@/lib/format";
 import { optimizeImageUrl } from "@/lib/images";
@@ -197,7 +197,7 @@ const demoOverflowBanners = [
   }
 ];
 
-export function CatalogHome({ section = "home" }) {
+export function CatalogHome({ section = "home", initialListingGroup = "", initialCategorySlug }) {
   const [data, setData] = useState({ categories: [], listings: [], banners: [] });
   const [selected, setSelected] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -214,12 +214,15 @@ export function CatalogHome({ section = "home" }) {
   const [locating, setLocating] = useState(false);
   const [locationError, setLocationError] = useState("");
   const [footerVisible, setFooterVisible] = useState(false);
-  const [listingGroup, setListingGroup] = useState("");
+  const listingGroup = initialListingGroup === "servicios" ? "servicios" : "";
+  const previousListingGroup = useRef(listingGroup);
   const sectionCopy = catalogSectionCopy(section);
 
   useEffect(() => {
-    setListingGroup(new URLSearchParams(window.location.search).get("grupo") || "");
-  }, []);
+    if (previousListingGroup.current === listingGroup) return;
+    previousListingGroup.current = listingGroup;
+    setFilters(emptyFilters);
+  }, [listingGroup]);
 
   useEffect(() => {
     let hasSavedArea = false;
@@ -481,11 +484,18 @@ export function CatalogHome({ section = "home" }) {
   );
   useEffect(() => {
     if (!data.categories?.length) return;
-    const categorySlug = new URLSearchParams(window.location.search).get("categoria");
-    if (!categorySlug) return;
+    const categorySlug = initialCategorySlug === undefined
+      ? new URLSearchParams(window.location.search).get("categoria")
+      : initialCategorySlug;
+    if (!categorySlug) {
+      if (initialCategorySlug !== undefined) {
+        setFilters((current) => ({ ...current, category: "" }));
+      }
+      return;
+    }
     const category = data.categories.find((item) => item.slug === categorySlug);
-    if (category) setFilters((current) => ({ ...current, category: category.id }));
-  }, [data.categories]);
+    setFilters((current) => ({ ...current, category: category?.id || "" }));
+  }, [data.categories, initialCategorySlug]);
 
   const listings = useMemo(() => {
     const q = normalize(filters.q);
@@ -710,7 +720,7 @@ export function CatalogHome({ section = "home" }) {
             title={sectionCopy.categoriesTitle}
             description={sectionCopy.categoriesDescription}
             categories={scopedCategories}
-            listings={catalogListings}
+            listings={section === "properties" ? propertyListings : marketplaceListings}
             categoryImages={categoryImages}
             totalCategoryImage={totalCategoryImage}
             activeCategory={filters.category}
@@ -1374,7 +1384,7 @@ function CategoryDirectory({
           </span>
           <span>
             <strong>Todo</strong>
-            <small>Ver anuncios</small>
+            <small>Todas en esta sección</small>
           </span>
         </button>
         {categories.map((category) => {
