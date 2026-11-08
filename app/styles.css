@@ -2967,10 +2967,13 @@ textarea:focus {
 
 .card-description {
   display: -webkit-box;
+  max-height: 2.5em;
   overflow: hidden;
+  overflow-wrap: anywhere;
   color: var(--muted);
   font-size: 0.82rem;
   line-height: 1.25;
+  line-clamp: 2;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
@@ -3081,6 +3084,15 @@ textarea:focus {
   .card-description {
     font-size: 0.72rem;
     -webkit-line-clamp: 2;
+  }
+
+  .marketplace-card {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  .marketplace-card .card-description {
+    display: none;
   }
 
   .marketplace-card .card-image {
@@ -5987,6 +5999,7 @@ button:disabled {
 
 .listing-title-button {
   display: -webkit-box;
+  max-height: 2.5em;
   overflow: hidden;
   overflow-wrap: anywhere;
   font-weight: 500;
@@ -6093,6 +6106,8 @@ button:disabled {
   align-content: flex-start;
   gap: 14px;
   padding: clamp(20px, 3vw, 30px);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 .miniweb-info h1,
@@ -7268,6 +7283,8 @@ button:disabled {
   border-radius: 8px;
   background: #fff;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 .listing-gallery {

@@ -2130,6 +2130,11 @@ function ListingCard({ listing, onSelect }) {
   const isPlaceholder = Boolean(listing.is_placeholder);
   const showRealEstateFacts = listing.category?.slug === "bienes-raices";
   const closed = closedStatus(listing.status);
+  const normalizedTitle = (listing.title || "").replace(/\s+/g, " ").trim();
+  const titlePreview =
+    normalizedTitle.length > 72
+      ? `${normalizedTitle.slice(0, 69).trimEnd()}…`
+      : normalizedTitle;
   const normalizedDescription = (listing.description || "").replace(/\s+/g, " ").trim();
   const descriptionPreview =
     normalizedDescription.length > 120
@@ -2151,8 +2156,13 @@ function ListingCard({ listing, onSelect }) {
         {isPlaceholder ? <span className="fresh-badge">{listing.placeholder_badge || "Espacio disponible"}</span> : null}
         {!isPlaceholder && listing.featured ? <span className="fresh-badge">Resaltado</span> : null}
         <PriceBlock listing={listing} />
-        <button className="listing-title-button" type="button" onClick={() => onSelect(listing)}>
-          {listing.title}
+        <button
+          className="listing-title-button"
+          type="button"
+          aria-label={listing.title}
+          onClick={() => onSelect(listing)}
+        >
+          {titlePreview}
         </button>
         <span className="card-location">
           {listing.district}, {listing.province}
