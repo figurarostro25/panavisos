@@ -1,5 +1,7 @@
 ﻿import "./styles.css";
 import { getSiteUrl } from "@/lib/site";
+import SeasonalDecor from "./SeasonalDecor";
+import "./seasonal.css";
 
 export const metadata = {
   metadataBase: new URL(getSiteUrl()),
@@ -19,7 +21,10 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="es">
-      <body>{children}</body>
+      <body>
+        <SeasonalDecor />
+        {children}
+      </body>
     </html>
   );
 }
