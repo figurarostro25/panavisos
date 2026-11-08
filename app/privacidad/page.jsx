@@ -31,6 +31,12 @@ export default function PrivacyPage() {
           del contenido y prevenir abuso.
         </p>
 
+        <p>
+          Para limitar envíos automatizados y proteger los formularios, el servidor puede usar temporalmente una huella
+          criptográfica de la dirección IP. PanAvisos no guarda la dirección IP en texto claro ni muestra esta huella a
+          otros visitantes.
+        </p>
+
         <h2>Consultas sobre anuncios</h2>
         <p>
           Cuando envías una consulta, PanAvisos guarda el mensaje en el historial de la plataforma y comparte con el

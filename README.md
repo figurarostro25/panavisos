@@ -45,6 +45,13 @@ PANAVISOS_SESSION_SECRET=
 
 `PANAVISOS_SESSION_SECRET` debe ser una frase larga aleatoria. No la compartas publicamente.
 
+## Límite de mensajes en Supabase
+
+Antes de desplegar cambios que usen el límite de mensajes, ejecuta una vez
+`supabase/upgrade-message-rate-limits.sql` en el SQL Editor de Supabase. La función
+solo se puede llamar desde el servidor con `SUPABASE_SERVICE_ROLE_KEY`; la tabla
+no es accesible desde clientes públicos ni autenticados.
+
 ## Desarrollo local
 
 ```bash

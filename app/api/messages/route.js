@@ -1,11 +1,40 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSiteUrl } from "@/lib/site";
+import { checkMessageRateLimit } from "@/lib/messageRateLimit";
 
 export const runtime = "nodejs";
 
 export async function POST(request) {
-  const body = await request.json();
+  let rateLimit;
+  try {
+    rateLimit = await checkMessageRateLimit(request);
+  } catch (error) {
+    console.error("No se pudo verificar el límite de mensajes", error);
+    return NextResponse.json(
+      { error: "No pudimos procesar tu mensaje ahora. Inténtalo de nuevo en unos minutos." },
+      { status: 503 }
+    );
+  }
+
+  if (!rateLimit.allowed) {
+    const retryAfter = Math.max(1, rateLimit.retryAfterSeconds);
+    return NextResponse.json(
+      { error: "Has enviado varios mensajes. Espera unos minutos e inténtalo de nuevo." },
+      { status: 429, headers: { "Retry-After": String(retryAfter) } }
+    );
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "La solicitud no tiene un formato válido." }, { status: 400 });
+  }
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return NextResponse.json({ error: "La solicitud no tiene un formato válido." }, { status: 400 });
+  }
+
   const message = String(body.message || "").trim();
   const senderEmail = String(body.sender_email || "").trim();
   const senderPhone = String(body.sender_phone || "").trim();
@@ -94,7 +123,10 @@ export async function POST(request) {
     .select("*")
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("No se pudo guardar el mensaje", error);
+    return NextResponse.json({ error: "No pudimos guardar tu mensaje ahora. Inténtalo de nuevo." }, { status: 500 });
+  }
 
   if (kind === "inquiry" && payload.listing_id) {
     await notifySeller(data).catch((notifyError) => {
